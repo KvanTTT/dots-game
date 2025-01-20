@@ -16,11 +16,14 @@ data class TextSpan(val start: Int, val size: Int) {
 
     val end
         get() = start + size
+
+    override fun toString(): String = "[$start..$end)"
 }
 
 class SgfRoot(
     val gameTree: List<GameTree>,
     val unparsedText: UnparsedText?,
+    val text: CharSequence,
     textSpan: TextSpan,
 ) : SgfNode(textSpan)
 
@@ -46,7 +49,7 @@ class Property(
 
 class PropertyValue(
     val lSquareBracket: LSquareBracketToken,
-    val propertyValueToken: PropertyValueToken?,
+    val propertyValueToken: PropertyValueToken,
     val rSquareBracket: RSquareBracketToken,
     textSpan: TextSpan,
 ) : SgfNode(textSpan)

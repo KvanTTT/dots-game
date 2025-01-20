@@ -49,7 +49,7 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
             (unparsedText ?: gameTrees.lastOrNull())?.textSpan?.end ?: text.length,
         )
 
-        return SgfRoot(gameTrees, unparsedText, textSpan)
+        return SgfRoot(gameTrees, unparsedText, text, textSpan)
     }
 
     private fun parseGameTree(): GameTree {
@@ -114,11 +114,7 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
     private fun parsePropertyValue(): PropertyValue {
         val lSquareBracket = LSquareBracketToken(matchChar('['))
 
-        val propertyValueToken = if (checkBounds() && text[currentIndex] != ']') {
-            parsePropertyValueToken()
-        } else {
-            null
-        }
+        val propertyValueToken = parsePropertyValueToken()
 
         val rSquareBracket = RSquareBracketToken(tryMatchChar(']')).also { it.reportIfError() }
 
@@ -130,7 +126,7 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
     private fun parsePropertyValueToken(): PropertyValueToken {
         val initialIndex = currentIndex
 
-        do {
+        while (checkBounds()) {
             when (text[currentIndex]) {
                 ']' -> break
                 '\\' -> {
@@ -141,7 +137,7 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
                 }
                 else -> currentIndex++
             }
-        } while (checkBounds())
+        }
 
         return PropertyValueToken(text.substring(initialIndex, currentIndex), getCurrentTextSpan(initialIndex))
     }

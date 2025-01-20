@@ -14,7 +14,6 @@ import org.dots.game.sgf.PropertyValueToken
 import org.dots.game.sgf.SemicolonToken
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class SgfParserTests {
     @Test
@@ -85,12 +84,11 @@ class SgfParserTests {
     @Test
     fun propertyValue() {
         fun checkValue(expectedToken: SgfToken, input: String) {
-            val propertyValueType = parseAndGetPropertyValue(input).propertyValueToken!!
+            val propertyValueType = parseAndGetPropertyValue(input).propertyValueToken
             checkTokens(expectedToken, propertyValueType)
         }
 
-        assertNull(parseAndGetPropertyValue("(;GC[])").propertyValueToken)
-
+        checkValue(PropertyValueToken("", TextSpan(5, 0)), "(;GC[])")
         checkValue(PropertyValueToken("text", TextSpan(5, 4)), """(;GC[text])""")
         checkValue(PropertyValueToken("a:b", TextSpan(5, 3)), """(;GC[a:b])""")
         checkValue(PropertyValueToken("a\nb", TextSpan(5, 3)), "(;GC[a\nb])")
@@ -144,8 +142,7 @@ class SgfParserTests {
         val propertyValue = property.value.single()
         assertEquals(TextSpan(8, 14), propertyValue.textSpan)
 
-        val propertyValueToken = propertyValue.propertyValueToken!!
-        checkTokens(PropertyValueToken("info1 info2 ", TextSpan(9, 12)), propertyValueToken)
+        checkTokens(PropertyValueToken("info1 info2 ", TextSpan(9, 12)), propertyValue.propertyValueToken)
     }
 
     private fun parseAndGetPropertyValue(input: String): PropertyValue {
