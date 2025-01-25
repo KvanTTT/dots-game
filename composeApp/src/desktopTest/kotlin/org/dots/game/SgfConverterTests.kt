@@ -2,21 +2,21 @@ package org.dots.game
 
 import org.dots.game.core.AppInfo
 import org.dots.game.core.GameInfo
-import org.dots.game.sgf.DiagnosticSeverity
+import org.dots.game.sgf.SgfDiagnosticSeverity
 import org.dots.game.sgf.LineColumn
 import org.dots.game.sgf.SgfConverter
 import org.dots.game.sgf.SgfDiagnostic
 import org.dots.game.sgf.SgfParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class SgfConverterTests {
     @Test
     fun gameInfo() {
-        val sgf = SgfParser.parse("(;GM[40]FF[4]CA[UTF-8]SZ[17:21]RU[russian]GN[Test Game]PB[Player1]BR[256]BT[Player1's Team]PW[Player2]WR[512]WT[Player2's Team]KM[0.5]DT[2025-01-19]GC[A game for SGF parser testing]PC[Amsterdam, Netherlands]EV[Test event]ON[Empty]AN[Ivan Kochurkin]CP[@]SO[https://zagram.org/eidokropki/index.html]TL[300]AP[https\\://zagram.org/eidokropki/index.html:1])")
-        val gameInfo = SgfConverter.convert(sgf) {
-            error(it)
-        }.single()
+        val gameInfo = parseAndConvert(
+            "(;GM[40]FF[4]CA[UTF-8]SZ[17:21]RU[russian]GN[Test Game]PB[Player1]BR[256]BT[Player1's Team]PW[Player2]WR[512]WT[Player2's Team]KM[0.5]DT[2025-01-19]GC[A game for SGF parser testing]PC[Amsterdam, Netherlands]EV[Test event]ON[Empty]AN[Ivan Kochurkin]CP[@]SO[https://zagram.org/eidokropki/index.html]TL[300]AP[https\\://zagram.org/eidokropki/index.html:1])",
+            ).single()
         with (gameInfo) {
             assertEquals(17, rules.width)
             assertEquals(21, rules.height)
@@ -42,32 +42,192 @@ class SgfConverterTests {
     }
 
     @Test
-    fun criticalErrorsWithValidTypes() {
-        val expectedDiagnostics = listOf(
-            SgfDiagnostic("Property GM (GameMode) has unsupported value `1` (Go). The only `40` (Kropki) is supported.", LineColumn(1, 6), DiagnosticSeverity.Critical),
-            SgfDiagnostic("Property FF (FileFormat) has unsupported value `3`. The only `4` is supported.", LineColumn(1, 11), DiagnosticSeverity.Critical),
-            SgfDiagnostic("Property SZ (Size) has invalid width: `1234`. Expected: 0..254.", LineColumn(1, 16), DiagnosticSeverity.Critical),
-            SgfDiagnostic("Property SZ (Size) has invalid height: `5678`. Expected: 0..254.", LineColumn(1, 21), DiagnosticSeverity.Critical),
-        )
-        checkDiagnostics("(;GM[1]FF[3]SZ[1234:5678])", expectedDiagnostics)
-    }
-
-    @Test
-    fun notCriticalErrors() {
-        // TODO
-    }
-
-    @Test
     fun multipleGames() {
-        // TODO
+        val gameInfos = parseAndConvert("""
+(;GM[40]FF[4]SZ[39:32]GN[game 1])
+(;GM[40]FF[4]SZ[20:20]GN[game 2])
+        """.trimIndent()
+        )
+        val gameInfo0 = gameInfos[0]
+        assertEquals(39, gameInfo0.rules.width)
+        assertEquals(32, gameInfo0.rules.height)
+        assertEquals("game 1", gameInfo0.gameName)
+        val gameInfo1 = gameInfos[1]
+        assertEquals(20, gameInfo1.rules.width)
+        assertEquals(20, gameInfo1.rules.height)
+        assertEquals("game 2", gameInfo1.gameName)
+    }
+
+    @Test
+    fun emptyFile() {
+        assertTrue(
+            parseAndConvert(
+                "", listOf(
+                    SgfDiagnostic(
+                        "At least one game tree should be specified.",
+                        LineColumn(1, 1),
+                        SgfDiagnosticSeverity.Error
+                    )
+                )
+            ).isEmpty()
+        )
+    }
+
+    @Test
+    fun noNodes() {
+        assertTrue(
+            parseAndConvert(
+                "()", listOf(
+                    SgfDiagnostic(
+                        "At least one node should be specified.",
+                        LineColumn(1, 2),
+                        SgfDiagnosticSeverity.Error
+                    )
+                )
+            ).isEmpty()
+        )
+    }
+
+    @Test
+    fun requiredPropertiesWithInvalidValues() {
+        assertTrue(
+            parseAndConvert(
+                "(;GM[1]FF[3]SZ[1234:5678])",
+                listOf(
+                    SgfDiagnostic(
+                        "Property GM (Game Mode) has unsupported value `1` (Go). The only `40` (Kropki) is supported.",
+                        LineColumn(1, 6),
+                        SgfDiagnosticSeverity.Critical
+                    ),
+                    SgfDiagnostic(
+                        "Property FF (File Format) has unsupported value `3`. The only `4` is supported.",
+                        LineColumn(1, 11),
+                        SgfDiagnosticSeverity.Critical
+                    ),
+                    SgfDiagnostic(
+                        "Property SZ (Size) has invalid width: `1234`. Expected: 0..254.",
+                        LineColumn(1, 16),
+                        SgfDiagnosticSeverity.Critical
+                    ),
+                    SgfDiagnostic(
+                        "Property SZ (Size) has invalid height: `5678`. Expected: 0..254.",
+                        LineColumn(1, 21),
+                        SgfDiagnosticSeverity.Critical
+                    ),
+                )
+            ).isEmpty()
+        )
+    }
+
+    @Test
+    fun differentGameModeAndSizeValues() {
+        parseAndConvert(
+            "(;GM[100]FF[4]SZ[20])", listOf(
+                SgfDiagnostic(
+                    "Property GM (Game Mode) has unsupported value `100`. The only `40` (Kropki) is supported.",
+                    LineColumn(1, 6),
+                    SgfDiagnosticSeverity.Critical
+                )
+            )
+        )
+        parseAndConvert("(;GM[40]FF[4]SZ[20])")
+        parseAndConvert(
+            "(;GM[40]FF[4]SZ[str])", listOf(
+                SgfDiagnostic(
+                    "Property SZ (Size) has invalid value `str`. Expected: 0..254.",
+                    LineColumn(1, 17),
+                    SgfDiagnosticSeverity.Critical,
+                )
+            )
+        )
+        parseAndConvert(
+            "(;GM[40]FF[4]SZ[30:31:32])",
+            listOf(
+                SgfDiagnostic(
+                    "Property SZ (Size) is defined in incorrect format: `30:31:32`. Expected: INT or INT:INT.",
+                    LineColumn(1, 17),
+                    SgfDiagnosticSeverity.Critical
+                )
+            )
+        )
+    }
+
+    @Test
+    fun requiredPropertiesMissing() {
+        assertTrue(
+            parseAndConvert(
+                "(;)", listOf(
+                    SgfDiagnostic(
+                        "Property GM (Game Mode) should be specified.",
+                        LineColumn(1, 3),
+                        SgfDiagnosticSeverity.Error
+                    ),
+                    SgfDiagnostic(
+                        "Property FF (File Format) should be specified.",
+                        LineColumn(1, 3),
+                        SgfDiagnosticSeverity.Error
+                    ),
+                    SgfDiagnostic(
+                        "Property SZ (Size) should be specified.",
+                        LineColumn(1, 3),
+                        SgfDiagnosticSeverity.Critical
+                    ),
+                )
+            ).isEmpty()
+        )
     }
 
     @Test
     fun duplicatedProperties() {
-        // TODO
+        parseAndConvert(
+            "(;GM[40]GM[40]FF[4]PB[Player1]SZ[39:32]PB[Player11]PB)", listOf(
+                SgfDiagnostic(
+                    "Property GM (Game Mode) is duplicated and ignored.",
+                    LineColumn(1, 9),
+                    SgfDiagnosticSeverity.Warning
+                ),
+                SgfDiagnostic(
+                    "Property PB (Player1 Name) is duplicated and ignored.",
+                    LineColumn(1, 40),
+                    SgfDiagnosticSeverity.Warning
+                ),
+                SgfDiagnostic(
+                    "Property PB (Player1 Name) is unspecified.",
+                    LineColumn(1, 54),
+                    SgfDiagnosticSeverity.Error
+                ),
+                SgfDiagnostic(
+                    "Property PB (Player1 Name) is duplicated and ignored.",
+                    LineColumn(1, 52),
+                    SgfDiagnosticSeverity.Warning
+                ),
+            )
+        )
     }
 
-    private fun checkDiagnostics(input: String, expectedDiagnostics: List<SgfDiagnostic>): List<GameInfo> {
+    @Test
+    fun propertyHasMultipleValues() {
+        parseAndConvert(
+            "(;GM[40][1]FF[4]PB[Player1][Player11]SZ[39:32])",
+            listOf(
+                SgfDiagnostic("Property GM (Game Mode) has unsupported value `1` (Go). The only `40` (Kropki) is supported.", LineColumn(1, 10), SgfDiagnosticSeverity.Critical),
+                SgfDiagnostic("Property GM (Game Mode) has duplicated value `1` that's ignored.", LineColumn(1, 10), SgfDiagnosticSeverity.Warning),
+                SgfDiagnostic("Property PB (Player1 Name) has duplicated value `Player11` that's ignored.", LineColumn(1, 29), SgfDiagnosticSeverity.Warning),
+            )
+        )
+    }
+
+    @Test
+    fun unknownProperties() {
+        parseAndConvert(
+            "(;GM[40]FF[4]SZ[39:32]UP[text value]UP)", listOf(
+                SgfDiagnostic("Property UP is unknown.", LineColumn(1, 23), SgfDiagnosticSeverity.Warning),
+                SgfDiagnostic("Property UP is unknown.", LineColumn(1, 37), SgfDiagnosticSeverity.Warning),
+            )
+        )
+    }
+
+    private fun parseAndConvert(input: String, expectedDiagnostics: List<SgfDiagnostic> = emptyList()): List<GameInfo> {
         val sgf = SgfParser.parse(input)
         val actualDiagnostics = mutableListOf<SgfDiagnostic>()
         val result = SgfConverter.convert(sgf) {

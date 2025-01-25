@@ -1,22 +1,132 @@
 package org.dots.game.sgf
 
-enum class SgfFileFormat(val value: Int) {
-    First(1),
-    Second(2),
-    Third(3),
-    Fourth(4);
+const val SUPPORTED_FILE_FORMAT = 4
+
+class SgfGameMode {
+    companion object {
+        const val SUPPORTED_GAME_MODE_NAME = "Kropki"
+
+        val gameModes: Map<Int, String> = mapOf(
+            1 to "Go",
+            2 to "Othello",
+            3 to "Chess",
+            4 to "Gomoku/Renju",
+            5 to "Nine Men's Morris",
+            6 to "Backgammon",
+            7 to "Xiangqi (Chinese chess)",
+            8 to "Shogi",
+            9 to "Lines of Action",
+            10 to "Ataxx",
+            11 to "Hex",
+            12 to "Jungle",
+            13 to "Neutron",
+            14 to "Phutball (Philosopher's Football)",
+            15 to "Quadrature",
+            16 to "Trax",
+            17 to "Tantrix",
+            18 to "Amazons",
+            19 to "Octi",
+            20 to "Gess",
+            21 to "Twixt",
+            22 to "Zèrtz",
+            23 to "Plateau",
+            24 to "Yinsh",
+            25 to "Punct",
+            26 to "Gobblet",
+            27 to "Hive",
+            28 to "Exxit",
+            29 to "Hnefatafl (Tafl games)",
+            30 to "Kuba",
+            31 to "Tripples",
+            32 to "Chase",
+            33 to "Tumbling Down",
+            34 to "Sahara",
+            35 to "Byte",
+            36 to "Focus",
+            37 to "Dvonn",
+            38 to "Tamsk",
+            39 to "Gipf",
+            40 to SUPPORTED_GAME_MODE_NAME,
+        )
+
+        val gameModeNameToKey: Map<String, Int> = gameModes.entries.associateBy({ it.value }) { it.key }.also {
+            require(it.size == gameModes.size)
+        }
+
+        val SUPPORTED_GAME_MODE_KEY: Int = gameModeNameToKey[SUPPORTED_GAME_MODE_NAME]!!
+    }
 }
 
-enum class SgfGameMode(val value: Int) {
-    Go(1), Othello(2), Chess(3),
-    GomokuRenju(4), NineMensMorris(5), Backgammon(6),
-    Chinesechess(7), Shogi(8), LinesOfAction(9),
-    Ataxx(10), Hex(11), Jungle(12), Neutron(13),
-    PhilosophersFootball(14), Quadrature(15), Trax(16),
-    Tantrix(17), Amazons(18), Octi(19), Gess(20),
-    Twixt(21), Zertz(22), Plateau(23), Yinsh(24),
-    Punct(25), Gobblet(26), hive(27), Exxit(28),
-    Hnefatal(29), Kuba(30), Tripples(31), Chase(32),
-    TumblingDown(33), Sahara(34), Byte(35), Focus(36),
-    Dvonn(37), Tamsk(38), Gipf(39), Kropki(40);
+enum class SgfPropertyType {
+    Number,
+    Double,
+    SimpleText,
+    Text,
+    Size,
+    AppInfo,
 }
+
+data class SgfPropertyInfo(val name: String, val type: SgfPropertyType = SgfPropertyType.SimpleText, val isKnown: Boolean = true)
+
+object SgfMetaInfo {
+    const val PLAYER1_MARKER = 'B'
+    const val PLAYER2_MARKER = 'W'
+
+    const val GAME_MODE_KEY = "GM"
+    const val FILE_FORMAT_KEY = "FF"
+    const val CHARSET_KEY = "CA"
+    const val SIZE_KEY = "SZ"
+    const val RULES_KEY = "RU"
+    const val RESULT_KEY = "RE"
+    const val GAME_NAME_KEY = "GN"
+    const val PLAYER1_NAME_KEY = "P${PLAYER1_MARKER}"
+    const val PLAYER1_RATING_KEY = "${PLAYER1_MARKER}R"
+    const val PLAYER1_TEAM_KEY = "${PLAYER1_MARKER}T"
+    const val PLAYER2_NAME_KEY = "P${PLAYER2_MARKER}"
+    const val PLAYER2_RATING_KEY = "${PLAYER2_MARKER}R"
+    const val PLAYER2_TEAM_KEY = "${PLAYER2_MARKER}T"
+    const val KOMI_KEY = "KM"
+    const val DATE_KEY = "DT"
+    const val GAME_COMMENT_KEY = "GC"
+    const val PLACE_KEY = "PC"
+    const val EVENT_KEY = "EV"
+    const val OPENING_KEY = "ON"
+    const val ANNOTATOR_KEY = "AN"
+    const val COPYRIGHT_KEY = "CP"
+    const val SOURCE_KEY = "SO"
+    const val TIME_LIMIT_KEY = "TL"
+    const val APP_INFO_KEY = "AP"
+
+    val propertyInfos: Map<String, SgfPropertyInfo> = mapOf(
+        GAME_MODE_KEY to SgfPropertyInfo("Game Mode", SgfPropertyType.Number),
+        FILE_FORMAT_KEY to SgfPropertyInfo("File Format", SgfPropertyType.Number),
+        CHARSET_KEY to SgfPropertyInfo( "Charset"),
+        SIZE_KEY to SgfPropertyInfo( "Size", SgfPropertyType.Size),
+        RULES_KEY to SgfPropertyInfo( "Rules"),
+        RESULT_KEY to SgfPropertyInfo( "Result"),
+        GAME_NAME_KEY to SgfPropertyInfo( "Game Name"),
+        PLAYER1_NAME_KEY to SgfPropertyInfo( "Player1 Name"),
+        PLAYER1_RATING_KEY to SgfPropertyInfo( "Player1 Rating", SgfPropertyType.Double),
+        PLAYER1_TEAM_KEY to SgfPropertyInfo( "Player1 Team"),
+        PLAYER2_NAME_KEY to SgfPropertyInfo( "Player2 Name"),
+        PLAYER2_RATING_KEY to SgfPropertyInfo( "Player2 Rating", SgfPropertyType.Double),
+        PLAYER2_TEAM_KEY to SgfPropertyInfo( "Player2 Team"),
+        KOMI_KEY to SgfPropertyInfo( "Komi", SgfPropertyType.Double),
+        DATE_KEY to SgfPropertyInfo( "Date"),
+        GAME_COMMENT_KEY to SgfPropertyInfo( "Game Comment", SgfPropertyType.Text),
+        PLACE_KEY to SgfPropertyInfo( "Place"),
+        EVENT_KEY to SgfPropertyInfo( "Event"),
+        OPENING_KEY to SgfPropertyInfo("Opening"),
+        ANNOTATOR_KEY to SgfPropertyInfo("Annotator"),
+        COPYRIGHT_KEY to SgfPropertyInfo("Copyright"),
+        SOURCE_KEY to SgfPropertyInfo("Source"),
+        TIME_LIMIT_KEY to SgfPropertyInfo("Time Limit", SgfPropertyType.Double),
+        APP_INFO_KEY to SgfPropertyInfo("App Info", SgfPropertyType.AppInfo),
+    )
+
+    val propertyInfoToKey: Map<SgfPropertyInfo, String> = propertyInfos.entries.associateBy({ it.value }) { it.key }.also {
+        require(it.size == propertyInfos.size)
+    }
+}
+
+class SgfProperty<T>(val info: SgfPropertyInfo, val value: T?, val rawValue: String?)
