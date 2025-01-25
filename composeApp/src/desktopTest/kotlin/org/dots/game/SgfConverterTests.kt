@@ -15,7 +15,7 @@ class SgfConverterTests {
     @Test
     fun gameInfo() {
         val gameInfo = parseAndConvert(
-            "(;GM[40]FF[4]CA[UTF-8]SZ[17:21]RU[russian]GN[Test Game]PB[Player1]BR[256]BT[Player1's Team]PW[Player2]WR[512]WT[Player2's Team]KM[0.5]DT[2025-01-19]GC[A game for SGF parser testing]PC[Amsterdam, Netherlands]EV[Test event]ON[Empty]AN[Ivan Kochurkin]CP[@]SO[https://zagram.org/eidokropki/index.html]TL[300]AP[https\\://zagram.org/eidokropki/index.html:1])",
+            "(;GM[40]FF[4]CA[UTF-8]SZ[17:21]RU[russian]GN[Test Game]PB[Player1]BR[256]BT[Player1's Team]PW[Player2]WR[512]WT[Player2's Team]KM[0.5]DT[2025-01-19]GC[A game for SGF parser testing]C[Comment to node]PC[Amsterdam, Netherlands]EV[Test event]ON[Empty]AN[Ivan Kochurkin]CP[@]SO[https://zagram.org/eidokropki/index.html]TM[300]OT[0+25]AP[https\\://zagram.org/eidokropki/index.html:1])",
             ).single()
         with (gameInfo) {
             assertEquals(17, rules.width)
@@ -30,13 +30,15 @@ class SgfConverterTests {
             assertEquals(0.5, komi)
             assertEquals("2025-01-19", date)
             assertEquals("A game for SGF parser testing", description)
+            assertEquals("Comment to node", comment)
             assertEquals("Amsterdam, Netherlands", place)
             assertEquals("Test event", event)
             assertEquals("Empty", opening)
             assertEquals("Ivan Kochurkin", annotator)
             assertEquals("@", copyright)
             assertEquals("https://zagram.org/eidokropki/index.html", source)
-            assertEquals(300.0, timeLimit)
+            assertEquals(300.0, time)
+            assertEquals("0+25", overtime)
             assertEquals(AppInfo("https://zagram.org/eidokropki/index.html", "1"), appInfo)
         }
     }

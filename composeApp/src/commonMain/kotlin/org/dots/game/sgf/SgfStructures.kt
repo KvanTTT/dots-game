@@ -88,13 +88,15 @@ object SgfMetaInfo {
     const val KOMI_KEY = "KM"
     const val DATE_KEY = "DT"
     const val GAME_COMMENT_KEY = "GC"
+    const val COMMENT_KEY = "C"
     const val PLACE_KEY = "PC"
     const val EVENT_KEY = "EV"
     const val OPENING_KEY = "ON"
     const val ANNOTATOR_KEY = "AN"
     const val COPYRIGHT_KEY = "CP"
     const val SOURCE_KEY = "SO"
-    const val TIME_LIMIT_KEY = "TL"
+    const val TIME_KEY = "TM"
+    const val OVERTIME_KEY = "OT"
     const val APP_INFO_KEY = "AP"
 
     val propertyInfos: Map<String, SgfPropertyInfo> = mapOf(
@@ -114,13 +116,15 @@ object SgfMetaInfo {
         KOMI_KEY to SgfPropertyInfo( "Komi", SgfPropertyType.Double),
         DATE_KEY to SgfPropertyInfo( "Date"),
         GAME_COMMENT_KEY to SgfPropertyInfo( "Game Comment", SgfPropertyType.Text),
+        COMMENT_KEY to SgfPropertyInfo( "Comment", SgfPropertyType.Text),
         PLACE_KEY to SgfPropertyInfo( "Place"),
         EVENT_KEY to SgfPropertyInfo( "Event"),
         OPENING_KEY to SgfPropertyInfo("Opening"),
         ANNOTATOR_KEY to SgfPropertyInfo("Annotator"),
         COPYRIGHT_KEY to SgfPropertyInfo("Copyright"),
         SOURCE_KEY to SgfPropertyInfo("Source"),
-        TIME_LIMIT_KEY to SgfPropertyInfo("Time Limit", SgfPropertyType.Double),
+        TIME_KEY to SgfPropertyInfo("Time", SgfPropertyType.Double),
+        OVERTIME_KEY to SgfPropertyInfo("Overtime"),
         APP_INFO_KEY to SgfPropertyInfo("App Info", SgfPropertyType.AppInfo),
     )
 

@@ -1,6 +1,5 @@
 package org.dots.game.sgf
 
-import org.dots.game.core.AppInfo
 import org.dots.game.core.Field
 import org.dots.game.core.GameInfo
 import org.dots.game.core.Rules
@@ -8,6 +7,7 @@ import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_KEY
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_NAME
 import org.dots.game.sgf.SgfMetaInfo.ANNOTATOR_KEY
 import org.dots.game.sgf.SgfMetaInfo.APP_INFO_KEY
+import org.dots.game.sgf.SgfMetaInfo.COMMENT_KEY
 import org.dots.game.sgf.SgfMetaInfo.COPYRIGHT_KEY
 import org.dots.game.sgf.SgfMetaInfo.DATE_KEY
 import org.dots.game.sgf.SgfMetaInfo.EVENT_KEY
@@ -17,6 +17,7 @@ import org.dots.game.sgf.SgfMetaInfo.GAME_MODE_KEY
 import org.dots.game.sgf.SgfMetaInfo.GAME_NAME_KEY
 import org.dots.game.sgf.SgfMetaInfo.KOMI_KEY
 import org.dots.game.sgf.SgfMetaInfo.OPENING_KEY
+import org.dots.game.sgf.SgfMetaInfo.OVERTIME_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLACE_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_NAME_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_RATING_KEY
@@ -26,7 +27,7 @@ import org.dots.game.sgf.SgfMetaInfo.PLAYER2_RATING_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_TEAM_KEY
 import org.dots.game.sgf.SgfMetaInfo.SIZE_KEY
 import org.dots.game.sgf.SgfMetaInfo.SOURCE_KEY
-import org.dots.game.sgf.SgfMetaInfo.TIME_LIMIT_KEY
+import org.dots.game.sgf.SgfMetaInfo.TIME_KEY
 import org.dots.game.sgf.SgfMetaInfo.propertyInfoToKey
 import org.dots.game.sgf.SgfMetaInfo.propertyInfos
 
@@ -144,13 +145,15 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
                 komi = KOMI_KEY.getPropertyValue(),
                 date = DATE_KEY.getPropertyValue(),
                 description = GAME_COMMENT_KEY.getPropertyValue(),
+                comment = COMMENT_KEY.getPropertyValue(),
                 place = PLACE_KEY.getPropertyValue(),
                 event = EVENT_KEY.getPropertyValue(),
                 opening = OPENING_KEY.getPropertyValue(),
                 annotator = ANNOTATOR_KEY.getPropertyValue(),
                 copyright = COPYRIGHT_KEY.getPropertyValue(),
                 source = SOURCE_KEY.getPropertyValue(),
-                timeLimit = TIME_LIMIT_KEY.getPropertyValue(),
+                time = TIME_KEY.getPropertyValue(),
+                overtime = OVERTIME_KEY.getPropertyValue(),
                 appInfo = APP_INFO_KEY.getPropertyValue(),
                 rules = rules,
             )
