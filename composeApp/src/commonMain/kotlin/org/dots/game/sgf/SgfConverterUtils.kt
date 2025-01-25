@@ -1,5 +1,29 @@
 package org.dots.game.sgf
 
+import org.dots.game.core.AppInfo
+
+fun String.convertAppInfo(): AppInfo {
+    // Handle escaping
+    var colonIndex = -1
+    do {
+        colonIndex = indexOf(':', colonIndex + 1)
+        if (colonIndex == -1) break
+        if (elementAtOrNull(colonIndex - 1) != '\\') break
+    } while (true)
+
+    val name: String
+    val version: String?
+    if (colonIndex != -1) {
+        name = substring(0, colonIndex) .convertSimpleText()
+        version = substring(colonIndex + 1).convertSimpleText()
+    } else {
+        name = this
+        version = null
+    }
+
+    return AppInfo(name, version)
+}
+
 fun String.convertSimpleText(): String = convertTextInternal(simpleText = true)
 
 fun String.convertText(): String = convertTextInternal(simpleText = false)
@@ -8,8 +32,8 @@ private fun String.convertTextInternal(simpleText: Boolean): String {
     return buildString {
         var index = 0
 
-        fun skipNextIfNeeded(charToCheck: Char) {
-            if (this@convertTextInternal.elementAtOrNull(index + 1) == charToCheck) {
+        fun skipNewLineIfNeeded() {
+            if (this@convertTextInternal.elementAtOrNull(index + 1) == '\n') {
                 index++
             }
         }
@@ -21,16 +45,15 @@ private fun String.convertTextInternal(simpleText: Boolean): String {
                     val nextChar = this@convertTextInternal.elementAtOrNull(index + 1)
                     if (nextChar == '\r') {
                         index++
-                        skipNextIfNeeded('\n')
+                        skipNewLineIfNeeded()
                     } else if (nextChar == '\n') {
                         index++
-                        skipNextIfNeeded('\r')
                     }
                 }
                 '\r' -> {
                     if (simpleText) {
                         append(" ")
-                        skipNextIfNeeded('\n')
+                        skipNewLineIfNeeded()
                     } else {
                         append(char)
                     }
@@ -38,7 +61,6 @@ private fun String.convertTextInternal(simpleText: Boolean): String {
                 '\n' -> {
                     if (simpleText) {
                         append(" ")
-                        skipNextIfNeeded('\r')
                     } else {
                         append(char)
                     }
@@ -83,6 +105,9 @@ fun CharSequence.buildLineOffsets(): List<Int> {
     }
 }
 
+/**
+ * The behavior is unspecified for out-of-bound input (for internal usage)
+ */
 fun Int.getLineColumn(lineOffsets: List<Int>): LineColumn {
     lineOffsets.binarySearch { it.compareTo(this) }.let { lineOffset ->
         return if (lineOffset < 0) {

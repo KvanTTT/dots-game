@@ -323,28 +323,6 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         return Pair(width, height)
     }
 
-    private fun String.convertAppInfo(): AppInfo {
-        // Handle escaping
-        var colonIndex = -1
-        do {
-            colonIndex = indexOf(':', colonIndex + 1)
-            if (colonIndex == -1) break
-            if (elementAtOrNull(colonIndex - 1) != '\\') break
-        } while (true)
-
-        val name: String
-        val version: String?
-        if (colonIndex != -1) {
-            name = substring(0, colonIndex) .convertSimpleText()
-            version = substring(colonIndex + 1).convertSimpleText()
-        } else {
-            name = this
-            version = null
-        }
-
-        return AppInfo(name, version)
-    }
-
     private fun SgfPropertyInfo.reportPropertyDiagnostic(message: String, textSpan: TextSpan, severity: SgfDiagnosticSeverity) {
         val propertyKey: String
         val propertyNameInfix: String
