@@ -17,7 +17,7 @@ class FieldWithEmptyCapturing() : FieldTests() {
         """)
 
         assertEquals(0, field.player1Score)
-        assertNull(field.makeMove(1, 1, Player.First))
-        assertNull(field.makeMove(1, 1, Player.Second))
+        assertNull(field.makeMove(2, 2, Player.First))
+        assertNull(field.makeMove(2, 2, Player.Second))
     }
 }

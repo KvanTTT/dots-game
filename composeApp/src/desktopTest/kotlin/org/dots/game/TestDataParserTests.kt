@@ -34,10 +34,10 @@ class TestDataParserTests {
         assertEquals(4, testDataField.height)
         assertEquals(
             listOf(
-                TestMove(1, 1, Player.First),
-                TestMove(2, 1, Player.Second),
-                TestMove(1, 2, Player.Second),
                 TestMove(2, 2, Player.First),
+                TestMove(3, 2, Player.Second),
+                TestMove(2, 3, Player.Second),
+                TestMove(3, 3, Player.First),
             ),
             testDataField.moves
         )
@@ -54,10 +54,10 @@ class TestDataParserTests {
 
         assertEquals(
             listOf(
-                TestMove(1, 1, Player.First),
-                TestMove(1, 2, Player.Second),
                 TestMove(2, 2, Player.First),
-                TestMove(2, 1, Player.Second),
+                TestMove(2, 3, Player.Second),
+                TestMove(3, 3, Player.First),
+                TestMove(3, 2, Player.Second),
             ),
             testDataField.moves
         )

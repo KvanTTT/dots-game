@@ -1,5 +1,6 @@
 package org.dots.game.infrastructure
 
+import org.dots.game.core.Field
 import org.dots.game.core.Player
 import org.dots.game.core.Position
 import kotlin.collections.iterator
@@ -38,7 +39,7 @@ object TestDataParser {
                     }
                 }
 
-                val testMove = TestMove(Position(cellIndex, lineIndex), player)
+                val testMove = TestMove(Position(cellIndex + Field.OFFSET, lineIndex + Field.OFFSET), player)
 
                 if (cell.length > 1) {
                     val parsedMoveNumber = cell.drop(1).toUIntOrNull()?.toInt()

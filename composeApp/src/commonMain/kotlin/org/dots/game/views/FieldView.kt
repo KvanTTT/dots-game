@@ -76,7 +76,7 @@ fun FieldView(currentMove: MoveResult?, moveMode: MoveMode, fieldViewData: Field
                             PointerEventType.Press -> {
                                 val fieldPosition = event.toFieldPositionIfFree(field, currentDensity)
                                 if (fieldPosition != null &&
-                                    field.makeMoveInternal(fieldPosition, field.getCurrentPlayer(moveMode.getMovePlayer())) != null
+                                    field.makeMoveUnsafe(fieldPosition, field.getCurrentPlayer(moveMode.getMovePlayer())) != null
                                 ) {
                                     onMovePlaced(field.lastMove!!)
                                 }
@@ -165,7 +165,7 @@ private fun Grid(field: Field) {
 @Composable
 private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings) {
     for (moveResult in field.moveSequence) {
-        val dotOffset = moveResult.position.toDpOffset(field)
+        val dotOffset = moveResult.position.toDpOffset()
         Box(Modifier
             .offset(dotOffset.x - dotRadius, dotOffset.y - dotRadius)
             .size(dotSize)
@@ -180,24 +180,28 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
             var maxX: Int = Int.MIN_VALUE
             var maxY: Int = Int.MIN_VALUE
 
-            val denormalizedPositions = buildList {
-                for (position in base.closurePositions) {
-                    val denormalizedPosition = with(field) { position.denormalize() }.also { add(it) }
+            // Drop out-of-bounds drawing
+            fun Position.coerceInRealSize() = Position(
+                x.coerceIn(Field.OFFSET, field.width),
+                y.coerceIn(Field.OFFSET, field.height),
+            )
 
-                    if (denormalizedPosition.x < minX) minX = denormalizedPosition.x
-                    if (denormalizedPosition.x > maxX) maxX = denormalizedPosition.x
-                    if (denormalizedPosition.y < minY) minY = denormalizedPosition.y
-                    if (denormalizedPosition.y > maxY) maxY = denormalizedPosition.y
-                }
+            for (position in base.closurePositions) {
+                val (x, y) = position.coerceInRealSize()
+                if (x < minX) minX = x
+                if (x > maxX) maxX = x
+                if (y < minY) minY = y
+                if (y > maxY) maxY = y
             }
 
             val xCount = (maxX - minX).toFloat()
             val yCount = (maxY - minY).toFloat()
 
             val polygonShape = GenericShape { size, _ ->
-                for ((index, denormalizedPosition) in denormalizedPositions.withIndex()) {
-                    val x = (denormalizedPosition.x - minX) / xCount * size.width
-                    val y = (denormalizedPosition.y - minY) / yCount * size.height
+                for ((index, position) in base.closurePositions.withIndex()) {
+                    val coercedPosition = position.coerceInRealSize()
+                    val x = (coercedPosition.x - minX) / xCount * size.width
+                    val y = (coercedPosition.y - minY) / yCount * size.height
                     if (index == 0) {
                         moveTo(x, y)
                     } else {
@@ -206,20 +210,19 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
                 }
             }
 
-            val xGraphical = minX.toGraphical()
-            val yGraphical = minY.toGraphical()
+            val offsetGraphical = Position(minX, minY).toDpOffset()
 
             Box(
                 Modifier
-                    .offset(xGraphical, yGraphical)
-                    .size(maxX.toGraphical() - xGraphical, maxY.toGraphical() - yGraphical)
+                    .offset(offsetGraphical.x, offsetGraphical.y)
+                    .size(cellSize * (maxX - minX), cellSize * (maxY - minY))
                     .background(uiSettings.toColor(moveResult.player).copy(alpha = baseAlpha), polygonShape)
             )
         }
     }
 
     currentMove?.let {
-        val dpOffset = it.position.toDpOffset(field)
+        val dpOffset = it.position.toDpOffset()
         Box(Modifier
             .offset(dpOffset.x - lastMoveRadius, dpOffset.y - lastMoveRadius)
             .size(lastMoveDotSize)
@@ -232,7 +235,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
 private fun Pointer(position: Position?, moveMode: MoveMode, field: Field, uiSettings: UiSettings) {
     if (position == null) return
 
-    val dpOffset = position.toDpOffset(field)
+    val dpOffset = position.toDpOffset()
     val currentPlayer = field.getCurrentPlayer(moveMode.getMovePlayer())
     Box(Modifier
         .offset(dpOffset.x - dotRadius, dpOffset.y - dotRadius)
@@ -241,14 +244,9 @@ private fun Pointer(position: Position?, moveMode: MoveMode, field: Field, uiSet
     )
 }
 
-private fun Position.toDpOffset(field: Field): DpOffset {
-    val denormalized = with(field) {
-        this@toDpOffset.denormalize()
-    }
-    return DpOffset(denormalized.x.toGraphical(), denormalized.y.toGraphical())
+private fun Position.toDpOffset(): DpOffset {
+    return DpOffset((x - Field.OFFSET).toGraphical(), (y - Field.OFFSET).toGraphical())
 }
-
-private fun Int.toGraphical(): Dp = cellSize * this + fieldPadding
 
 private fun PointerEvent.toFieldPositionIfFree(field: Field, currentDensity: Density): Position? {
     val offset = changes.first().position
@@ -257,6 +255,8 @@ private fun PointerEvent.toFieldPositionIfFree(field: Field, currentDensity: Den
         val x = round((offset.x.toDp() - fieldPadding) / cellSize).toInt()
         val y = round((offset.y.toDp() - fieldPadding) / cellSize).toInt()
 
-        return field.positionIfWithinBoundsAndFree(x, y)
+        return field.positionIfWithinBoundsAndFree(x + Field.OFFSET, y + Field.OFFSET)
     }
 }
+
+private fun Int.toGraphical(): Dp = cellSize * this + fieldPadding

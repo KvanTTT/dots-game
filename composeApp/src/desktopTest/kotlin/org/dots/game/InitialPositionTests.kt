@@ -13,21 +13,21 @@ class InitialPositionTests {
     @Test
     fun crossOnMinimalField() {
         with (Field(Rules(2, 2, initialPosition = InitialPosition.Cross))) {
-            checkCross(0, 0)
+            checkCross(1, 1)
         }
     }
 
     @Test
     fun crossOnEvenField() {
         with (Field(Rules(8, 8, initialPosition = InitialPosition.Cross))) {
-            checkCross(3, 3)
+            checkCross(4, 4)
         }
     }
 
     @Test
     fun crossOnOddField() {
         with (Field(Rules(9, 9, initialPosition = InitialPosition.Cross))) {
-            checkCross(3, 3)
+            checkCross(4, 4)
         }
     }
 
@@ -39,9 +39,9 @@ class InitialPositionTests {
     private fun Field.checkCross(x: Int, y: Int) {
         val firstPlayerPlaced = Player.First.createPlacedState()
         val secondPlayerPlaced = Player.Second.createPlacedState()
-        Position(x, y).normalize().getState().checkPlaced(firstPlayerPlaced)
-        Position(x, y + 1).normalize().getState().checkPlaced(secondPlayerPlaced)
-        Position(x + 1, x + 1).normalize().getState().checkPlaced(firstPlayerPlaced)
-        Position(x + 1, y).normalize().getState().checkPlaced(secondPlayerPlaced)
+        Position(x, y).getState().checkPlaced(firstPlayerPlaced)
+        Position(x, y + 1).getState().checkPlaced(secondPlayerPlaced)
+        Position(x + 1, x + 1).getState().checkPlaced(firstPlayerPlaced)
+        Position(x + 1, y).getState().checkPlaced(secondPlayerPlaced)
     }
 }

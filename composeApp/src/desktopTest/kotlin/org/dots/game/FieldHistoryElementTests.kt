@@ -174,7 +174,7 @@ class FieldHistoryElementTests {
     }
 
     private fun FieldHistory.makeMove(x: Int, y: Int): Node {
-        assertTrue(add(field.makeMoveInternal(Position(x, y))!!))
+        assertTrue(add(field.makeMoveUnsafe(Position(x, y))!!))
         return currentNode
     }
 }

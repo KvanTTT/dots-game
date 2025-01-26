@@ -119,6 +119,6 @@ class FieldHistoryTests : FieldTests() {
     }
 
     private fun FieldHistory.makeMove(x: Int, y: Int): Boolean {
-        return add(field.makeMoveInternal(Position(x, y))!!)
+        return add(field.makeMoveUnsafe(Position(x, y))!!)
     }
 }

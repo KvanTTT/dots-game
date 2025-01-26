@@ -2,15 +2,15 @@ package org.dots.game.core
 
 class Field(val rules: Rules = Rules.Standard) {
     companion object {
+        const val OFFSET: Int = 1
         const val MAX_WIDTH = (1 shl Position.COORDINATE_BITS_COUNT) - 2
         const val MAX_HEIGHT = (1 shl Position.COORDINATE_BITS_COUNT) - 2
     }
 
-    val fieldOffset: Int = 1
     val width: Int = rules.width
     val height: Int = rules.height
-    val realWidth: Int = width + fieldOffset * 2
-    val realHeight: Int = height + fieldOffset * 2
+    val realWidth: Int = width + OFFSET * 2
+    val realHeight: Int = height + OFFSET * 2
     val initialMovesCount: Int
 
     // Initialize field as a primitive int array with expanded borders to get rid of extra range checks and boxing
@@ -34,11 +34,11 @@ class Field(val rules: Rules = Rules.Standard) {
         }
 
         if (rules.initialPosition == InitialPosition.Cross) {
-            val startPosition = Position(width / 2 - 1, height / 2 - 1).normalize()
-            makeMoveInternal(startPosition, Player.First)
-            makeMoveInternal(Position(startPosition.x + 1, startPosition.y), Player.Second)
-            makeMoveInternal(Position(startPosition.x + 1, startPosition.y + 1), Player.First)
-            makeMoveInternal(Position(startPosition.x, startPosition.y + 1), Player.Second)
+            val startPosition = Position(width / 2, height / 2)
+            makeMoveUnsafe(startPosition, Player.First)
+            makeMoveUnsafe(Position(startPosition.x + 1, startPosition.y), Player.Second)
+            makeMoveUnsafe(Position(startPosition.x + 1, startPosition.y + 1), Player.First)
+            makeMoveUnsafe(Position(startPosition.x, startPosition.y + 1), Player.Second)
         }
 
         initialMovesCount = moveResults.size
@@ -58,13 +58,16 @@ class Field(val rules: Rules = Rules.Standard) {
     var player2Score: Int = 0
         private set
 
+    /**
+     * Valid real positions starts from `1`, but not from `0`. `0` is reserved for internal purposes.
+     */
     fun makeMove(x: Int, y: Int, player: Player? = null): MoveResult? {
         val position = positionIfWithinBoundsAndFree(x, y) ?: return null
-        return makeMoveInternal(position, player)?.denormalize()
+        return makeMoveUnsafe(position, player)
     }
 
     fun positionIfWithinBoundsAndFree(x: Int, y: Int): Position? {
-        return if (x < 0 || x >= width || y < 0 || y >= height) null else Position(x, y).normalize().takeIf {
+        return if (x < OFFSET || x >= width + OFFSET || y < OFFSET || y >= height + OFFSET) null else Position(x, y).takeIf {
             it.getState().checkValidMove()
         }
     }
@@ -74,42 +77,23 @@ class Field(val rules: Rules = Rules.Standard) {
     }
 
     fun unmakeMove(): MoveResult? {
-        return unmakeMoveInternal()?.denormalize()
-    }
+        if (currentMoveNumber == 0) return null
 
-    fun MoveResult.denormalize(): MoveResult? {
-        return MoveResult(
-            position.denormalize(),
-            player,
-            number,
-            positionPreviousState,
-            bases.map { base ->
-                Base(
-                    base.player,
-                    base.playerDiff,
-                    base.oppositePlayerDiff,
-                    base.closurePositions.map { it.denormalize() },
-                    base.territoryPreviousStates.entries.associate { it.key.denormalize() to it.value },
-                    base.isEmpty
-                )
+        val moveResult = moveResults.removeLast()
+
+        for (base in moveResult.bases) {
+            for ((position, previousState) in base.territoryPreviousStates) {
+                position.setState(previousState)
             }
-        )
+            updateScoreCount(base.player, base.playerDiff, base.oppositePlayerDiff, rollback = true)
+        }
+
+        moveResult.position.setState(moveResult.positionPreviousState)
+
+        return moveResult
     }
 
-    fun Position.normalize(): Position {
-        return Position(x + fieldOffset, y + fieldOffset)
-    }
-
-    fun Position.denormalize(): Position {
-        val newX = x - fieldOffset
-        val newY = y - fieldOffset
-        return Position(
-            if (newX < 0) 0 else if (newX >= width) width - 1 else newX,
-            if (newY < 0) 0 else if (newY >= height) height - 1 else newY
-        )
-    }
-
-    internal fun makeMoveInternal(position: Position, player: Player? = null): MoveResult? {
+    internal fun makeMoveUnsafe(position: Position, player: Player? = null): MoveResult? {
         val currentPlayer = getCurrentPlayer(player)
 
         val originalState = position.getState()
@@ -127,23 +111,6 @@ class Field(val rules: Rules = Rules.Standard) {
         }
 
         return MoveResult(position, currentPlayer, currentMoveNumber, originalState, resultBases).also { moveResults.add(it) }
-    }
-
-    internal fun unmakeMoveInternal(): MoveResult? {
-        if (currentMoveNumber == 0) return null
-
-        val moveResult = moveResults.removeLast()
-
-        for (base in moveResult.bases) {
-            for ((position, previousState) in base.territoryPreviousStates) {
-                position.setState(previousState)
-            }
-            updateScoreCount(base.player, base.playerDiff, base.oppositePlayerDiff, rollback = true)
-        }
-
-        moveResult.position.setState(moveResult.positionPreviousState)
-
-        return moveResult
     }
 
     /**

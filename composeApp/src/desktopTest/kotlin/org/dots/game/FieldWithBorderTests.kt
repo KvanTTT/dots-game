@@ -61,7 +61,7 @@ class FieldWithBorderTests() : FieldTests() {
         """)
 
         assertEquals(2, field.player1Score)
-        assertNotNull(field.makeMove(3, 1, Player.Second))
+        assertNotNull(field.makeMove(4, 2, Player.Second))
         assertEquals(2, field.player1Score)
     }
 

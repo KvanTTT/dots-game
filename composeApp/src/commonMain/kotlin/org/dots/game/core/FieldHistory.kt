@@ -45,7 +45,7 @@ class FieldHistory(val field: Field) {
     fun next(): Boolean {
         val nextNode = currentNode.nextNodes.values.firstOrNull() ?: return false
         val moveResult = nextNode.moveResult!!
-        field.makeMoveInternal(moveResult.position, moveResult.player)
+        field.makeMoveUnsafe(moveResult.position, moveResult.player)
         currentNode = nextNode
         return true
     }
@@ -82,14 +82,14 @@ class FieldHistory(val field: Field) {
 
         val numberOfNodesToRollback = currentNode.number - commonRootNode.number
         (0 until numberOfNodesToRollback).forEach { i ->
-            requireNotNull(field.unmakeMoveInternal())
+            requireNotNull(field.unmakeMove())
             currentNode = currentNode.previousNode!!
         }
 
         for (nextNode in nextNodes) {
             val moveResult = nextNode.moveResult ?: continue
             val nextMovePosition = moveResult.position
-            requireNotNull(field.makeMoveInternal(nextMovePosition, moveResult.player))
+            requireNotNull(field.makeMoveUnsafe(nextMovePosition, moveResult.player))
             currentNode = currentNode.nextNodes.getValue(moveResult.position)
         }
 
