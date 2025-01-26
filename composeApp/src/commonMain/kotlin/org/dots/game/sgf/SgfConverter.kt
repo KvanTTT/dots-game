@@ -209,14 +209,30 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
                             propertyValue,
                             propertyValueToken
                         )
-                        else -> false
+                        else -> {
+                            if (intValue == null) {
+                                propertyInfo.reportPropertyDiagnostic(
+                                    "has incorrect format: `${propertyValue}`. Expected: Number.",
+                                    propertyValueToken.textSpan,
+                                    SgfDiagnosticSeverity.Warning,
+                                )
+                            }
+                            false
+                        }
                     }
 
                     intValue
                 }
 
-                // TODO: add diagnostics when conversion is failed
-                SgfPropertyType.Double -> propertyValue.toDoubleOrNull()
+                SgfPropertyType.Double -> propertyValue.toDoubleOrNull().also {
+                    if (it == null) {
+                        propertyInfo.reportPropertyDiagnostic(
+                            "has incorrect format: `${propertyValue}`. Expected: Real Number.",
+                            propertyValueToken.textSpan,
+                            SgfDiagnosticSeverity.Warning,
+                        )
+                    }
+                }
                 SgfPropertyType.SimpleText -> propertyValue.convertSimpleText()
                 SgfPropertyType.Text -> propertyValue.convertText()
                 SgfPropertyType.Size -> propertyValueToken.convertSize(propertyInfo)

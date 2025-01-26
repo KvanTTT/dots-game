@@ -10,7 +10,7 @@ import org.dots.game.sgf.SgfDiagnostic
 import org.dots.game.sgf.SgfParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SgfConverterTests {
@@ -281,6 +281,20 @@ class SgfConverterTests {
         assertEquals(2, gameInfo.player1InitialPositions.size)
         assertEquals(Position(13, 13), gameInfo.player1InitialPositions[0])
         assertEquals(Position(1, 2), gameInfo.player1InitialPositions[1])
+    }
+
+    @Test
+    fun incorrectFormatWarnings() {
+        val gameInfo = parseAndConvert(
+            "(;GM[40]FF[4]SZ[39:32]BR[asdf])", listOf(
+                SgfDiagnostic(
+                    "Property BR (Player1 Rating) has incorrect format: `asdf`. Expected: Real Number.",
+                    LineColumn(1, 26),
+                    SgfDiagnosticSeverity.Warning
+                ),
+            )
+        ).single()
+        assertNull(gameInfo.player1Rating)
     }
 
     private fun parseAndConvert(input: String, expectedDiagnostics: List<SgfDiagnostic> = emptyList()): List<GameInfo> {
