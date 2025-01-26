@@ -1,6 +1,6 @@
 package org.dots.game.core
 
-class Field(val rules: Rules = Rules.Standard) {
+class Field(val rules: Rules = Rules.Standard, onIncorrectInitialPosition: (Position, Player) -> Unit = { _, _ -> }) {
     companion object {
         const val OFFSET: Int = 1
         const val MAX_WIDTH = (1 shl Position.COORDINATE_BITS_COUNT) - 2
@@ -33,13 +33,16 @@ class Field(val rules: Rules = Rules.Standard) {
             }
         }
 
-        if (rules.initialPosition == InitialPosition.Cross) {
-            val startPosition = Position(width / 2, height / 2)
-            makeMoveUnsafe(startPosition, Player.First)
-            makeMoveUnsafe(Position(startPosition.x + 1, startPosition.y), Player.Second)
-            makeMoveUnsafe(Position(startPosition.x + 1, startPosition.y + 1), Player.First)
-            makeMoveUnsafe(Position(startPosition.x, startPosition.y + 1), Player.Second)
+        fun initializePosition(positions: List<Position>, player: Player) {
+            for (position in positions) {
+                if (makeMove(position, player) == null) {
+                    onIncorrectInitialPosition(position, player)
+                }
+            }
         }
+
+        initializePosition(rules.player1InitialPositions, Player.First)
+        initializePosition(rules.player2InitialPositions, Player.Second)
 
         initialMovesCount = moveResults.size
     }
@@ -61,12 +64,13 @@ class Field(val rules: Rules = Rules.Standard) {
     /**
      * Valid real positions starts from `1`, but not from `0`. `0` is reserved for internal purposes.
      */
-    fun makeMove(x: Int, y: Int, player: Player? = null): MoveResult? {
-        val position = positionIfWithinBoundsAndFree(x, y) ?: return null
+    fun makeMove(position: Position, player: Player? = null): MoveResult? {
+        val position = positionIfWithinBoundsAndFree(position) ?: return null
         return makeMoveUnsafe(position, player)
     }
 
-    fun positionIfWithinBoundsAndFree(x: Int, y: Int): Position? {
+    fun positionIfWithinBoundsAndFree(position: Position): Position? {
+        val (x, y) = position
         return if (x < OFFSET || x >= width + OFFSET || y < OFFSET || y >= height + OFFSET) null else Position(x, y).takeIf {
             it.getState().checkValidMove()
         }

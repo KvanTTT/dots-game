@@ -3,7 +3,6 @@ package org.dots.game
 import org.dots.game.core.EmptyHistoryElement
 import org.dots.game.core.Field
 import org.dots.game.core.FieldHistory
-import org.dots.game.core.InitialPosition
 import org.dots.game.core.Node
 import org.dots.game.core.NodeHistoryElement
 import org.dots.game.core.Position
@@ -169,7 +168,7 @@ class FieldHistoryElementTests {
     }
 
     private fun initializeFieldHistory(): FieldHistory {
-        val field = Field(Rules(8, 8, initialPosition = InitialPosition.Empty))
+        val field = Field(Rules(8, 8))
         return FieldHistory(field)
     }
 

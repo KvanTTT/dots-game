@@ -2,6 +2,7 @@ package org.dots.game
 
 import org.dots.game.core.Player
 import org.dots.game.core.Position
+import org.dots.game.core.x
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -16,7 +17,7 @@ class StandardFieldTests : FieldTests() {
             . . .
         """)
 
-        assertNull(field.makeMove(2, 2, Player.First))
+        assertNull(field.makeMove(2 x 2, Player.First))
     }
 
     @Test
@@ -36,7 +37,7 @@ class StandardFieldTests : FieldTests() {
             . . .
         """)
 
-        val moveResult = field.makeMove(2, 3, Player.First)!!
+        val moveResult = field.makeMove(2 x 3, Player.First)!!
         val base = moveResult.bases.single()
         assertEquals(
             listOf(Position(2, 3), Position(3, 2), Position(2, 1), Position(1, 2)),
@@ -89,7 +90,7 @@ class StandardFieldTests : FieldTests() {
             . . * . .
         """)
 
-        val moveResult = field.makeMove(3, 2, Player.First)!!
+        val moveResult = field.makeMove(3 x 2, Player.First)!!
         val bases = moveResult.bases
         assertEquals(3, bases.size)
         assertEquals(3, field.player1Score)
@@ -103,8 +104,8 @@ class StandardFieldTests : FieldTests() {
             . * * .
         """)
 
-        assertNull(field.makeMove(3, 2, Player.First))
-        assertNull(field.makeMove(3, 2, Player.Second))
+        assertNull(field.makeMove(3 x 2, Player.First))
+        assertNull(field.makeMove(3 x 2, Player.Second))
     }
 
     @Test
@@ -144,7 +145,7 @@ class StandardFieldTests : FieldTests() {
 
         assertEquals(1, field.player2Score)
 
-        assertNotNull(field.makeMove(4, 2, Player.First))
+        assertNotNull(field.makeMove(4 x 2, Player.First))
         assertEquals(2, field.player2Score)
     }
 
@@ -161,7 +162,7 @@ class StandardFieldTests : FieldTests() {
         """)
         assertEquals(1, field.player2Score)
 
-        assertNotNull(field.makeMove(4, 2, Player.First))
+        assertNotNull(field.makeMove(4 x 2, Player.First))
         assertEquals(2, field.player2Score)
     }
 
@@ -179,7 +180,7 @@ class StandardFieldTests : FieldTests() {
 
         assertEquals(1, field.player2Score)
 
-        assertNotNull(field.makeMove(4, 2, Player.First))
+        assertNotNull(field.makeMove(4 x 2, Player.First))
         assertEquals(2, field.player2Score)
     }
 
@@ -196,7 +197,7 @@ class StandardFieldTests : FieldTests() {
         """)
 
         assertEquals(2, field.player2Score)
-        assertNull(field.makeMove(8, 4, Player.First))
+        assertNull(field.makeMove(8 x 4, Player.First))
     }
 
     @Test
@@ -212,8 +213,8 @@ class StandardFieldTests : FieldTests() {
         """)
 
         assertEquals(1, field.player2Score)
-        assertNull(field.makeMove(8, 4, Player.First))
-        assertNull(field.makeMove(4, 4, Player.First))
+        assertNull(field.makeMove(8 x 4, Player.First))
+        assertNull(field.makeMove(4 x 4, Player.First))
     }
 
     @Test

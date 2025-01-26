@@ -255,7 +255,7 @@ private fun PointerEvent.toFieldPositionIfFree(field: Field, currentDensity: Den
         val x = round((offset.x.toDp() - fieldPadding) / cellSize).toInt()
         val y = round((offset.y.toDp() - fieldPadding) / cellSize).toInt()
 
-        return field.positionIfWithinBoundsAndFree(x + Field.OFFSET, y + Field.OFFSET)
+        return field.positionIfWithinBoundsAndFree(Position(x + Field.OFFSET, y + Field.OFFSET))
     }
 }
 

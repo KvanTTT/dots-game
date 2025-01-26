@@ -130,12 +130,17 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         return if (hasCriticalError || width == null || height == null) {
             null
         } else {
-            val rules = Rules(width, height)
-
             fun <T> String.getPropertyValue(): T? {
                 @Suppress("UNCHECKED_CAST")
                 return gameInfoProperties[this]?.value as? T
             }
+
+            val rules = Rules(
+                width,
+                height,
+                player1InitialPositions = PLAYER1_ADD_DOTS_KEY.getPropertyValue() ?: listOf(),
+                player2InitialPositions = PLAYER2_ADD_DOTS_KEY.getPropertyValue() ?: listOf(),
+            )
 
             GameInfo(
                 gameName = GAME_NAME_KEY.getPropertyValue(),
@@ -159,8 +164,6 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
                 overtime = OVERTIME_KEY.getPropertyValue(),
                 appInfo = APP_INFO_KEY.getPropertyValue(),
                 rules = rules,
-                player1InitialPositions = PLAYER1_ADD_DOTS_KEY.getPropertyValue() ?: listOf(),
-                player2InitialPositions = PLAYER2_ADD_DOTS_KEY.getPropertyValue() ?: listOf(),
             )
         }
     }

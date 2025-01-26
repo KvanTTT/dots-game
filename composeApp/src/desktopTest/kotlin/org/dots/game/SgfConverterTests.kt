@@ -233,18 +233,18 @@ class SgfConverterTests {
 
     @Test
     fun initialPositionsAreCorrect() {
-        val gameInfo = parseAndConvert(
+        val rules = parseAndConvert(
             "(;GM[40]FF[4]SZ[100:100]AB[az][mm]AW[AZ][])"
-        ).single()
-        assertEquals(2, gameInfo.player1InitialPositions.size)
-        assertEquals(Position(1, 26), gameInfo.player1InitialPositions[0])
-        assertEquals(Position(13, 13), gameInfo.player1InitialPositions[1])
-        assertEquals(Position(27, 52), gameInfo.player2InitialPositions.single())
+        ).single().rules
+        assertEquals(2, rules.player1InitialPositions.size)
+        assertEquals(Position(1, 26), rules.player1InitialPositions[0])
+        assertEquals(Position(13, 13), rules.player1InitialPositions[1])
+        assertEquals(Position(27, 52), rules.player2InitialPositions.single())
     }
 
     @Test
     fun initialPositionsAreIncorrect() {
-        val gameInfo = parseAndConvert(
+        val rules = parseAndConvert(
             "(;GM[40]FF[4]SZ[39:32]AB[a!]AW[-Z][1234])", listOf(
                 SgfDiagnostic(
                     "Property AB (Player1 initial dots) has incorrect y coordinate `!`.",
@@ -262,14 +262,14 @@ class SgfConverterTests {
                     SgfDiagnosticSeverity.Error
                 )
             )
-        ).single()
-        assertTrue(gameInfo.player1InitialPositions.isEmpty())
-        assertTrue(gameInfo.player2InitialPositions.isEmpty())
+        ).single().rules
+        assertTrue(rules.player1InitialPositions.isEmpty())
+        assertTrue(rules.player2InitialPositions.isEmpty())
     }
 
     @Test
     fun initialPositionsOverwriting() {
-        val gameInfo = parseAndConvert(
+        val rules = parseAndConvert(
             "(;GM[40]FF[4]SZ[39:32]AB[ab][mm][ab])", listOf(
                 SgfDiagnostic(
                     "Property AB (Player1 initial dots) value `ab` overwrites one the previous position.",
@@ -277,10 +277,10 @@ class SgfConverterTests {
                     SgfDiagnosticSeverity.Warning
                 ),
             )
-        ).single()
-        assertEquals(2, gameInfo.player1InitialPositions.size)
-        assertEquals(Position(13, 13), gameInfo.player1InitialPositions[0])
-        assertEquals(Position(1, 2), gameInfo.player1InitialPositions[1])
+        ).single().rules
+        assertEquals(2, rules.player1InitialPositions.size)
+        assertEquals(Position(13, 13), rules.player1InitialPositions[0])
+        assertEquals(Position(1, 2), rules.player1InitialPositions[1])
     }
 
     @Test

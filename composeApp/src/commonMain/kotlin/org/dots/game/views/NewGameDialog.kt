@@ -2,7 +2,6 @@ package org.dots.game.views
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.Card
 import androidx.compose.material.Checkbox
 import androidx.compose.material.DropdownMenu
@@ -28,9 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import org.dots.game.core.Field
-import org.dots.game.core.InitialPosition
+import org.dots.game.core.InitialPositionType
 import org.dots.game.core.Rules
+import org.dots.game.core.generateDefaultInitialPosition
 import kotlin.math.round
 
 @Composable
@@ -42,16 +40,16 @@ fun NewGameDialog(
     val maxWidth = 48
     val minHeight = 3
     val maxHeight = 48
-    val rules = Rules.Standard
+    val standardRules = Rules.Standard
 
-    var width by remember { mutableStateOf(rules.width) }
-    var height by remember { mutableStateOf(rules.height) }
-    var captureByBorder by remember { mutableStateOf(rules.captureByBorder) }
-    var captureEmptyBase by remember { mutableStateOf(rules.captureEmptyBase) }
+    var width by remember { mutableStateOf(standardRules.width) }
+    var height by remember { mutableStateOf(standardRules.height) }
+    var captureByBorder by remember { mutableStateOf(standardRules.captureByBorder) }
+    var captureEmptyBase by remember { mutableStateOf(standardRules.captureEmptyBase) }
 
     var initialPositionExpanded by remember { mutableStateOf(false) }
-    val initialPositionItems = InitialPosition.entries
-    var initialPositionSelected by remember { mutableStateOf(rules.initialPosition) }
+    val initialPositionTypeItems = InitialPositionType.entries
+    var initialPositionTypeSelected by remember { mutableStateOf(InitialPositionType.Cross) }
 
     @Composable
     fun SetupDimension(isWidth: Boolean) {
@@ -95,14 +93,14 @@ fun NewGameDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Initial position: ", Modifier.fillMaxWidth(0.5f))
                     Box(Modifier.fillMaxWidth().background(Color.LightGray).clickable(onClick = { initialPositionExpanded = true })) {
-                        Text(initialPositionSelected.toString(), Modifier.align(Alignment.Center))
+                        Text(initialPositionTypeSelected.toString(), Modifier.align(Alignment.Center))
                         DropdownMenu(
                             initialPositionExpanded,
                             onDismissRequest = { initialPositionExpanded = false },
                         ) {
-                            initialPositionItems.forEachIndexed { _, initialPositionType ->
+                            initialPositionTypeItems.forEachIndexed { _, initialPositionType ->
                                 DropdownMenuItem(onClick = {
-                                    initialPositionSelected = initialPositionType
+                                    initialPositionTypeSelected = initialPositionType
                                     initialPositionExpanded = false
                                 }) {
                                     Text(initialPositionType.toString())
@@ -123,7 +121,10 @@ fun NewGameDialog(
                 }
 
                 TextButton(
-                    onClick = { onConfirmation(Rules(width, height, captureByBorder, captureEmptyBase, initialPositionSelected)) },
+                    onClick = {
+                        val (player1InitialPositions, player2InitialPositions) = initialPositionTypeSelected.generateDefaultInitialPosition(width, height)!!
+                        onConfirmation(Rules(width, height, captureByBorder, captureEmptyBase, player1InitialPositions, player2InitialPositions))
+                    },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {
                     Text("Create new game")

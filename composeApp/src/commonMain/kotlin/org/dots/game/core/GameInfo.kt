@@ -22,8 +22,6 @@ class GameInfo(
     val overtime: String?,
     val appInfo: AppInfo?,
     val rules: Rules,
-    val player1InitialPositions: List<Position>,
-    val player2InitialPositions: List<Position>,
 )
 
 data class AppInfo(val name: String, val version: String?)

@@ -23,3 +23,5 @@ value class Position private constructor(val position: Int) {
     operator fun component1(): Int = x
     operator fun component2(): Int = y
 }
+
+infix fun Int.x(that: Int): Position = Position(this, that)

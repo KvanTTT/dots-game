@@ -1,6 +1,7 @@
 package org.dots.game
 
 import org.dots.game.core.Player
+import org.dots.game.core.x
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -17,7 +18,7 @@ class FieldWithEmptyCapturing() : FieldTests() {
         """)
 
         assertEquals(0, field.player1Score)
-        assertNull(field.makeMove(2, 2, Player.First))
-        assertNull(field.makeMove(2, 2, Player.Second))
+        assertNull(field.makeMove(2 x 2, Player.First))
+        assertNull(field.makeMove(2 x 2, Player.Second))
     }
 }
