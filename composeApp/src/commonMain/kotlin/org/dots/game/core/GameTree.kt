@@ -1,9 +1,9 @@
 package org.dots.game.core
 
-class FieldHistory(val field: Field) {
-    val rootNode: Node = Node(null, null, 0, mutableMapOf())
-    val allNodes: MutableSet<Node> = mutableSetOf(rootNode)
-    var currentNode: Node = rootNode
+class GameTree(val field: Field) {
+    val rootNode: GameTreeNode = GameTreeNode(null, null, 0, mutableMapOf())
+    val allNodes: MutableSet<GameTreeNode> = mutableSetOf(rootNode)
+    var currentNode: GameTreeNode = rootNode
         private set
 
     /**
@@ -17,7 +17,7 @@ class FieldHistory(val field: Field) {
         var result: Boolean
         currentNode = if (existingNode == null) {
             result = true
-            Node(move, previousNode = currentNode, move.number - field.initialMovesCount + 1).also {
+            GameTreeNode(move, previousNode = currentNode, move.number - field.initialMovesCount + 1).also {
                 currentNode.nextNodes[position] = it
                 allNodes.add(it)
             }
@@ -54,7 +54,7 @@ class FieldHistory(val field: Field) {
      * @return `false` if @param[targetNode] is a @property[currentNode] or it's an unrelated node,
      * otherwise perform switching to the passed node and returns `true`
      */
-    fun switch(targetNode: Node): Boolean {
+    fun switch(targetNode: GameTreeNode): Boolean {
         if (targetNode == currentNode) return false
 
         val reversedCurrentNodes = buildSet {
@@ -65,7 +65,7 @@ class FieldHistory(val field: Field) {
             }
         }
 
-        var commonRootNode: Node? = null
+        var commonRootNode: GameTreeNode? = null
         val nextNodes = buildList {
             targetNode.walkMovesReversed { node ->
                 if (reversedCurrentNodes.contains(node)) {
@@ -105,7 +105,7 @@ class FieldHistory(val field: Field) {
     fun remove(): Boolean {
         if (currentNode == rootNode) return false
 
-        fun removeRecursively(node: Node) {
+        fun removeRecursively(node: GameTreeNode) {
             require(allNodes.remove(node))
             for (nextNode in node.nextNodes.values) {
                 removeRecursively(nextNode)
@@ -123,7 +123,7 @@ class FieldHistory(val field: Field) {
         return true
     }
 
-    private inline fun Node.walkMovesReversed(action: (Node) -> Boolean) {
+    private inline fun GameTreeNode.walkMovesReversed(action: (GameTreeNode) -> Boolean) {
         var move = this
         var distance = 0
         do {
@@ -135,11 +135,11 @@ class FieldHistory(val field: Field) {
     }
 }
 
-class Node(
+class GameTreeNode(
     val moveResult: MoveResult?,
-    val previousNode: Node?,
+    val previousNode: GameTreeNode?,
     val number: Int,
-    val nextNodes: MutableMap<Position, Node> = mutableMapOf(),
+    val nextNodes: MutableMap<Position, GameTreeNode> = mutableMapOf(),
 ) {
     val isRoot = moveResult == null
 

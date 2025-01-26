@@ -1,8 +1,8 @@
 package org.dots.game
 
 import org.dots.game.core.Field
-import org.dots.game.core.FieldHistory
-import org.dots.game.core.Node
+import org.dots.game.core.GameTree
+import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Position
 import org.dots.game.core.Rules
 import kotlin.test.Test
@@ -10,10 +10,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class FieldHistoryTests : FieldTests() {
+class GameTreeTests : FieldTests() {
     @Test
     fun addBackNextCommands() {
-        with(initializeFieldHistory()) {
+        with(initializeGameTree()) {
             assertTrue(makeMove(1, 1))
             assertTrue(back())
             assertFalse(back()) // False because there are no more moves
@@ -29,16 +29,16 @@ class FieldHistoryTests : FieldTests() {
 
     @Test
     fun switchOnTheSameNode() {
-        val fieldHistory = initializeFieldHistory()
+        val gameTree = initializeGameTree()
 
-        fieldHistory.makeMove(1, 1)
-        val currentNode = fieldHistory.currentNode
-        assertFalse(fieldHistory.switch(currentNode)) // No switch on the same node
+        gameTree.makeMove(1, 1)
+        val currentNode = gameTree.currentNode
+        assertFalse(gameTree.switch(currentNode)) // No switch on the same node
     }
 
     @Test
     fun switchOnPreviousAndNextNode() {
-        with(initializeFieldHistory()) {
+        with(initializeGameTree()) {
             makeMove(1, 1)
             val firstMoveNode = currentNode
 
@@ -56,7 +56,7 @@ class FieldHistoryTests : FieldTests() {
 
     @Test
     fun switchOnDifferentBranches() {
-        with (initializeFieldHistory()) {
+        with (initializeGameTree()) {
             makeMove(1, 1)
             val firstMoveNode = currentNode
 
@@ -74,23 +74,22 @@ class FieldHistoryTests : FieldTests() {
 
     @Test
     fun switchOnUnrelatedNode() {
-        val fieldHistory = initializeFieldHistory()
+        val gameTree = initializeGameTree()
 
-        fieldHistory.makeMove(1, 1)
-        fieldHistory.makeMove(2, 2)
+        gameTree.makeMove(1, 1)
+        gameTree.makeMove(2, 2)
 
-        assertFalse(fieldHistory.switch(Node(null, null, 0))) // Try switching to unrelated node, no change
+        assertFalse(gameTree.switch(GameTreeNode(null, null, 0))) // Try switching to unrelated node, no change
     }
 
     @Test
     fun removeRootNode() {
-        val fieldHistory = initializeFieldHistory()
-        assertFalse(fieldHistory.remove())
+        assertFalse(initializeGameTree().remove())
     }
 
     @Test
     fun removeBranch() {
-        with(initializeFieldHistory()) {
+        with(initializeGameTree()) {
             makeMove(1, 1)
             val nodeToRemove = currentNode
 
@@ -112,12 +111,12 @@ class FieldHistoryTests : FieldTests() {
         }
     }
 
-    private fun initializeFieldHistory(): FieldHistory {
+    private fun initializeGameTree(): GameTree {
         val field = Field(Rules(4, 4))
-        return FieldHistory(field)
+        return GameTree(field)
     }
 
-    private fun FieldHistory.makeMove(x: Int, y: Int): Boolean {
+    private fun GameTree.makeMove(x: Int, y: Int): Boolean {
         return add(field.makeMoveUnsafe(Position(x, y))!!)
     }
 }

@@ -36,8 +36,8 @@ private val lineThickness = 1.dp
 private val nodeRadius = stepSize * nodeRatio
 private val nodeSize = nodeRadius * 2
 
-private val fieldHistoryViewWidth = 300.dp
-private val fieldHistoryViewHeight = 200.dp
+private val gameTreeViewWidth = 300.dp
+private val gameTreeViewHeight = 200.dp
 private val scrollbarSize = 10.dp
 
 private val horizontalLineModifier = Modifier
@@ -60,10 +60,10 @@ private val selectedNodeModifier = Modifier
     .zIndex( 2f)
 
 @Composable
-fun FieldHistoryView(
-    currentNode: Node?,
-    fieldHistory: FieldHistory,
-    fieldHistoryViewData: FieldHistoryViewData,
+fun GameTreeView(
+    currentNode: GameTreeNode?,
+    gameTree: GameTree,
+    gameTreeViewData: GameTreeViewData,
     uiSettings: UiSettings,
     onChangeCurrentNode: () -> Unit
 ) {
@@ -72,11 +72,11 @@ fun FieldHistoryView(
     Box(
         Modifier
             .padding(top = 10.dp)
-            .size(fieldHistoryViewWidth, fieldHistoryViewHeight)
+            .size(gameTreeViewWidth, gameTreeViewHeight)
             .focusRequester(requester)
             .focusable()
             .onKeyEvent { keyEvent ->
-                handleKeyEvent(keyEvent, fieldHistory).also {
+                handleKeyEvent(keyEvent, gameTree).also {
                     if (it) {
                         onChangeCurrentNode()
                     }
@@ -89,44 +89,44 @@ fun FieldHistoryView(
             .horizontalScroll(horizontalScrollState)
             .verticalScroll(verticalScrollState)
             .padding(end = scrollbarSize, bottom = scrollbarSize)
-            .size(fieldHistoryViewData.size)
+            .size(gameTreeViewData.size)
         ) {
             ConnectionsAndNodes(
-                fieldHistory,
-                fieldHistoryViewData.fieldHistoryElements,
+                gameTree,
+                gameTreeViewData.elements,
                 onChangeCurrentNode,
                 uiSettings
             )
-            CurrentNode(currentNode, fieldHistoryViewData)
+            CurrentNode(currentNode, gameTreeViewData)
         }
 
         HorizontalScrollbar(horizontalScrollState, Modifier
             .align(Alignment.BottomStart)
-            .size(fieldHistoryViewWidth - scrollbarSize, scrollbarSize)
+            .size(gameTreeViewWidth - scrollbarSize, scrollbarSize)
         )
         VerticalScrollbar(verticalScrollState, Modifier
             .align(Alignment.TopEnd)
-            .size(scrollbarSize, fieldHistoryViewHeight - scrollbarSize)
+            .size(scrollbarSize, gameTreeViewHeight - scrollbarSize)
         )
     }
-    LaunchedEffect(fieldHistory) {
+    LaunchedEffect(gameTree) {
         requester.requestFocus()
     }
 }
 
-class FieldHistoryViewData(fieldHistory: FieldHistory) {
-    val fieldHistoryElements: FieldHistoryElements = fieldHistory.getHistoryElements(mainBranchIsAlwaysStraight = true)
+class GameTreeViewData(gameTree: GameTree) {
+    val elements: GameTreeElements = gameTree.getElements(mainBranchIsAlwaysStraight = true)
 
     val size: DpSize = DpSize(
-        stepSize * (fieldHistoryElements.size - 1) + nodeSize,
-        stepSize * (fieldHistoryElements.maxOf { yLine -> yLine.size } - 1) + nodeSize
+        stepSize * (elements.size - 1) + nodeSize,
+        stepSize * (elements.maxOf { yLine -> yLine.size } - 1) + nodeSize
     )
 
-    val nodeToIndexMap: Map<Node, Pair<Int, Int>> by lazy {
+    val nodeToIndexMap: Map<GameTreeNode, Pair<Int, Int>> by lazy {
         buildMap {
-            for (xIndex in fieldHistoryElements.indices) {
-                for ((yIndex, element) in fieldHistoryElements[xIndex].withIndex()) {
-                    val node = (element as? NodeHistoryElement)?.node ?: continue
+            for (xIndex in elements.indices) {
+                for ((yIndex, element) in elements[xIndex].withIndex()) {
+                    val node = (element as? NodeGameTreeElement)?.node ?: continue
                     this[node] = xIndex to yIndex
                 }
             }
@@ -136,19 +136,19 @@ class FieldHistoryViewData(fieldHistory: FieldHistory) {
 
 @Composable
 private fun ConnectionsAndNodes(
-    fieldHistory: FieldHistory,
-    fieldHistoryElements: FieldHistoryElements,
+    gameTree: GameTree,
+    gameTreeElements: GameTreeElements,
     onChangeCurrentNode: () -> Unit,
     uiSettings: UiSettings
 ) {
-    for (xIndex in fieldHistoryElements.indices) {
+    for (xIndex in gameTreeElements.indices) {
         val offsetX = stepSize * xIndex
 
-        for ((yIndex, element) in fieldHistoryElements[xIndex].withIndex()) {
+        for ((yIndex, element) in gameTreeElements[xIndex].withIndex()) {
             val offsetY = stepSize * yIndex
 
             when (element) {
-                is NodeHistoryElement -> {
+                is NodeGameTreeElement -> {
                     val node = element.node
 
                     val color: Color
@@ -175,9 +175,9 @@ private fun ConnectionsAndNodes(
                             .offset(offsetX, offsetY)
                             .then(nodeModifier)
                             .background(color, CircleShape)
-                            .pointerInput(fieldHistory) {
+                            .pointerInput(gameTree) {
                                 detectTapGestures(onPress = {
-                                    if (fieldHistory.switch(node)) {
+                                    if (gameTree.switch(node)) {
                                         onChangeCurrentNode()
                                     }
                                 })
@@ -187,7 +187,7 @@ private fun ConnectionsAndNodes(
                     }
                 }
 
-                is VerticalLineHistoryElement -> {
+                is VerticalLineGameTreeElement -> {
                     // Render vertical connection line
                     Box(
                         Modifier
@@ -196,28 +196,28 @@ private fun ConnectionsAndNodes(
                     )
                 }
 
-                is EmptyHistoryElement -> {}
+                is EmptyGameTreeElement -> {}
             }
         }
     }
 }
 
 @Composable
-private fun CurrentNode(currentNode: Node?, fieldHistoryViewData: FieldHistoryViewData) {
+private fun CurrentNode(currentNode: GameTreeNode?, gameTreeViewData: GameTreeViewData) {
     if (currentNode == null) return
-    val (xIndex, yIndex) = fieldHistoryViewData.nodeToIndexMap.getValue(currentNode)
+    val (xIndex, yIndex) = gameTreeViewData.nodeToIndexMap.getValue(currentNode)
 
     Box(
         Modifier.offset(stepSize * xIndex, stepSize * yIndex).then(selectedNodeModifier)
     )
 }
 
-private fun handleKeyEvent(keyEvent: KeyEvent, fieldHistory: FieldHistory): Boolean {
+private fun handleKeyEvent(keyEvent: KeyEvent, gameTree: GameTree): Boolean {
     if (keyEvent.type == KeyEventType.KeyDown) {
         if (keyEvent.key == Key.DirectionLeft) {
-            return fieldHistory.back()
+            return gameTree.back()
         } else if (keyEvent.key == Key.DirectionRight) {
-            return fieldHistory.next()
+            return gameTree.next()
         }
     }
 

@@ -28,11 +28,11 @@ fun App() {
         var start by rememberSaveable { mutableStateOf(true) }
         var field: Field by rememberSaveable {  mutableStateOf(Field(startRules)) }
         var fieldViewData: FieldViewData by rememberSaveable { mutableStateOf<FieldViewData>(FieldViewData(field)) }
-        var fieldHistory: FieldHistory by rememberSaveable { mutableStateOf(FieldHistory(field)) }
-        var fieldHistoryViewData: FieldHistoryViewData by rememberSaveable { mutableStateOf(FieldHistoryViewData(fieldHistory)) }
+        var gameTree: GameTree by rememberSaveable { mutableStateOf(GameTree(field)) }
+        var gameTreeViewData: GameTreeViewData by rememberSaveable { mutableStateOf(GameTreeViewData(gameTree)) }
 
         var lastMove: MoveResult? by remember { mutableStateOf<MoveResult?>(null) }
-        var currentNode by remember { mutableStateOf<Node?>(null) }
+        var currentGameTreeNode by remember { mutableStateOf<GameTreeNode?>(null) }
         var player1Score by remember { mutableStateOf("0") }
         var player2Score by remember { mutableStateOf("0") }
         val showNewGameDialog = remember { mutableStateOf(false) }
@@ -42,21 +42,21 @@ fun App() {
             player1Score = field.player1Score.toString()
             player2Score = field.player2Score.toString()
             lastMove = field.lastMove
-            currentNode = fieldHistory.currentNode
+            currentGameTreeNode = gameTree.currentNode
         }
 
-        fun updateFieldAndHistory() {
+        fun updateFieldAndGameTree() {
             updateCurrentNode()
 
-            fieldHistoryViewData = FieldHistoryViewData(fieldHistory)
+            gameTreeViewData = GameTreeViewData(gameTree)
         }
 
-        fun initializeFieldAndHistory(rules: Rules) {
+        fun initializeFieldAndGameTree(rules: Rules) {
             field = Field(rules)
             fieldViewData = FieldViewData(field)
-            fieldHistory = FieldHistory(field)
+            gameTree = GameTree(field)
 
-            updateFieldAndHistory()
+            updateFieldAndGameTree()
         }
 
         if (showNewGameDialog.value) {
@@ -66,11 +66,11 @@ fun App() {
                 },
                 onConfirmation = { rules ->
                     showNewGameDialog.value = false
-                    initializeFieldAndHistory(rules)
+                    initializeFieldAndGameTree(rules)
                 }
             )
         } else if (start) {
-            initializeFieldAndHistory(startRules)
+            initializeFieldAndGameTree(startRules)
             start = false
         }
 
@@ -83,8 +83,8 @@ fun App() {
                 }
                 Row {
                     FieldView(lastMove, moveMode, fieldViewData, uiSettings) {
-                        fieldHistory.add(it)
-                        updateFieldAndHistory()
+                        gameTree.add(it)
+                        updateFieldAndGameTree()
                     }
                 }
             }
@@ -98,7 +98,7 @@ fun App() {
                     Button(onClick = { showNewGameDialog.value = true }, playerButtonModifier) {
                         Text("New")
                     }
-                    Button(onClick = { initializeFieldAndHistory(field.rules) }, playerButtonModifier) {
+                    Button(onClick = { initializeFieldAndGameTree(field.rules) }, playerButtonModifier) {
                         Text("Reset")
                     }
                 }
@@ -138,7 +138,7 @@ fun App() {
                     }
                 }
 
-                FieldHistoryView(currentNode, fieldHistory, fieldHistoryViewData, uiSettings) {
+                GameTreeView(currentGameTreeNode, gameTree, gameTreeViewData, uiSettings) {
                     updateCurrentNode()
                 }
             }

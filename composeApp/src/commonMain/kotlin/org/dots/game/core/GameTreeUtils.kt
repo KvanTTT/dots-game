@@ -5,24 +5,24 @@ import kotlin.collections.List
 private const val X_OFFSET = 1
 private const val Y_OFFSET = 1
 
-typealias FieldHistoryElements = List<List<FieldHistoryElement>>
+typealias GameTreeElements = List<List<GameTreeElement>>
 
-sealed class FieldHistoryElement()
+sealed class GameTreeElement()
 
-data class NodeHistoryElement(val node: Node) : FieldHistoryElement() {
+data class NodeGameTreeElement(val node: GameTreeNode) : GameTreeElement() {
     override fun toString(): String = node.toString()
 }
 
-object VerticalLineHistoryElement : FieldHistoryElement() {
+object VerticalLineGameTreeElement : GameTreeElement() {
     override fun toString(): String = "|"
 }
 
-object EmptyHistoryElement : FieldHistoryElement() {
+object EmptyGameTreeElement : GameTreeElement() {
     override fun toString(): String = "Empty"
 }
 
 /**
- * @return a structure that represents drawing elements of the field history
+ * @return a structure that represents drawing elements of the game tree
  * The first `List` stands for X coordinate, the second `List` stands for Y coordinate.
  * The element could be node, vertical line or empty.
  *
@@ -30,10 +30,10 @@ object EmptyHistoryElement : FieldHistoryElement() {
  * The main branch is a branch composed of every first next node.
  * If it's `true`, then such branches are rendered as straight lines (see tests for clarity)
  */
-fun FieldHistory.getHistoryElements(mainBranchIsAlwaysStraight: Boolean = false): FieldHistoryElements {
-    val result = mutableListOf<MutableList<FieldHistoryElement>>(mutableListOf(NodeHistoryElement(rootNode)))
+fun GameTree.getElements(mainBranchIsAlwaysStraight: Boolean = false): GameTreeElements {
+    val result = mutableListOf<MutableList<GameTreeElement>>(mutableListOf(NodeGameTreeElement(rootNode)))
 
-    fun walk(node: Node, xIndex: Int) {
+    fun walk(node: GameTreeNode, xIndex: Int) {
         val currentYLine = result[xIndex]
 
         val nextNodes = node.nextNodes.values
@@ -42,7 +42,7 @@ fun FieldHistory.getHistoryElements(mainBranchIsAlwaysStraight: Boolean = false)
         for (nextNode in nextNodes) {
             val nextXIndex = xIndex + X_OFFSET
             val nextYLine = if (nextXIndex >= result.size) {
-                mutableListOf<FieldHistoryElement>().also { result.add(it) }
+                mutableListOf<GameTreeElement>().also { result.add(it) }
             } else {
                 result[nextXIndex]
             }
@@ -50,15 +50,15 @@ fun FieldHistory.getHistoryElements(mainBranchIsAlwaysStraight: Boolean = false)
             val currentYLineSize = currentYLine.size
             val nextYLineSize = nextYLine.size + Y_OFFSET
 
-            fun insertSpacesAndNode(yLine: MutableList<FieldHistoryElement>, maxYSize: Int, node: Node) {
+            fun insertSpacesAndNode(yLine: MutableList<GameTreeElement>, maxYSize: Int, node: GameTreeNode) {
                 val numberOfSpaces = maxYSize - yLine.size - 1
-                (0 until numberOfSpaces).forEach { yLine.add(EmptyHistoryElement) }
-                yLine.add(NodeHistoryElement(node))
+                (0 until numberOfSpaces).forEach { yLine.add(EmptyGameTreeElement) }
+                yLine.add(NodeGameTreeElement(node))
             }
 
-            fun insertVerticalLines(yLine: MutableList<FieldHistoryElement>, maxYSize: Int) {
+            fun insertVerticalLines(yLine: MutableList<GameTreeElement>, maxYSize: Int) {
                 val numberOfVerticalLines = maxYSize - yLine.size
-                (0 until numberOfVerticalLines).forEach { yLine.add(VerticalLineHistoryElement) }
+                (0 until numberOfVerticalLines).forEach { yLine.add(VerticalLineGameTreeElement) }
             }
 
             val maxYSize: Int
@@ -70,10 +70,10 @@ fun FieldHistory.getHistoryElements(mainBranchIsAlwaysStraight: Boolean = false)
                     // Realign parent nodes using the obtained new offset (`nextYLineSize`)
                     var xIndexOfMainBranch = xIndex
                     var yLineOfMainBranch = result[xIndex]
-                    var currentNode: Node
-                    var nodeToRealign: Node = node
+                    var currentNode: GameTreeNode
+                    var nodeToRealign: GameTreeNode = node
                     do {
-                        require((yLineOfMainBranch.removeLast() as NodeHistoryElement).node == nodeToRealign)
+                        require((yLineOfMainBranch.removeLast() as NodeGameTreeElement).node == nodeToRealign)
 
                         insertSpacesAndNode(yLineOfMainBranch, maxYSize, nodeToRealign)
 
