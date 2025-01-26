@@ -2,6 +2,7 @@ package org.dots.game
 
 import org.dots.game.core.AppInfo
 import org.dots.game.core.GameInfo
+import org.dots.game.core.Position
 import org.dots.game.sgf.SgfDiagnosticSeverity
 import org.dots.game.sgf.LineColumn
 import org.dots.game.sgf.SgfConverter
@@ -9,6 +10,7 @@ import org.dots.game.sgf.SgfDiagnostic
 import org.dots.game.sgf.SgfParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class SgfConverterTests {
@@ -227,6 +229,58 @@ class SgfConverterTests {
                 SgfDiagnostic("Property UP is unknown.", LineColumn(1, 37), SgfDiagnosticSeverity.Warning),
             )
         )
+    }
+
+    @Test
+    fun initialPositionsAreCorrect() {
+        val gameInfo = parseAndConvert(
+            "(;GM[40]FF[4]SZ[100:100]AB[az][mm]AW[AZ][])"
+        ).single()
+        assertEquals(2, gameInfo.player1InitialPositions.size)
+        assertEquals(Position(1, 26), gameInfo.player1InitialPositions[0])
+        assertEquals(Position(13, 13), gameInfo.player1InitialPositions[1])
+        assertEquals(Position(27, 52), gameInfo.player2InitialPositions.single())
+    }
+
+    @Test
+    fun initialPositionsAreIncorrect() {
+        val gameInfo = parseAndConvert(
+            "(;GM[40]FF[4]SZ[39:32]AB[a!]AW[-Z][1234])", listOf(
+                SgfDiagnostic(
+                    "Property AB (Player1 initial dots) has incorrect y coordinate `!`.",
+                    LineColumn(1, 27),
+                    SgfDiagnosticSeverity.Error
+                ),
+                SgfDiagnostic(
+                    "Property AW (Player2 initial dots) has incorrect x coordinate `-`.",
+                    LineColumn(1, 32),
+                    SgfDiagnosticSeverity.Error
+                ),
+                SgfDiagnostic(
+                    "Property AW (Player2 initial dots) has incorrect format: `1234`. Expected: `xy`, where coordinate in [a..zA..Z].",
+                    LineColumn(1, 36),
+                    SgfDiagnosticSeverity.Error
+                )
+            )
+        ).single()
+        assertTrue(gameInfo.player1InitialPositions.isEmpty())
+        assertTrue(gameInfo.player2InitialPositions.isEmpty())
+    }
+
+    @Test
+    fun initialPositionsOverwriting() {
+        val gameInfo = parseAndConvert(
+            "(;GM[40]FF[4]SZ[39:32]AB[ab][mm][ab])", listOf(
+                SgfDiagnostic(
+                    "Property AB (Player1 initial dots) value `ab` overwrites one the previous position.",
+                    LineColumn(1, 34),
+                    SgfDiagnosticSeverity.Warning
+                ),
+            )
+        ).single()
+        assertEquals(2, gameInfo.player1InitialPositions.size)
+        assertEquals(Position(13, 13), gameInfo.player1InitialPositions[0])
+        assertEquals(Position(1, 2), gameInfo.player1InitialPositions[1])
     }
 
     private fun parseAndConvert(input: String, expectedDiagnostics: List<SgfDiagnostic> = emptyList()): List<GameInfo> {

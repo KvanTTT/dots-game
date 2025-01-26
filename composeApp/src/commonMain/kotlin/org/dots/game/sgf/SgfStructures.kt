@@ -64,9 +64,15 @@ enum class SgfPropertyType {
     Text,
     Size,
     AppInfo,
+    Position,
 }
 
-data class SgfPropertyInfo(val name: String, val type: SgfPropertyType = SgfPropertyType.SimpleText, val isKnown: Boolean = true)
+data class SgfPropertyInfo(
+    val name: String,
+    val type: SgfPropertyType = SgfPropertyType.SimpleText,
+    val multipleValues: Boolean = false,
+    val isKnown: Boolean = true,
+)
 
 object SgfMetaInfo {
     const val PLAYER1_MARKER = 'B'
@@ -99,6 +105,9 @@ object SgfMetaInfo {
     const val OVERTIME_KEY = "OT"
     const val APP_INFO_KEY = "AP"
 
+    const val PLAYER1_ADD_DOTS_KEY = "A${PLAYER1_MARKER}"
+    const val PLAYER2_ADD_DOTS_KEY = "A${PLAYER2_MARKER}"
+
     val propertyInfos: Map<String, SgfPropertyInfo> = mapOf(
         GAME_MODE_KEY to SgfPropertyInfo("Game Mode", SgfPropertyType.Number),
         FILE_FORMAT_KEY to SgfPropertyInfo("File Format", SgfPropertyType.Number),
@@ -126,6 +135,9 @@ object SgfMetaInfo {
         TIME_KEY to SgfPropertyInfo("Time", SgfPropertyType.Double),
         OVERTIME_KEY to SgfPropertyInfo("Overtime"),
         APP_INFO_KEY to SgfPropertyInfo("App Info", SgfPropertyType.AppInfo),
+
+        PLAYER1_ADD_DOTS_KEY to SgfPropertyInfo("Player1 initial dots", SgfPropertyType.Position, multipleValues = true),
+        PLAYER2_ADD_DOTS_KEY to SgfPropertyInfo("Player2 initial dots", SgfPropertyType.Position, multipleValues = true),
     )
 
     val propertyInfoToKey: Map<SgfPropertyInfo, String> = propertyInfos.entries.associateBy({ it.value }) { it.key }.also {
@@ -133,4 +145,4 @@ object SgfMetaInfo {
     }
 }
 
-class SgfProperty<T>(val info: SgfPropertyInfo, val value: T?, val rawValue: String?)
+class SgfProperty<T>(val info: SgfPropertyInfo, val value: T?)

@@ -2,6 +2,7 @@ package org.dots.game.sgf
 
 import org.dots.game.core.Field
 import org.dots.game.core.GameInfo
+import org.dots.game.core.Position
 import org.dots.game.core.Rules
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_KEY
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_NAME
@@ -19,9 +20,11 @@ import org.dots.game.sgf.SgfMetaInfo.KOMI_KEY
 import org.dots.game.sgf.SgfMetaInfo.OPENING_KEY
 import org.dots.game.sgf.SgfMetaInfo.OVERTIME_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLACE_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER1_ADD_DOTS_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_NAME_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_RATING_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_TEAM_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER2_ADD_DOTS_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_NAME_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_RATING_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_TEAM_KEY
@@ -156,6 +159,8 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
                 overtime = OVERTIME_KEY.getPropertyValue(),
                 appInfo = APP_INFO_KEY.getPropertyValue(),
                 rules = rules,
+                player1InitialPositions = PLAYER1_ADD_DOTS_KEY.getPropertyValue() ?: listOf(),
+                player2InitialPositions = PLAYER2_ADD_DOTS_KEY.getPropertyValue() ?: listOf(),
             )
         }
     }
@@ -187,8 +192,7 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
             )
         }
 
-        var singleConvertedValue: Any? = null
-        var singleRawValue: String? = null
+        val convertedValues = mutableListOf<Any?>()
         for ((index, propertyValue) in value.withIndex()) {
             val propertyValueToken = propertyValue.propertyValueToken
             val propertyValue = propertyValueToken.value
@@ -211,17 +215,28 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
                     intValue
                 }
 
+                // TODO: add diagnostics when conversion is failed
                 SgfPropertyType.Double -> propertyValue.toDoubleOrNull()
                 SgfPropertyType.SimpleText -> propertyValue.convertSimpleText()
                 SgfPropertyType.Text -> propertyValue.convertText()
                 SgfPropertyType.Size -> propertyValueToken.convertSize(propertyInfo)
                 SgfPropertyType.AppInfo -> propertyValue.convertAppInfo()
+                SgfPropertyType.Position -> {
+                    propertyValueToken.convertPosition(propertyInfo)?.also { position ->
+                        if (convertedValues.removeAll { it == position }) {
+                            propertyInfo.reportPropertyDiagnostic(
+                                "value `${propertyValue}` overwrites one the previous position.",
+                                propertyValueToken.textSpan,
+                                SgfDiagnosticSeverity.Warning,
+                            )
+                        }
+                    }
+                }
             }
 
-            if (index == 0) {
-                singleConvertedValue = convertedValue
-                singleRawValue = propertyValue
-            } else {
+            convertedValue?.let { convertedValues.add(it) }
+
+            if (index > 0 && !propertyInfo.multipleValues) {
                 propertyInfo.reportPropertyDiagnostic(
                     "has duplicated value `$propertyValue` that's ignored.",
                     propertyValueToken.textSpan,
@@ -230,7 +245,13 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
             }
         }
 
-        return SgfProperty(propertyInfo, singleConvertedValue, singleRawValue) to reportedCriticalError
+        val resultValue = if (!propertyInfo.multipleValues) {
+            convertedValues.firstOrNull()
+        } else {
+            convertedValues
+        }
+
+        return SgfProperty(propertyInfo, resultValue) to reportedCriticalError
     }
 
     private fun validateGameMode(
@@ -324,6 +345,51 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
             }
         }
         return Pair(width, height)
+    }
+
+    private fun PropertyValueToken.convertPosition(propertyInfo: SgfPropertyInfo): Position? {
+        return when (value.length) {
+            0 -> null // Empty value is treated as pass
+            2 -> {
+                val x = value[0].convertToCoordinateOrNull()
+                val y = value[1].convertToCoordinateOrNull()
+                if (x != null && y != null) {
+                    Position(x, y)
+                } else {
+                    if (x == null) {
+                        propertyInfo.reportPropertyDiagnostic(
+                            "has incorrect x coordinate `${value[0]}`.",
+                            TextSpan(textSpan.start, 1),
+                            SgfDiagnosticSeverity.Error,
+                        )
+                    }
+                    if (y == null) {
+                        propertyInfo.reportPropertyDiagnostic(
+                            "has incorrect y coordinate `${value[1]}`.",
+                            TextSpan(textSpan.start + 1, 1),
+                            SgfDiagnosticSeverity.Error,
+                        )
+                    }
+                    null
+                }
+            }
+            else -> {
+                propertyInfo.reportPropertyDiagnostic(
+                    "has incorrect format: `${value}`. Expected: `xy`, where coordinate in [a..zA..Z].",
+                    textSpan,
+                    SgfDiagnosticSeverity.Error,
+                )
+                null
+            }
+        }
+    }
+
+    private fun Char.convertToCoordinateOrNull(): Int? {
+        return when {
+            this >= 'a' && this <= 'z' -> this - 'a' + Field.OFFSET
+            this >= 'A' && this <= 'Z' -> this - 'A' + ('z' - 'a' + 1) + Field.OFFSET
+            else -> null
+        }
     }
 
     private fun SgfPropertyInfo.reportPropertyDiagnostic(message: String, textSpan: TextSpan, severity: SgfDiagnosticSeverity) {
