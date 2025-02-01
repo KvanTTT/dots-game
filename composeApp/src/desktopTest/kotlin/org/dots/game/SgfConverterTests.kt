@@ -298,6 +298,22 @@ class SgfConverterTests {
         checkMoveDisregardExtraInfo(Position(1, 2), Player.Second, rules.initialMoves.single())
     }
 
+    @Test
+    fun initialPositionsIncorrectBecauseOfPlacedToCapturedTerriroty() {
+        // . .  *1 *2 .
+        // . *0 +6 +7 *3
+        // . .  *5 *4 .
+        parseAndConvert(
+            "(;GM[40]FF[4]SZ[39:32]AB[bb][ca][da][eb][dc][cc]AW[cb][db])", listOf(
+                SgfDiagnostic(
+                    "Property AW (Player2 initial dots) value `db` is incorrect. The dot at position `(4;2)` is already placed or captured.",
+                    LineColumn(1, 56),
+                    SgfDiagnosticSeverity.Error,
+                )
+            )
+        )
+    }
+
     private fun checkMoveDisregardExtraInfo(expectedPosition: Position, expectedPlayer: Player, actualMoveInfo: MoveInfo) {
         assertEquals(expectedPosition, actualMoveInfo.position)
         assertEquals(expectedPlayer, actualMoveInfo.player)

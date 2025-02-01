@@ -153,6 +153,14 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
             }
 
             val rules = Rules(width, height, initialMoves = initialMoves)
+            Field(rules) { errorMoveInfo ->
+                val (propertyInfo, textSpan) = errorMoveInfo.extraInfo as PropertyInfoAndTextSpan
+                propertyInfo.reportPropertyDiagnostic(
+                    "value `${textSpan.getText()}` is incorrect. The dot at position `${errorMoveInfo.position}` is already placed or captured.",
+                    textSpan,
+                    SgfDiagnosticSeverity.Error,
+                )
+            }
 
             GameInfo(
                 gameName = GAME_NAME_KEY.getPropertyValue(),
