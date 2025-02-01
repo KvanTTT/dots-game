@@ -25,3 +25,5 @@ class GameInfo(
 )
 
 data class AppInfo(val name: String, val version: String?)
+
+data class MoveInfo(val position: Position, val player: Player, val extraInfo: Any? = null)

@@ -1,5 +1,16 @@
 package org.dots.game.sgf
 
+import org.dots.game.core.Player
+import org.dots.game.sgf.SgfMetaInfo.PLAYER1_ADD_DOTS_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER1_NAME_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER1_RATING_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER1_TEAM_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER2_ADD_DOTS_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER2_NAME_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER2_RATING_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER2_TEAM_KEY
+import org.dots.game.sgf.SgfMetaInfo.propertyInfoToKey
+
 const val SUPPORTED_FILE_FORMAT = 4
 
 class SgfGameMode {
@@ -73,6 +84,14 @@ data class SgfPropertyInfo(
     val multipleValues: Boolean = false,
     val isKnown: Boolean = true,
 )
+
+fun SgfPropertyInfo.getPlayer(): Player {
+    return when (val key = propertyInfoToKey[this]) {
+        PLAYER1_NAME_KEY, PLAYER1_RATING_KEY, PLAYER1_TEAM_KEY, PLAYER1_ADD_DOTS_KEY -> Player.First
+        PLAYER2_NAME_KEY, PLAYER2_RATING_KEY, PLAYER2_TEAM_KEY, PLAYER2_ADD_DOTS_KEY -> Player.Second
+        else -> error("The function should be called only for player-related properties but not for `${key ?: name}`")
+    }
+}
 
 object SgfMetaInfo {
     const val PLAYER1_MARKER = 'B'

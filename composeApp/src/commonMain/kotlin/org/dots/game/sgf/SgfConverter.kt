@@ -2,6 +2,7 @@ package org.dots.game.sgf
 
 import org.dots.game.core.Field
 import org.dots.game.core.GameInfo
+import org.dots.game.core.MoveInfo
 import org.dots.game.core.Position
 import org.dots.game.core.Rules
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_KEY
@@ -36,7 +37,6 @@ import org.dots.game.sgf.SgfMetaInfo.propertyInfos
 
 class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter: (SgfDiagnostic) -> Unit) {
     companion object {
-
         /**
          * Returns `null` if a critical error occurs:
          *   * Unsupported file format (FF)
@@ -48,7 +48,9 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         }
     }
 
-    val lineOffsets by lazy(LazyThreadSafetyMode.NONE) { sgf.text.buildLineOffsets() }
+    private val lineOffsets by lazy(LazyThreadSafetyMode.NONE) { sgf.text.buildLineOffsets() }
+
+    private fun TextSpan.getText() = sgf.text.substring(start, end)
 
     fun convert(): List<GameInfo> {
         if (sgf.gameTree.isEmpty()) {
@@ -135,12 +137,22 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
                 return gameInfoProperties[this]?.value as? T
             }
 
-            val rules = Rules(
-                width,
-                height,
-                player1InitialPositions = PLAYER1_ADD_DOTS_KEY.getPropertyValue() ?: listOf(),
-                player2InitialPositions = PLAYER2_ADD_DOTS_KEY.getPropertyValue() ?: listOf(),
-            )
+            val initialMoves = buildList {
+                addAll(PLAYER1_ADD_DOTS_KEY.getPropertyValue<List<MoveInfo>>() ?: emptyList())
+                for (player2InitialMoveInfo in (PLAYER2_ADD_DOTS_KEY.getPropertyValue<List<MoveInfo>>() ?: emptyList())) {
+                    if (removeAll { it.position == player2InitialMoveInfo.position }) {
+                        val (propertyInfo, textSpan) = player2InitialMoveInfo.extraInfo as PropertyInfoAndTextSpan
+                        propertyInfo.reportPropertyDiagnostic(
+                            "value `${textSpan.getText()}` overwrites one the previous position of first player ${propertyInfos.getValue(PLAYER1_ADD_DOTS_KEY).getFullName()}.",
+                            textSpan,
+                            SgfDiagnosticSeverity.Warning,
+                        )
+                    }
+                    add(player2InitialMoveInfo)
+                }
+            }
+
+            val rules = Rules(width, height, initialMoves = initialMoves)
 
             GameInfo(
                 gameName = GAME_NAME_KEY.getPropertyValue(),
@@ -241,8 +253,8 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
                 SgfPropertyType.Size -> propertyValueToken.convertSize(propertyInfo)
                 SgfPropertyType.AppInfo -> propertyValue.convertAppInfo()
                 SgfPropertyType.Position -> {
-                    propertyValueToken.convertPosition(propertyInfo)?.also { position ->
-                        if (convertedValues.removeAll { it == position }) {
+                    propertyValueToken.convertPosition(propertyInfo)?.also { moveInfo ->
+                        if (convertedValues.removeAll { (it as MoveInfo).position == moveInfo.position }) {
                             propertyInfo.reportPropertyDiagnostic(
                                 "value `${propertyValue}` overwrites one the previous position.",
                                 propertyValueToken.textSpan,
@@ -366,14 +378,18 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         return Pair(width, height)
     }
 
-    private fun PropertyValueToken.convertPosition(propertyInfo: SgfPropertyInfo): Position? {
+    private fun PropertyValueToken.convertPosition(propertyInfo: SgfPropertyInfo): MoveInfo? {
         return when (value.length) {
             0 -> null // Empty value is treated as pass
             2 -> {
                 val x = value[0].convertToCoordinateOrNull()
                 val y = value[1].convertToCoordinateOrNull()
                 if (x != null && y != null) {
-                    Position(x, y)
+                    MoveInfo(
+                        Position(x, y),
+                        propertyInfo.getPlayer(),
+                        PropertyInfoAndTextSpan(propertyInfo, textSpan),
+                    )
                 } else {
                     if (x == null) {
                         propertyInfo.reportPropertyDiagnostic(
@@ -403,6 +419,8 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         }
     }
 
+    private data class PropertyInfoAndTextSpan(val propertyInfo: SgfPropertyInfo, val textSpan: TextSpan)
+
     private fun Char.convertToCoordinateOrNull(): Int? {
         return when {
             this >= 'a' && this <= 'z' -> this - 'a' + Field.OFFSET
@@ -412,6 +430,12 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
     }
 
     private fun SgfPropertyInfo.reportPropertyDiagnostic(message: String, textSpan: TextSpan, severity: SgfDiagnosticSeverity) {
+        val messageWithPropertyInfo = "Property ${getFullName()} $message"
+        val lineColumn = textSpan.start.getLineColumn(lineOffsets)
+        diagnosticReporter(SgfDiagnostic(messageWithPropertyInfo, lineColumn, severity))
+    }
+
+    private fun SgfPropertyInfo.getFullName(): String {
         val propertyKey: String
         val propertyNameInfix: String
         if (isKnown) {
@@ -421,9 +445,7 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
             propertyKey = name
             propertyNameInfix = ""
         }
-        val messageWithPropertyInfo = "Property ${propertyKey}${propertyNameInfix} $message"
-        val lineColumn = textSpan.start.getLineColumn(lineOffsets)
-        diagnosticReporter(SgfDiagnostic(messageWithPropertyInfo, lineColumn, severity))
+        return "$propertyKey$propertyNameInfix"
     }
 
     private fun reportDiagnostic(message: String, textSpan: TextSpan) {

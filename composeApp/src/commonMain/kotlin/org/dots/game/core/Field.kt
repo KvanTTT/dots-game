@@ -1,6 +1,6 @@
 package org.dots.game.core
 
-class Field(val rules: Rules = Rules.Standard, onIncorrectInitialPosition: (Position, Player) -> Unit = { _, _ -> }) {
+class Field(val rules: Rules = Rules.Standard, onIncorrectInitialMove: (MoveInfo) -> Unit = { _ -> }) {
     companion object {
         const val OFFSET: Int = 1
         const val MAX_WIDTH = (1 shl Position.COORDINATE_BITS_COUNT) - 2
@@ -33,16 +33,11 @@ class Field(val rules: Rules = Rules.Standard, onIncorrectInitialPosition: (Posi
             }
         }
 
-        fun initializePosition(positions: List<Position>, player: Player) {
-            for (position in positions) {
-                if (makeMove(position, player) == null) {
-                    onIncorrectInitialPosition(position, player)
-                }
+        for (moveInfo in rules.initialMoves) {
+            if (makeMove(moveInfo.position, moveInfo.player) == null) {
+                onIncorrectInitialMove(moveInfo)
             }
         }
-
-        initializePosition(rules.player1InitialPositions, Player.First)
-        initializePosition(rules.player2InitialPositions, Player.Second)
 
         initialMovesCount = moveResults.size
     }

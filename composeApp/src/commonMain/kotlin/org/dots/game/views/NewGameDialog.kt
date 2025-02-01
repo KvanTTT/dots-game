@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import org.dots.game.core.InitialPositionType
 import org.dots.game.core.Rules
-import org.dots.game.core.generateDefaultInitialPosition
+import org.dots.game.core.generateDefaultInitialPositions
 import kotlin.math.round
 
 @Composable
@@ -122,8 +122,8 @@ fun NewGameDialog(
 
                 TextButton(
                     onClick = {
-                        val (player1InitialPositions, player2InitialPositions) = initialPositionTypeSelected.generateDefaultInitialPosition(width, height)!!
-                        onConfirmation(Rules(width, height, captureByBorder, captureEmptyBase, player1InitialPositions, player2InitialPositions))
+                        val initialMoves = initialPositionTypeSelected.generateDefaultInitialPositions(width, height)!!
+                        onConfirmation(Rules(width, height, captureByBorder, captureEmptyBase, initialMoves))
                     },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {

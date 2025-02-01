@@ -8,8 +8,7 @@ class Rules(
     val height: Int = 32,
     val captureByBorder: Boolean = false,
     val captureEmptyBase: Boolean = false,
-    val player1InitialPositions: List<Position> = emptyList(),
-    val player2InitialPositions: List<Position> = emptyList(),
+    val initialMoves: List<MoveInfo> = emptyList(),
 ) {
     companion object {
         val Standard = Rules()
@@ -26,27 +25,24 @@ enum class InitialPositionType {
     Custom;
 }
 
-fun InitialPositionType.generateDefaultInitialPosition(width: Int, height: Int): Pair<List<Position>, List<Position>>? {
+fun InitialPositionType.generateDefaultInitialPositions(width: Int, height: Int): List<MoveInfo>? {
     when {
         this == Empty -> {
-            return Pair(emptyList(), emptyList())
+            return emptyList()
         }
         this == Cross -> {
             if (width < 2 || height < 2) return null
 
             val startPosition = Position(width / 2, height / 2)
-            val player1InitialPositions = listOf(
-                startPosition,
-                Position(startPosition.x + 1, startPosition.y + 1),
+            return listOf(
+                MoveInfo(startPosition, Player.First),
+                MoveInfo(Position(startPosition.x + 1, startPosition.y + 1), Player.First),
+                MoveInfo(Position(startPosition.x + 1, startPosition.y), Player.Second),
+                MoveInfo(Position(startPosition.x, startPosition.y + 1), Player.Second),
             )
-            val player2InitialPositions = listOf(
-                Position(startPosition.x + 1, startPosition.y),
-                Position(startPosition.x, startPosition.y + 1),
-            )
-            return player1InitialPositions to player2InitialPositions
         }
         else -> {
-            return Pair(emptyList(), emptyList())
+            return emptyList()
         }
     }
 }

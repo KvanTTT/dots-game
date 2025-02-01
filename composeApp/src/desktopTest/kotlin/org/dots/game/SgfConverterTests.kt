@@ -2,6 +2,8 @@ package org.dots.game
 
 import org.dots.game.core.AppInfo
 import org.dots.game.core.GameInfo
+import org.dots.game.core.MoveInfo
+import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.sgf.SgfDiagnosticSeverity
 import org.dots.game.sgf.LineColumn
@@ -236,10 +238,10 @@ class SgfConverterTests {
         val rules = parseAndConvert(
             "(;GM[40]FF[4]SZ[100:100]AB[az][mm]AW[AZ][])"
         ).single().rules
-        assertEquals(2, rules.player1InitialPositions.size)
-        assertEquals(Position(1, 26), rules.player1InitialPositions[0])
-        assertEquals(Position(13, 13), rules.player1InitialPositions[1])
-        assertEquals(Position(27, 52), rules.player2InitialPositions.single())
+        assertEquals(3, rules.initialMoves.size)
+        checkMoveDisregardExtraInfo(Position(1, 26), Player.First, rules.initialMoves[0])
+        checkMoveDisregardExtraInfo(Position(13, 13), Player.First,rules.initialMoves[1])
+        checkMoveDisregardExtraInfo(Position(27, 52), Player.Second,rules.initialMoves[2])
     }
 
     @Test
@@ -263,8 +265,7 @@ class SgfConverterTests {
                 )
             )
         ).single().rules
-        assertTrue(rules.player1InitialPositions.isEmpty())
-        assertTrue(rules.player2InitialPositions.isEmpty())
+        assertTrue(rules.initialMoves.isEmpty())
     }
 
     @Test
@@ -278,9 +279,28 @@ class SgfConverterTests {
                 ),
             )
         ).single().rules
-        assertEquals(2, rules.player1InitialPositions.size)
-        assertEquals(Position(13, 13), rules.player1InitialPositions[0])
-        assertEquals(Position(1, 2), rules.player1InitialPositions[1])
+        assertEquals(2, rules.initialMoves.size)
+        checkMoveDisregardExtraInfo(Position(13, 13), Player.First,rules.initialMoves[0])
+        checkMoveDisregardExtraInfo(Position(1, 2), Player.First,rules.initialMoves[1])
+    }
+
+    @Test
+    fun initialPositionsOfPlayer2OverwritesPlayer1() {
+        val rules = parseAndConvert(
+            "(;GM[40]FF[4]SZ[39:32]AB[ab]AW[ab])", listOf(
+                SgfDiagnostic(
+                    "Property AW (Player2 initial dots) value `ab` overwrites one the previous position of first player AB (Player1 initial dots).",
+                    LineColumn(1, 32),
+                    SgfDiagnosticSeverity.Warning
+                ),
+            )
+        ).single().rules
+        checkMoveDisregardExtraInfo(Position(1, 2), Player.Second, rules.initialMoves.single())
+    }
+
+    private fun checkMoveDisregardExtraInfo(expectedPosition: Position, expectedPlayer: Player, actualMoveInfo: MoveInfo) {
+        assertEquals(expectedPosition, actualMoveInfo.position)
+        assertEquals(expectedPlayer, actualMoveInfo.player)
     }
 
     @Test
