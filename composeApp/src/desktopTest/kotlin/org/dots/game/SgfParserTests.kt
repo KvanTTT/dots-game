@@ -3,8 +3,8 @@ package org.dots.game
 import org.dots.game.sgf.IdentifierToken
 import org.dots.game.sgf.LParenToken
 import org.dots.game.sgf.LSquareBracketToken
-import org.dots.game.sgf.PropertyValue
-import org.dots.game.sgf.UnparsedText
+import org.dots.game.sgf.SgfPropertyValueNode
+import org.dots.game.sgf.UnparsedTextToken
 import org.dots.game.sgf.RParenToken
 import org.dots.game.sgf.RSquareBracketToken
 import org.dots.game.sgf.SgfParser
@@ -47,17 +47,17 @@ class SgfParserTests {
 
     @Test
     fun unparsedText() {
-        fun check(expectedToken: UnparsedText, text: String) {
+        fun check(expectedToken: UnparsedTextToken, text: String) {
             val actualToken = SgfParser.parse(text).unparsedText!!
             checkTokens(expectedToken, actualToken)
         }
 
-        check(UnparsedText("---", TextSpan(0, 3)), "---")
-        check(UnparsedText("---", TextSpan(1, 3)), "(---")
-        check(UnparsedText("---", TextSpan(2, 3)), "(;---")
-        check(UnparsedText("---", TextSpan(4, 3)), "(;GM---")
+        check(UnparsedTextToken("---", TextSpan(0, 3)), "---")
+        check(UnparsedTextToken("---", TextSpan(1, 3)), "(---")
+        check(UnparsedTextToken("---", TextSpan(2, 3)), "(;---")
+        check(UnparsedTextToken("---", TextSpan(4, 3)), "(;GM---")
 
-        check(UnparsedText("---", TextSpan(2, 3)), "  ---")
+        check(UnparsedTextToken("---", TextSpan(2, 3)), "  ---")
     }
 
     @Test
@@ -112,7 +112,7 @@ class SgfParserTests {
         checkErrors(
             listOf(
                 RParenToken(TextSpan(10, 0)),
-                UnparsedText("---", TextSpan(10, 3))),
+                UnparsedTextToken("---", TextSpan(10, 3))),
             "(;GC[info]---"
         )
 
@@ -145,7 +145,7 @@ class SgfParserTests {
         checkTokens(PropertyValueToken("info1 info2 ", TextSpan(9, 12)), propertyValue.propertyValueToken)
     }
 
-    private fun parseAndGetPropertyValue(input: String): PropertyValue {
+    private fun parseAndGetPropertyValue(input: String): SgfPropertyValueNode {
         val root = SgfParser.parse(input)
         return root.gameTree.single().nodes.single().properties.single().value.single()
     }

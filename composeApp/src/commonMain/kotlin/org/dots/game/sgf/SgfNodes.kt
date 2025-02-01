@@ -1,8 +1,8 @@
 package org.dots.game.sgf
 
-abstract class SgfNode(val textSpan: TextSpan)
+abstract class SgfParsedNode(val textSpan: TextSpan)
 
-sealed class SgfToken(textSpan: TextSpan, val value: String) : SgfNode(textSpan) {
+sealed class SgfToken(textSpan: TextSpan, val value: String) : SgfParsedNode(textSpan) {
     open val isError: Boolean
         get() = textSpan.size == 0
 }
@@ -21,38 +21,38 @@ data class TextSpan(val start: Int, val size: Int) {
 }
 
 class SgfRoot(
-    val gameTree: List<GameTree>,
-    val unparsedText: UnparsedText?,
+    val gameTree: List<SgfGameTree>,
+    val unparsedText: UnparsedTextToken?,
     val text: CharSequence,
     textSpan: TextSpan,
-) : SgfNode(textSpan)
+) : SgfParsedNode(textSpan)
 
-class GameTree(
+class SgfGameTree(
     val lParen: LParenToken,
-    val nodes: List<Node>,
-    val childrenGameTrees: List<GameTree>,
+    val nodes: List<SgfNode>,
+    val childrenGameTrees: List<SgfGameTree>,
     val rParen: RParenToken,
     textSpan: TextSpan,
-) : SgfNode(textSpan)
+) : SgfParsedNode(textSpan)
 
-class Node(
+class SgfNode(
     val semicolon: SemicolonToken,
-    val properties: List<Property>,
+    val properties: List<SgfPropertyNode>,
     textSpan: TextSpan,
-) : SgfNode(textSpan)
+) : SgfParsedNode(textSpan)
 
-class Property(
+class SgfPropertyNode(
     val identifier: IdentifierToken,
-    val value: List<PropertyValue>,
+    val value: List<SgfPropertyValueNode>,
     textSpan: TextSpan,
-) : SgfNode(textSpan)
+) : SgfParsedNode(textSpan)
 
-class PropertyValue(
+class SgfPropertyValueNode(
     val lSquareBracket: LSquareBracketToken,
     val propertyValueToken: PropertyValueToken,
     val rSquareBracket: RSquareBracketToken,
     textSpan: TextSpan,
-) : SgfNode(textSpan)
+) : SgfParsedNode(textSpan)
 
 class LParenToken(textSpan: TextSpan) : SgfToken(textSpan, "(")
 
@@ -68,6 +68,6 @@ class RSquareBracketToken(textSpan: TextSpan) : SgfToken(textSpan, "]")
 
 class PropertyValueToken(value: String, textSpan: TextSpan) : SgfToken(textSpan, value)
 
-class UnparsedText(value: String, textSpan: TextSpan) : SgfToken(textSpan, value) {
+class UnparsedTextToken(value: String, textSpan: TextSpan) : SgfToken(textSpan, value) {
     override val isError: Boolean = true
 }

@@ -74,7 +74,7 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         }
     }
 
-    private fun convertGameInfo(node: Node): GameInfo? {
+    private fun convertGameInfo(node: SgfNode): GameInfo? {
         val gameInfoProperties = mutableMapOf<String, SgfProperty<*>>()
         var hasCriticalError = false
 
@@ -188,7 +188,7 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         }
     }
 
-    private fun Property.convert(): Pair<SgfProperty<*>, Boolean> {
+    private fun SgfPropertyNode.convert(): Pair<SgfProperty<*>, Boolean> {
         var reportedCriticalError = false
 
         val propertyIdentifier = identifier.value

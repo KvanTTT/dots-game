@@ -35,8 +35,8 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
             }
         }
 
-        val unparsedText = if (currentIndex < text.length) {
-            UnparsedText(
+        val unparsedTextToken = if (currentIndex < text.length) {
+            UnparsedTextToken(
                 text.substring(currentIndex),
                 TextSpan(currentIndex, text.length - currentIndex)
             ).also { it.reportIfError() }
@@ -45,14 +45,14 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
         }
 
         val textSpan = TextSpan.fromBounds(
-            (gameTrees.firstOrNull() ?: unparsedText)?.textSpan?.start ?: text.length,
-            (unparsedText ?: gameTrees.lastOrNull())?.textSpan?.end ?: text.length,
+            (gameTrees.firstOrNull() ?: unparsedTextToken)?.textSpan?.start ?: text.length,
+            (unparsedTextToken ?: gameTrees.lastOrNull())?.textSpan?.end ?: text.length,
         )
 
-        return SgfRoot(gameTrees, unparsedText, text, textSpan)
+        return SgfRoot(gameTrees, unparsedTextToken, text, textSpan)
     }
 
-    private fun parseGameTree(): GameTree {
+    private fun parseGameTree(): SgfGameTree {
         val lParen = LParenToken(matchChar('('))
 
         skipWhitespaces()
@@ -73,10 +73,10 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
 
         skipWhitespaces()
 
-        return GameTree(lParen, nodes, childrenGameTrees, rParen, textSpanFromNodes(lParen, rParen))
+        return SgfGameTree(lParen, nodes, childrenGameTrees, rParen, textSpanFromNodes(lParen, rParen))
     }
 
-    private fun parseNode(): Node {
+    private fun parseNode(): SgfNode {
         val semicolon = SemicolonToken(matchChar(';'))
 
         skipWhitespaces()
@@ -87,10 +87,10 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
             }
         }
 
-        return Node(semicolon, properties, textSpanFromNodes(semicolon, properties.lastOrNull() ?: semicolon))
+        return SgfNode(semicolon, properties, textSpanFromNodes(semicolon, properties.lastOrNull() ?: semicolon))
     }
 
-    private fun parseProperty(): Property {
+    private fun parseProperty(): SgfPropertyNode {
         val initialIndex = currentIndex
         currentIndex++
 
@@ -108,10 +108,10 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
             }
         }
 
-        return Property(identifier, values, textSpanFromNodes(identifier, values.lastOrNull() ?: identifier))
+        return SgfPropertyNode(identifier, values, textSpanFromNodes(identifier, values.lastOrNull() ?: identifier))
     }
 
-    private fun parsePropertyValue(): PropertyValue {
+    private fun parsePropertyValue(): SgfPropertyValueNode {
         val lSquareBracket = LSquareBracketToken(matchChar('['))
 
         val propertyValueToken = parsePropertyValueToken()
@@ -120,7 +120,7 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
 
         skipWhitespaces()
 
-        return PropertyValue(lSquareBracket, propertyValueToken, rSquareBracket, textSpanFromNodes(lSquareBracket, rSquareBracket))
+        return SgfPropertyValueNode(lSquareBracket, propertyValueToken, rSquareBracket, textSpanFromNodes(lSquareBracket, rSquareBracket))
     }
 
     private fun parsePropertyValueToken(): PropertyValueToken {
@@ -176,7 +176,7 @@ class SgfParser private constructor(val text: CharSequence, val errorReporter: (
         }
     }
 
-    private fun textSpanFromNodes(startNode: SgfNode, endNode: SgfNode): TextSpan {
+    private fun textSpanFromNodes(startNode: SgfParsedNode, endNode: SgfParsedNode): TextSpan {
         return TextSpan.fromBounds(startNode.textSpan.start, endNode.textSpan.end)
     }
 
