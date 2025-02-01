@@ -1,7 +1,9 @@
 package org.dots.game.sgf
 
 import org.dots.game.core.Field
+import org.dots.game.core.Game
 import org.dots.game.core.GameInfo
+import org.dots.game.core.GameTree
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Position
 import org.dots.game.core.Rules
@@ -43,7 +45,7 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
          *   * Unsupported mode (not Kropki)
          *   * Incorrect or unspecified size
          */
-        fun convert(sgf: SgfRoot, diagnosticReporter: (SgfDiagnostic) -> Unit): List<GameInfo> {
+        fun convert(sgf: SgfRoot, diagnosticReporter: (SgfDiagnostic) -> Unit): List<Game> {
             return SgfConverter(sgf, diagnosticReporter).convert()
         }
     }
@@ -52,7 +54,7 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
 
     private fun TextSpan.getText() = sgf.text.substring(start, end)
 
-    fun convert(): List<GameInfo> {
+    fun convert(): List<Game> {
         if (sgf.gameTree.isEmpty()) {
             reportDiagnostic("At least one game tree should be specified.", sgf.textSpan)
         }
@@ -74,7 +76,7 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         }
     }
 
-    private fun convertGameInfo(node: SgfNode): GameInfo? {
+    private fun convertGameInfo(node: SgfNode): Game? {
         val gameInfoProperties = mutableMapOf<String, SgfProperty<*>>()
         var hasCriticalError = false
 
@@ -129,63 +131,68 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
             hasCriticalError = true
         }
 
-        return if (hasCriticalError || width == null || height == null) {
-            null
-        } else {
-            fun <T> String.getPropertyValue(): T? {
-                @Suppress("UNCHECKED_CAST")
-                return gameInfoProperties[this]?.value as? T
-            }
+        if (hasCriticalError || width == null || height == null) return null
 
-            val initialMoves = buildList {
-                addAll(PLAYER1_ADD_DOTS_KEY.getPropertyValue<List<MoveInfo>>() ?: emptyList())
-                for (player2InitialMoveInfo in (PLAYER2_ADD_DOTS_KEY.getPropertyValue<List<MoveInfo>>() ?: emptyList())) {
-                    if (removeAll { it.position == player2InitialMoveInfo.position }) {
-                        val (propertyInfo, textSpan) = player2InitialMoveInfo.extraInfo as PropertyInfoAndTextSpan
-                        propertyInfo.reportPropertyDiagnostic(
-                            "value `${textSpan.getText()}` overwrites one the previous position of first player ${propertyInfos.getValue(PLAYER1_ADD_DOTS_KEY).getFullName()}.",
-                            textSpan,
-                            SgfDiagnosticSeverity.Warning,
-                        )
-                    }
-                    add(player2InitialMoveInfo)
+        fun <T> String.getPropertyValue(): T? {
+            @Suppress("UNCHECKED_CAST")
+            return gameInfoProperties[this]?.value as? T
+        }
+
+        val initialMoves = buildList {
+            addAll(PLAYER1_ADD_DOTS_KEY.getPropertyValue<List<MoveInfo>>() ?: emptyList())
+            for (player2InitialMoveInfo in (PLAYER2_ADD_DOTS_KEY.getPropertyValue<List<MoveInfo>>() ?: emptyList())) {
+                if (removeAll { it.position == player2InitialMoveInfo.position }) {
+                    val (propertyInfo, textSpan) = player2InitialMoveInfo.extraInfo as PropertyInfoAndTextSpan
+                    propertyInfo.reportPropertyDiagnostic(
+                        "value `${textSpan.getText()}` overwrites one the previous position of first player ${
+                            propertyInfos.getValue(
+                                PLAYER1_ADD_DOTS_KEY
+                            ).getFullName()
+                        }.",
+                        textSpan,
+                        SgfDiagnosticSeverity.Warning,
+                    )
                 }
+                add(player2InitialMoveInfo)
             }
+        }
 
-            val rules = Rules(width, height, initialMoves = initialMoves)
-            Field(rules) { errorMoveInfo ->
-                val (propertyInfo, textSpan) = errorMoveInfo.extraInfo as PropertyInfoAndTextSpan
-                propertyInfo.reportPropertyDiagnostic(
-                    "value `${textSpan.getText()}` is incorrect. The dot at position `${errorMoveInfo.position}` is already placed or captured.",
-                    textSpan,
-                    SgfDiagnosticSeverity.Error,
-                )
-            }
+        val gameInfo = GameInfo(
+            gameName = GAME_NAME_KEY.getPropertyValue(),
+            player1Name = PLAYER1_NAME_KEY.getPropertyValue(),
+            player1Rating = PLAYER1_RATING_KEY.getPropertyValue(),
+            player1Team = PLAYER1_TEAM_KEY.getPropertyValue(),
+            player2Name = PLAYER2_NAME_KEY.getPropertyValue(),
+            player2Rating = PLAYER2_RATING_KEY.getPropertyValue(),
+            player2Team = PLAYER2_TEAM_KEY.getPropertyValue(),
+            komi = KOMI_KEY.getPropertyValue(),
+            date = DATE_KEY.getPropertyValue(),
+            description = GAME_COMMENT_KEY.getPropertyValue(),
+            comment = COMMENT_KEY.getPropertyValue(),
+            place = PLACE_KEY.getPropertyValue(),
+            event = EVENT_KEY.getPropertyValue(),
+            opening = OPENING_KEY.getPropertyValue(),
+            annotator = ANNOTATOR_KEY.getPropertyValue(),
+            copyright = COPYRIGHT_KEY.getPropertyValue(),
+            source = SOURCE_KEY.getPropertyValue(),
+            time = TIME_KEY.getPropertyValue(),
+            overtime = OVERTIME_KEY.getPropertyValue(),
+            appInfo = APP_INFO_KEY.getPropertyValue(),
+        )
 
-            GameInfo(
-                gameName = GAME_NAME_KEY.getPropertyValue(),
-                player1Name = PLAYER1_NAME_KEY.getPropertyValue(),
-                player1Rating = PLAYER1_RATING_KEY.getPropertyValue(),
-                player1Team = PLAYER1_TEAM_KEY.getPropertyValue(),
-                player2Name = PLAYER2_NAME_KEY.getPropertyValue(),
-                player2Rating = PLAYER2_RATING_KEY.getPropertyValue(),
-                player2Team = PLAYER2_TEAM_KEY.getPropertyValue(),
-                komi = KOMI_KEY.getPropertyValue(),
-                date = DATE_KEY.getPropertyValue(),
-                description = GAME_COMMENT_KEY.getPropertyValue(),
-                comment = COMMENT_KEY.getPropertyValue(),
-                place = PLACE_KEY.getPropertyValue(),
-                event = EVENT_KEY.getPropertyValue(),
-                opening = OPENING_KEY.getPropertyValue(),
-                annotator = ANNOTATOR_KEY.getPropertyValue(),
-                copyright = COPYRIGHT_KEY.getPropertyValue(),
-                source = SOURCE_KEY.getPropertyValue(),
-                time = TIME_KEY.getPropertyValue(),
-                overtime = OVERTIME_KEY.getPropertyValue(),
-                appInfo = APP_INFO_KEY.getPropertyValue(),
-                rules = rules,
+        val rules = Rules(width, height, initialMoves = initialMoves)
+        val field = Field(rules) { errorMoveInfo ->
+            val (propertyInfo, textSpan) = errorMoveInfo.extraInfo as PropertyInfoAndTextSpan
+            propertyInfo.reportPropertyDiagnostic(
+                "value `${textSpan.getText()}` is incorrect. The dot at position `${errorMoveInfo.position}` is already placed or captured.",
+                textSpan,
+                SgfDiagnosticSeverity.Error,
             )
         }
+
+        val gameTree = GameTree(field)
+
+        return Game(gameInfo, gameTree)
     }
 
     private fun SgfPropertyNode.convert(): Pair<SgfProperty<*>, Boolean> {

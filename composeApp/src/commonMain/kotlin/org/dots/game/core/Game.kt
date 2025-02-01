@@ -1,5 +1,13 @@
 package org.dots.game.core
 
+class Game(val gameInfo: GameInfo, val gameTree: GameTree) {
+    val rules = gameTree.field.rules
+
+    operator fun component1(): GameInfo = gameInfo
+    operator fun component2(): Rules = rules
+    operator fun component3(): GameTree = gameTree
+}
+
 class GameInfo(
     val gameName: String?,
     val player1Name: String?,
@@ -21,7 +29,6 @@ class GameInfo(
     val time: Double?,
     val overtime: String?,
     val appInfo: AppInfo?,
-    val rules: Rules,
 )
 
 data class AppInfo(val name: String, val version: String?)

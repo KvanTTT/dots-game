@@ -1,7 +1,7 @@
 package org.dots.game
 
 import org.dots.game.core.AppInfo
-import org.dots.game.core.GameInfo
+import org.dots.game.core.Game
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.Position
@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 class SgfConverterTests {
     @Test
     fun gameInfo() {
-        val gameInfo = parseAndConvert(
+        val (gameInfo, rules) = parseAndConvert(
             "(;GM[40]FF[4]CA[UTF-8]SZ[17:21]RU[russian]GN[Test Game]PB[Player1]BR[256]BT[Player1's Team]PW[Player2]WR[512]WT[Player2's Team]KM[0.5]DT[2025-01-19]GC[A game for SGF parser testing]C[Comment to node]PC[Amsterdam, Netherlands]EV[Test event]ON[Empty]AN[Ivan Kochurkin]CP[@]SO[https://zagram.org/eidokropki/index.html]TM[300]OT[0+25]AP[https\\://zagram.org/eidokropki/index.html:1])",
             ).single()
         with (gameInfo) {
@@ -49,18 +49,18 @@ class SgfConverterTests {
 
     @Test
     fun multipleGames() {
-        val gameInfos = parseAndConvert("""
+        val games = parseAndConvert("""
 (;GM[40]FF[4]SZ[39:32]GN[game 1])
 (;GM[40]FF[4]SZ[20:20]GN[game 2])
         """.trimIndent()
         )
-        val gameInfo0 = gameInfos[0]
-        assertEquals(39, gameInfo0.rules.width)
-        assertEquals(32, gameInfo0.rules.height)
+        val (gameInfo0, rules0) = games[0]
+        assertEquals(39, rules0.width)
+        assertEquals(32, rules0.height)
         assertEquals("game 1", gameInfo0.gameName)
-        val gameInfo1 = gameInfos[1]
-        assertEquals(20, gameInfo1.rules.width)
-        assertEquals(20, gameInfo1.rules.height)
+        val (gameInfo1, rules1) = games[1]
+        assertEquals(20, rules1.width)
+        assertEquals(20, rules1.height)
         assertEquals("game 2", gameInfo1.gameName)
     }
 
@@ -329,11 +329,11 @@ class SgfConverterTests {
                     SgfDiagnosticSeverity.Warning
                 ),
             )
-        ).single()
+        ).single().gameInfo
         assertNull(gameInfo.player1Rating)
     }
 
-    private fun parseAndConvert(input: String, expectedDiagnostics: List<SgfDiagnostic> = emptyList()): List<GameInfo> {
+    private fun parseAndConvert(input: String, expectedDiagnostics: List<SgfDiagnostic> = emptyList()): List<Game> {
         val sgf = SgfParser.parse(input)
         val actualDiagnostics = mutableListOf<SgfDiagnostic>()
         val result = SgfConverter.convert(sgf) {
