@@ -3,6 +3,7 @@ package org.dots.game
 import org.dots.game.core.Field
 import org.dots.game.core.GameTree
 import org.dots.game.core.GameTreeNode
+import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.core.Rules
 import kotlin.test.Test
@@ -22,8 +23,19 @@ class GameTreeTests : FieldTests() {
             assertTrue(makeMove(2, 1)) // True, because it's a new node
             assertTrue(back())
             assertTrue(next()) // True, the current node should be (1;1) (first branch)
-            assertEquals(Position(1, 1), field.lastMove!!.position)
+            assertEquals(Position(1, 1), field.lastMove!!.positionPlayer.position)
             assertFalse(next()) // False, there are no more moves
+        }
+    }
+
+    @Test
+    fun newNodeIfPlacedToTheSamePositionButByDifferentPlayers() {
+        with(initializeGameTree()) {
+            assertTrue(makeMove(1, 1, Player.First))
+            assertTrue(back())
+            assertFalse(makeMove(1, 1, Player.First)) // False, because such a node already exists
+            assertTrue(back())
+            assertTrue(makeMove(1, 1, Player.Second)) // True, same position, but player is another
         }
     }
 
@@ -116,7 +128,7 @@ class GameTreeTests : FieldTests() {
         return GameTree(field)
     }
 
-    private fun GameTree.makeMove(x: Int, y: Int): Boolean {
-        return add(field.makeMoveUnsafe(Position(x, y))!!)
+    private fun GameTree.makeMove(x: Int, y: Int, player: Player? = null): Boolean {
+        return add(field.makeMoveUnsafe(Position(x, y), player)!!)
     }
 }

@@ -402,7 +402,10 @@ data class MoveResult(
     val number: Int,
     val positionPreviousState: DotState,
     val bases: List<Base>,
-)
+) {
+    val positionPlayer: PositionPlayer
+        get() = PositionPlayer(position, player)
+}
 
 class Base(
     val player: Player,
@@ -411,4 +414,9 @@ class Base(
     val closurePositions: List<Position>,
     val territoryPreviousStates: Map<Position, DotState>,
     val isEmpty: Boolean,
+)
+
+data class PositionPlayer(
+    val position: Position,
+    val player: Player,
 )

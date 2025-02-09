@@ -11,14 +11,14 @@ class GameTree(val field: Field) {
      * otherwise add the new passed node and returns `true`
      */
     fun add(move: MoveResult): Boolean {
-        val position = move.position
-        val existingNode = currentNode.nextNodes[position]
+        val positionPlayer = move.positionPlayer
+        val existingNode = currentNode.nextNodes[positionPlayer]
 
         var result: Boolean
         currentNode = if (existingNode == null) {
             result = true
             GameTreeNode(move, previousNode = currentNode, move.number - field.initialMovesCount + 1).also {
-                currentNode.nextNodes[position] = it
+                currentNode.nextNodes[positionPlayer] = it
                 allNodes.add(it)
             }
         } else {
@@ -90,7 +90,7 @@ class GameTree(val field: Field) {
             val moveResult = nextNode.moveResult ?: continue
             val nextMovePosition = moveResult.position
             requireNotNull(field.makeMoveUnsafe(nextMovePosition, moveResult.player))
-            currentNode = currentNode.nextNodes.getValue(moveResult.position)
+            currentNode = currentNode.nextNodes.getValue(moveResult.positionPlayer)
         }
 
         require(currentNode == targetNode)
@@ -113,12 +113,12 @@ class GameTree(val field: Field) {
             node.nextNodes.clear()
         }
 
-        val currentNodePosition = currentNode.moveResult!!.position
+        val currentNodePositionPlayer = currentNode.moveResult!!.positionPlayer
 
         removeRecursively(currentNode)
         require(back())
 
-        requireNotNull(currentNode.nextNodes.remove(currentNodePosition))
+        requireNotNull(currentNode.nextNodes.remove(currentNodePositionPlayer))
 
         return true
     }
@@ -139,7 +139,7 @@ class GameTreeNode(
     val moveResult: MoveResult?,
     val previousNode: GameTreeNode?,
     val number: Int,
-    val nextNodes: MutableMap<Position, GameTreeNode> = mutableMapOf(),
+    val nextNodes: MutableMap<PositionPlayer, GameTreeNode> = mutableMapOf(),
 ) {
     val isRoot = moveResult == null
 
@@ -147,3 +147,4 @@ class GameTreeNode(
         return "#$number: " + (moveResult?.position?.toString() ?: "root")
     }
 }
+
