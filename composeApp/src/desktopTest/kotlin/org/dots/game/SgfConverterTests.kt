@@ -4,6 +4,7 @@ import org.dots.game.core.AppInfo
 import org.dots.game.core.Game
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
+import org.dots.game.core.PositionPlayer
 import org.dots.game.core.Position
 import org.dots.game.sgf.SgfDiagnosticSeverity
 import org.dots.game.sgf.LineColumn
@@ -50,8 +51,8 @@ class SgfConverterTests {
     @Test
     fun multipleGames() {
         val games = parseAndConvert("""
-(;GM[40]FF[4]SZ[39:32]GN[game 1])
-(;GM[40]FF[4]SZ[20:20]GN[game 2])
+            (;GM[40]FF[4]SZ[39:32]GN[game 1])
+            (;GM[40]FF[4]SZ[20:20]GN[game 2])
         """.trimIndent()
         )
         val (gameInfo0, rules0) = games[0]
@@ -70,9 +71,9 @@ class SgfConverterTests {
             parseAndConvert(
                 "", listOf(
                     SgfDiagnostic(
-                        "At least one game tree should be specified.",
+                        "Empty game trees.",
                         LineColumn(1, 1),
-                        SgfDiagnosticSeverity.Error
+                        SgfDiagnosticSeverity.Warning
                     )
                 )
             ).isEmpty()
@@ -85,7 +86,7 @@ class SgfConverterTests {
             parseAndConvert(
                 "()", listOf(
                     SgfDiagnostic(
-                        "At least one node should be specified.",
+                        "Root node with game info is missing.",
                         LineColumn(1, 2),
                         SgfDiagnosticSeverity.Error
                     )
@@ -299,7 +300,7 @@ class SgfConverterTests {
     }
 
     @Test
-    fun initialPositionsIncorrectBecauseOfPlacedToCapturedTerriroty() {
+    fun initialPositionsIncorrectBecauseOfPlacedToCapturedTerritory() {
         // . .  *1 *2 .
         // . *0 +6 +7 *3
         // . .  *5 *4 .
@@ -312,6 +313,44 @@ class SgfConverterTests {
                 )
             )
         )
+    }
+
+    @Test
+    fun simpleMovesSequence() {
+        parseAndConvert(
+            "(;GM[40]FF[4]SZ[39:32];B[bb];W[cc];B[dd])"
+        )
+    }
+
+    @Test
+    fun branches() {
+
+    }
+
+    @Test
+    fun movesInRootNode() {
+        val gameTree = parseAndConvert(
+            "(;GM[40]FF[4]SZ[39:32]B[cc]W[dd])",
+            listOf(
+                SgfDiagnostic("Property B (Player1 move) declared in Root scope, but should be declared in Move scope.", LineColumn(1, 23), SgfDiagnosticSeverity.Warning),
+                SgfDiagnostic("Property W (Player2 move) declared in Root scope, but should be declared in Move scope.", LineColumn(1, 28), SgfDiagnosticSeverity.Warning),
+            )
+        ).single().gameTree
+        var nextNode = gameTree.rootNode.nextNodes.getValue(PositionPlayer(Position(3, 3), Player.First))
+        nextNode = nextNode.nextNodes.getValue(PositionPlayer(Position(4, 4), Player.Second))
+        assertTrue(nextNode.nextNodes.isEmpty())
+    }
+
+    @Test
+    fun gameInfoInMoveNode() {
+        val gameTree = parseAndConvert(
+            "(;GM[40]FF[4]SZ[39:32];GN[Game name not in root]B[cc])",
+            listOf(
+                SgfDiagnostic("Property GN (Game Name) declared in Move scope, but should be declared in Root scope. The value is ignored.", LineColumn(1, 24), SgfDiagnosticSeverity.Error),
+            )
+        ).single().gameTree
+        val nextNode = gameTree.rootNode.nextNodes.getValue(PositionPlayer(Position(3, 3), Player.First))
+        assertTrue(nextNode.nextNodes.isEmpty())
     }
 
     private fun checkMoveDisregardExtraInfo(expectedPosition: Position, expectedPlayer: Player, actualMoveInfo: MoveInfo) {

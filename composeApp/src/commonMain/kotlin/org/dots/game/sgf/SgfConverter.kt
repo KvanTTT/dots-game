@@ -5,6 +5,7 @@ import org.dots.game.core.Game
 import org.dots.game.core.GameInfo
 import org.dots.game.core.GameTree
 import org.dots.game.core.MoveInfo
+import org.dots.game.core.MoveResult
 import org.dots.game.core.Position
 import org.dots.game.core.Rules
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_KEY
@@ -24,10 +25,12 @@ import org.dots.game.sgf.SgfMetaInfo.OPENING_KEY
 import org.dots.game.sgf.SgfMetaInfo.OVERTIME_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLACE_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_ADD_DOTS_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER1_MOVE
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_NAME_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_RATING_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_TEAM_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_ADD_DOTS_KEY
+import org.dots.game.sgf.SgfMetaInfo.PLAYER2_MOVE
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_NAME_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_RATING_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_TEAM_KEY
@@ -54,62 +57,57 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
 
     private fun TextSpan.getText() = sgf.text.substring(start, end)
 
-    fun convert(): List<Game> {
+    private fun convert(): List<Game> {
         if (sgf.gameTree.isEmpty()) {
-            reportDiagnostic("At least one game tree should be specified.", sgf.textSpan)
+            reportDiagnostic("Empty game trees.", sgf.textSpan, SgfDiagnosticSeverity.Warning)
         }
 
         return buildList {
-            for (gameTree in sgf.gameTree) {
-                if (gameTree.nodes.isEmpty()) {
-                    reportDiagnostic("At least one node should be specified.", TextSpan(gameTree.lParen.textSpan.end, 0))
-                }
-
-                for ((index, node) in gameTree.nodes.withIndex()) {
-                    if (index == 0) {
-                        convertGameInfo(node)?.let { add(it) }
-                    } else {
-                        // TODO: implement moves processing
-                    }
-                }
+            for (sgfGameTree in sgf.gameTree) {
+                convertGameTree(sgfGameTree, gameTree = null, topLevel = true)?.let { add(it) }
             }
         }
     }
 
-    private fun convertGameInfo(node: SgfNode): Game? {
-        val gameInfoProperties = mutableMapOf<String, SgfProperty<*>>()
-        var hasCriticalError = false
+    private fun convertGameTree(sgfGameTree: SgfGameTree, gameTree: GameTree?, topLevel: Boolean): Game? {
+        if (topLevel && sgfGameTree.nodes.isEmpty()) {
+            reportDiagnostic("Root node with game info is missing.", TextSpan(sgfGameTree.lParen.textSpan.end, 0), SgfDiagnosticSeverity.Error)
+        }
 
-        for (property in node.properties) {
-            val propertyIdentifier = property.identifier.value
+        var game: Game? = null
+        var initializedGameTree: GameTree? = gameTree
+        val movesInfoToResult = mutableListOf<Pair<MoveInfo, MoveResult?>>()
 
-            val existingProperty = gameInfoProperties[propertyIdentifier]
-            val (sgfProperty, reportedCriticalError) = property.convert()
-            if (existingProperty == null) {
-                hasCriticalError = hasCriticalError or reportedCriticalError
-                gameInfoProperties[propertyIdentifier] = sgfProperty
-            } else if (sgfProperty.info.isKnown) {
-                sgfProperty.info.reportPropertyDiagnostic(
-                    "is duplicated and ignored.",
-                    property.textSpan,
-                    SgfDiagnosticSeverity.Warning
-                )
+        for ((index, sgfNode) in sgfGameTree.nodes.withIndex()) {
+            val isRootScope = topLevel && index == 0
+            val (convertedProperties, hasCriticalError) = convertProperties(sgfNode, isRootScope = isRootScope)
+            if (isRootScope) {
+                require(gameTree == null)
+                game = convertGameInfo(sgfNode, convertedProperties, hasCriticalError)
+                initializedGameTree = game?.gameTree
+            }
+            if (initializedGameTree != null) {
+                movesInfoToResult.convertMovesInfo(sgfNode, initializedGameTree, convertedProperties)
             }
         }
 
-        fun reportErrorIfNotSpecified(propertyKey: String, severity: SgfDiagnosticSeverity) {
-            if (gameInfoProperties[propertyKey] == null) {
-                propertyInfos.getValue(propertyKey).reportPropertyDiagnostic(
-                    "should be specified.",
-                    TextSpan(node.semicolon.textSpan.end, 0),
-                    severity
-                )
+        if (initializedGameTree != null) {
+            movesInfoToResult.rollbackMoves(initializedGameTree)
+
+            for (childGameTree in sgfGameTree.childrenGameTrees) {
+                require(convertGameTree(childGameTree, initializedGameTree, topLevel = false) == null)
             }
         }
+
+        return game
+    }
+
+    private fun convertGameInfo(node: SgfNode, gameInfoProperties: MutableMap<String, SgfProperty<*>>, hasCriticalError: Boolean): Game? {
+        var hasCriticalError = hasCriticalError
 
         // Report only properties that should be specified
-        reportErrorIfNotSpecified(GAME_MODE_KEY, SgfDiagnosticSeverity.Error)
-        reportErrorIfNotSpecified(FILE_FORMAT_KEY, SgfDiagnosticSeverity.Error)
+        gameInfoProperties.reportPropertyIfNotSpecified(GAME_MODE_KEY, node, SgfDiagnosticSeverity.Error)
+        gameInfoProperties.reportPropertyIfNotSpecified(FILE_FORMAT_KEY, node, SgfDiagnosticSeverity.Error)
 
         val sizeProperty = gameInfoProperties[SIZE_KEY]
         val width: Int?
@@ -127,20 +125,15 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         } else {
             width = null
             height = null
-            reportErrorIfNotSpecified(SIZE_KEY, SgfDiagnosticSeverity.Critical)
+            gameInfoProperties.reportPropertyIfNotSpecified(SIZE_KEY, node, SgfDiagnosticSeverity.Critical)
             hasCriticalError = true
         }
 
         if (hasCriticalError || width == null || height == null) return null
 
-        fun <T> String.getPropertyValue(): T? {
-            @Suppress("UNCHECKED_CAST")
-            return gameInfoProperties[this]?.value as? T
-        }
-
         val initialMoves = buildList {
-            addAll(PLAYER1_ADD_DOTS_KEY.getPropertyValue<List<MoveInfo>>() ?: emptyList())
-            for (player2InitialMoveInfo in (PLAYER2_ADD_DOTS_KEY.getPropertyValue<List<MoveInfo>>() ?: emptyList())) {
+            addAll(gameInfoProperties.getPropertyValue<List<MoveInfo>>(PLAYER1_ADD_DOTS_KEY) ?: emptyList())
+            for (player2InitialMoveInfo in (gameInfoProperties.getPropertyValue<List<MoveInfo>>(PLAYER2_ADD_DOTS_KEY) ?: emptyList())) {
                 if (removeAll { it.position == player2InitialMoveInfo.position }) {
                     val (propertyInfo, textSpan) = player2InitialMoveInfo.extraInfo as PropertyInfoAndTextSpan
                     propertyInfo.reportPropertyDiagnostic(
@@ -158,26 +151,26 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         }
 
         val gameInfo = GameInfo(
-            gameName = GAME_NAME_KEY.getPropertyValue(),
-            player1Name = PLAYER1_NAME_KEY.getPropertyValue(),
-            player1Rating = PLAYER1_RATING_KEY.getPropertyValue(),
-            player1Team = PLAYER1_TEAM_KEY.getPropertyValue(),
-            player2Name = PLAYER2_NAME_KEY.getPropertyValue(),
-            player2Rating = PLAYER2_RATING_KEY.getPropertyValue(),
-            player2Team = PLAYER2_TEAM_KEY.getPropertyValue(),
-            komi = KOMI_KEY.getPropertyValue(),
-            date = DATE_KEY.getPropertyValue(),
-            description = GAME_COMMENT_KEY.getPropertyValue(),
-            comment = COMMENT_KEY.getPropertyValue(),
-            place = PLACE_KEY.getPropertyValue(),
-            event = EVENT_KEY.getPropertyValue(),
-            opening = OPENING_KEY.getPropertyValue(),
-            annotator = ANNOTATOR_KEY.getPropertyValue(),
-            copyright = COPYRIGHT_KEY.getPropertyValue(),
-            source = SOURCE_KEY.getPropertyValue(),
-            time = TIME_KEY.getPropertyValue(),
-            overtime = OVERTIME_KEY.getPropertyValue(),
-            appInfo = APP_INFO_KEY.getPropertyValue(),
+            gameName = gameInfoProperties.getPropertyValue(GAME_NAME_KEY),
+            player1Name = gameInfoProperties.getPropertyValue(PLAYER1_NAME_KEY),
+            player1Rating = gameInfoProperties.getPropertyValue(PLAYER1_RATING_KEY),
+            player1Team = gameInfoProperties.getPropertyValue(PLAYER1_TEAM_KEY),
+            player2Name = gameInfoProperties.getPropertyValue(PLAYER2_NAME_KEY),
+            player2Rating = gameInfoProperties.getPropertyValue(PLAYER2_RATING_KEY),
+            player2Team = gameInfoProperties.getPropertyValue(PLAYER2_TEAM_KEY),
+            komi = gameInfoProperties.getPropertyValue(KOMI_KEY),
+            date = gameInfoProperties.getPropertyValue(DATE_KEY),
+            description = gameInfoProperties.getPropertyValue(GAME_COMMENT_KEY),
+            comment = gameInfoProperties.getPropertyValue(COMMENT_KEY),
+            place = gameInfoProperties.getPropertyValue(PLACE_KEY),
+            event = gameInfoProperties.getPropertyValue(EVENT_KEY),
+            opening = gameInfoProperties.getPropertyValue(OPENING_KEY),
+            annotator = gameInfoProperties.getPropertyValue(ANNOTATOR_KEY),
+            copyright = gameInfoProperties.getPropertyValue(COPYRIGHT_KEY),
+            source = gameInfoProperties.getPropertyValue(SOURCE_KEY),
+            time = gameInfoProperties.getPropertyValue(TIME_KEY),
+            overtime = gameInfoProperties.getPropertyValue(OVERTIME_KEY),
+            appInfo = gameInfoProperties.getPropertyValue(APP_INFO_KEY),
         )
 
         val rules = Rules(width, height, initialMoves = initialMoves)
@@ -193,6 +186,106 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         val gameTree = GameTree(field)
 
         return Game(gameInfo, gameTree)
+    }
+
+    private fun MutableList<Pair<MoveInfo, MoveResult?>>.convertMovesInfo(
+        node: SgfNode,
+        gameTree: GameTree,
+        convertedProperties: MutableMap<String, SgfProperty<*>>,
+    ) {
+        val player1Moves = convertedProperties.getPropertyValue<List<MoveInfo>>(PLAYER1_MOVE)
+        val player2Moves = convertedProperties.getPropertyValue<List<MoveInfo>>(PLAYER2_MOVE)
+
+        fun processMoves(moveInfos: List<MoveInfo>?) {
+            if (moveInfos == null) return
+
+            for (moveInfo in moveInfos) {
+                val moveResult = gameTree.field.makeMove(moveInfo.position, moveInfo.player)
+                if (moveResult != null) {
+                    gameTree.add(moveResult)
+                } else {
+                    // TODO: report a error
+                }
+                add(moveInfo to moveResult)
+            }
+        }
+
+        processMoves(player1Moves)
+        processMoves(player2Moves)
+    }
+
+    private fun MutableList<Pair<MoveInfo, MoveResult?>>.rollbackMoves(initializedGameTree: GameTree) {
+        for ((_, moveResult) in this) {
+            if (moveResult != null) {
+                require(initializedGameTree.back())
+            }
+        }
+    }
+
+    private fun convertProperties(node: SgfNode, isRootScope: Boolean): Pair<MutableMap<String, SgfProperty<*>>, Boolean> {
+        val properties = mutableMapOf<String, SgfProperty<*>>()
+        var hasCriticalError = false
+
+        for (property in node.properties) {
+            val propertyIdentifier = property.identifier.value
+
+            val existingProperty = properties[propertyIdentifier]
+            val (sgfProperty, reportedCriticalError) = property.convert()
+            val sgfPropertyInfo = sgfProperty.info
+            if (existingProperty == null) {
+                hasCriticalError = hasCriticalError or reportedCriticalError
+                properties[propertyIdentifier] = sgfProperty
+            } else if (sgfPropertyInfo.isKnown) {
+                sgfPropertyInfo.reportPropertyDiagnostic(
+                    "is duplicated and ignored.",
+                    property.textSpan,
+                    SgfDiagnosticSeverity.Warning
+                )
+            }
+
+            if (isRootScope && sgfPropertyInfo.scope == SgfPropertyScope.Move ||
+                    !isRootScope && sgfPropertyInfo.scope == SgfPropertyScope.Root
+            ) {
+                val currentScope: SgfPropertyScope
+                val severity: SgfDiagnosticSeverity
+                val messageSuffix: String
+                if (isRootScope) {
+                    currentScope = SgfPropertyScope.Root
+                    severity = SgfDiagnosticSeverity.Warning
+                    messageSuffix = ""
+                } else {
+                    currentScope = SgfPropertyScope.Move
+                    severity = SgfDiagnosticSeverity.Error
+                    messageSuffix = " The value is ignored."
+                }
+                sgfPropertyInfo.reportPropertyDiagnostic(
+                    "declared in $currentScope scope, but should be declared in ${sgfPropertyInfo.scope} scope.$messageSuffix",
+                    property.textSpan,
+                    severity,
+                )
+            }
+        }
+
+        return properties to hasCriticalError
+    }
+
+    private fun Map<String, SgfProperty<*>>.reportPropertyIfNotSpecified(
+        propertyKey: String,
+        node: SgfNode,
+        severity: SgfDiagnosticSeverity
+    ) {
+        if (this[propertyKey] == null) {
+            propertyInfos.getValue(propertyKey).reportPropertyDiagnostic(
+                "should be specified.",
+                TextSpan(node.semicolon.textSpan.end, 0),
+                severity
+            )
+        }
+    }
+
+    private fun <T> Map<String, SgfProperty<*>>.getPropertyValue(propertyKey: String): T? {
+        @Suppress("UNCHECKED_CAST")
+        return this[propertyKey]?.value as? T
     }
 
     private fun SgfPropertyNode.convert(): Pair<SgfProperty<*>, Boolean> {
@@ -463,8 +556,8 @@ class SgfConverter private constructor(val sgf: SgfRoot, val diagnosticReporter:
         return "$propertyKey$propertyNameInfix"
     }
 
-    private fun reportDiagnostic(message: String, textSpan: TextSpan) {
-        diagnosticReporter(SgfDiagnostic(message, textSpan.start.getLineColumn(lineOffsets), SgfDiagnosticSeverity.Error))
+    private fun reportDiagnostic(message: String, textSpan: TextSpan, severity: SgfDiagnosticSeverity) {
+        diagnosticReporter(SgfDiagnostic(message, textSpan.start.getLineColumn(lineOffsets), severity))
     }
 }
 
