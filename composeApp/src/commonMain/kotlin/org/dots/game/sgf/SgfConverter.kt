@@ -79,7 +79,7 @@ class SgfConverter private constructor(val sgf: SgfRoot, val warnOnMultipleGames
 
         return buildList {
             for ((index, sgfGameTree) in sgf.gameTree.withIndex()) {
-                convertGameTree(sgfGameTree, game = null, mainBranch = true)?.let { add(it) }
+                convertGameTree(sgfGameTree, mainBranch = true, game = null, rootConverterProperties = null)?.let { add(it) }
 
                 if (warnOnMultipleGames && index > 0) {
                     reportDiagnostic("Only single game is supported. Other games will be ignored.", sgfGameTree.textSpan, SgfDiagnosticSeverity.Warning)
@@ -88,22 +88,29 @@ class SgfConverter private constructor(val sgf: SgfRoot, val warnOnMultipleGames
         }
     }
 
-    private fun convertGameTree(sgfGameTree: SgfGameTree, game: Game?, mainBranch: Boolean): Game? {
+    private fun convertGameTree(
+        sgfGameTree: SgfGameTree,
+        mainBranch: Boolean,
+        game: Game?,
+        rootConverterProperties: Map<String, SgfProperty<*>>?
+    ): Game? {
         val root = mainBranch && game == null
         if (root && sgfGameTree.nodes.isEmpty()) {
             reportDiagnostic("Root node with game info is missing.", TextSpan(sgfGameTree.lParen.textSpan.end, 0), SgfDiagnosticSeverity.Error)
         }
 
         var initializedGame: Game? = game
+        var initializedRootConverterProperties: Map<String, SgfProperty<*>>? = rootConverterProperties
         var movesCount = 0
-        var rootConverterProperties: Map<String, SgfProperty<*>>? = null
 
         for ((index, sgfNode) in sgfGameTree.nodes.withIndex()) {
             val isRootScope = root && index == 0
             val (convertedProperties, hasCriticalError) = convertProperties(sgfNode, isRootScope = isRootScope)
             if (isRootScope) {
-                rootConverterProperties = convertedProperties
+                require(initializedGame == null)
+                require(initializedRootConverterProperties == null)
                 initializedGame = convertGameInfo(sgfNode, convertedProperties, hasCriticalError)
+                initializedRootConverterProperties = convertedProperties
             }
             if (initializedGame?.gameTree != null) {
                 movesCount += convertMovesInfo(initializedGame.gameTree, convertedProperties)
@@ -112,11 +119,16 @@ class SgfConverter private constructor(val sgf: SgfRoot, val warnOnMultipleGames
 
         if (initializedGame != null) {
             if (mainBranch && sgfGameTree.childrenGameTrees.isEmpty()) {
-                rootConverterProperties.validateResultPropertyMatchesFieldResult(initializedGame)
+                initializedRootConverterProperties.validateResultPropertyMatchesFieldResult(initializedGame)
             }
 
             for ((index, childGameTree) in sgfGameTree.childrenGameTrees.withIndex()) {
-                convertGameTree(childGameTree, initializedGame, mainBranch = index == 0)
+                convertGameTree(
+                    childGameTree,
+                    mainBranch = index == 0,
+                    initializedGame,
+                    initializedRootConverterProperties
+                )
             }
 
             initializedGame.gameTree.back(movesCount)
