@@ -469,4 +469,20 @@ class StandardFieldTests : FieldTests() {
             assertNull(it.makeMove(3 x 2, Player.First))
         }
     }
+
+    @Test
+    fun capturingAfterPlacingToEmptyTerritoryShouldBeMinimal() {
+        testFieldWithRollback("""
+            .  .  .  .  .
+            .  .  *2 .  .
+            .  *1 .  *3 .
+            .  *6 *7 *4 .
+            .  .  *5 .  .
+            .  .  .  .  .
+        """.trimIndent()) {
+            val moveResult = it.makeMove(3 x 3, Player.Second)!!
+            val base = moveResult.bases.single()
+            assertEquals(1, base.previousStates.size)
+        }
+    }
 }
