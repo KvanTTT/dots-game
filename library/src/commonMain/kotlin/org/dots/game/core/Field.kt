@@ -137,17 +137,18 @@ class Field {
                 newHeight = height
             }
         }
+
+        fun Position.transform() = transform(transformType, realWidth, realHeight)
+
         val newField = Field(Rules(
             width = newWidth,
             height = newHeight,
             captureByBorder = rules.captureByBorder,
             baseMode = rules.baseMode,
             suicideAllowed = rules.suicideAllowed,
-            initialMoves = listOf(), // It will be initialized later together with all moves.
+            initialMoves = rules.initialMoves.map { MoveInfo(it.position.transform(), it.player, it.extraInfo) },
         ))
         newField.initialMovesCount = initialMovesCount
-
-        fun Position.transform() = transform(transformType, realWidth, realHeight)
 
         for (y in 0 until realHeight) {
             for (x in 0 until realWidth) {
