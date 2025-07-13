@@ -4,6 +4,7 @@ import org.dots.game.Diagnostic
 import org.dots.game.core.EMPTY_POSITION
 import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Field
+import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.core.Rules
@@ -28,7 +29,9 @@ object FieldParser {
     ): Field {
         val (width, height, allMoves) = parse(data, diagnosticReporter)
 
-        return Field.create (initializeRules(width, height)).apply {
+        return Field.create (initializeRules(width, height), onIncorrectInitialMove = { moveInfo: MoveInfo, _: Boolean, moveNumber: Int ->
+            diagnosticReporter(Diagnostic("Can't make initial move #$moveNumber at ${moveInfo.position} (${moveInfo.player})", textSpan = null))
+        }).apply {
             for ((number, move) in allMoves) {
                 val position = move.position
                 if (makeMoveUnsafe(position, move.player) == null) {

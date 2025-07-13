@@ -5,6 +5,7 @@ import org.dots.game.toLineColumnDiagnostic
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.round
 
@@ -113,11 +114,7 @@ object SgfAnalyser {
                 println("Fields per second: ${(sgfFiles.size.toDouble() / totalFieldNanos * nanosInSec).toInt()}")
                 println(
                     "Millis per field: ${
-                        formatDouble(
-                            totalFieldNanos.toDouble() / sgfFiles.size / TimeUnit.MILLISECONDS.toNanos(
-                                1
-                            )
-                        )
+                        String.format(Locale.ENGLISH, "%.4f", totalFieldNanos.toDouble() / sgfFiles.size / nanosInMs)
                     }"
                 )
                 println("Average number of moves per field: ${(totalMovesCount.toDouble() / sgfFiles.size).toInt()}")

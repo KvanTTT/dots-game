@@ -9,12 +9,15 @@ import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.parameters.types.restrictTo
+import org.dots.game.core.BaseMode
 import org.dots.game.core.Field
 import org.dots.game.core.InitialPositionType
 import org.dots.game.core.Rules
+import org.dots.game.core.generateDefaultInitialPositions
 import java.io.File
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets.UTF_8
+import java.util.Locale
 import kotlin.reflect.KProperty
 
 class CliArgs : CliktCommand() {
@@ -37,19 +40,21 @@ class CliArgs : CliktCommand() {
         .help("Number of games to drop")
     val width: Int? by option("-w", "--width")
         .int()
-        .restrictTo(1, Field.MAX_WIDTH)
+        .restrictTo(5, Field.MAX_WIDTH)
         .help("Field width")
     val height: Int? by option("-h", "--height")
         .int()
-        .restrictTo(1, Field.MAX_HEIGHT)
+        .restrictTo(5, Field.MAX_HEIGHT)
         .help("Field height")
     val captureEmptyBases: Boolean? by option(captureEmptyBasesOption)
         .boolean()
         .help("If enabled, base is created even if it doesn't have enemy dots inside")
     val initialPosition: InitialPositionType? by option()
         .enum<InitialPositionType>()
-        .help("The initial position, allowed values: ${InitialPositionType.Empty}, ${InitialPositionType.Cross}")
-        .check { it == InitialPositionType.Empty || it == InitialPositionType.Cross }
+        .help("The initial position, allowed values: ${
+            InitialPositionType.entries.filter { it != InitialPositionType.Custom }.joinToString(", ") { it.name }
+        }")
+        .check { it != InitialPositionType.Custom }
     val seed: Long? by option("-s", "--seed")
         .long()
         .help("Seed. Use `0` value for timestamp-based seed")
@@ -73,16 +78,26 @@ class CliArgs : CliktCommand() {
         } else {
             outputStream.println("Random games mode activated...")
             outputStream.reportSpecifiedButUnusedParameter(::gamesCountToDrop, gamesCountToDrop)
+            val fieldWidth = width ?: Rules.Standard.width
+            val fieldHeight = height ?: Rules.Standard.height
+            val rules = Rules(
+                fieldWidth,
+                fieldHeight,
+                captureByBorder = false,
+                baseMode = if (captureEmptyBases ?: false) BaseMode.AnySurrounding else BaseMode.AtLeastOneOpponentDot,
+                suicideAllowed = true,
+                initialMoves = initialPosition?.generateDefaultInitialPositions(fieldWidth, fieldHeight) ?: emptyList(),
+            )
             RandomGameAnalyser.process(
-                outputStream,
+                rules,
                 gamesCount,
-                width ?: Rules.Standard.width,
-                height ?: Rules.Standard.height,
-                initialPosition ?: InitialPositionType.Empty,
-                captureEmptyBases ?: false,
                 seed ?: 0L,
                 checkRollback,
-            )
+                measureNanos = { System.nanoTime() },
+                formatDouble = { String.format(Locale.ENGLISH, "%.4f", it) }
+            ) {
+                outputStream.println(it)
+            }
         }
     }
     fun PrintStream.reportSpecifiedButUnusedParameter(property: KProperty<*>, value: Any?) {
