@@ -14,7 +14,7 @@ class Field {
         fun checkWidth(value: Int): Boolean = value in 0..MAX_WIDTH
         fun checkHeight(value: Int): Boolean = value in 0..MAX_HEIGHT
 
-        fun create(rules: Rules, onIncorrectInitialMove: (MoveInfo, Boolean, Int) -> Unit = { _, _, _ -> }): Field {
+        fun create(rules: Rules, onIncorrectInitialMove: (moveInfo: MoveInfo, incorrectMove: Boolean, moveNumber: Int) -> Unit = { _, _, _ -> }): Field {
             return Field(rules).apply {
                 for (moveInfo in rules.initialMoves) {
                     val position = moveInfo.position
@@ -484,7 +484,19 @@ class Field {
                         break
                     }
 
-                    tryGetCounterCounterClockwiseClosure(position, unconnectedPosition, playerPlaced)?.let { add(it) }
+                    tryGetCounterCounterClockwiseClosure(position, unconnectedPosition, playerPlaced)?.let {
+                        var added = false
+                        for (closureDataIndex in 0 until size) {
+                            if (it.closure.size < this[closureDataIndex].closure.size) {
+                                add(closureDataIndex, it)
+                                added = true
+                                break
+                            }
+                        }
+                        if (!added) {
+                            add(it)
+                        }
+                    }
                 }
             }
 

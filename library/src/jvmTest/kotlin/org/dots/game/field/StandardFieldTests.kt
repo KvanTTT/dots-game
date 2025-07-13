@@ -569,16 +569,36 @@ class StandardFieldTests : FieldTests() {
     }
 
     @Test
-    fun adjacentEmptyBaseToNonEmpty() {
-        testFieldWithRollback("""
+    fun adjacentInnerEmptyBaseAndOuterNonEmptyBase() {
+        testFieldWithTransformsAndRollback("""
 . + + . + + .
 + . . . * . +
 + . + . + . +
 + . . + . . +
 . + . . . + .
 . . + + + . .
-""") {
-            it.makeMove(4 x 2, Player.Second)
+""") { field, transformFunc ->
+            assertNotNull(field.makeMove(transformFunc(4 x 2), Player.Second))
+            assertEquals(1, field.player2Score)
+            assertNull(field.makeMove(transformFunc(4 x 5), Player.First))
+            assertNull(field.makeMove(transformFunc(4 x 5), Player.Second))
+        }
+    }
+
+    @Test
+    fun adjacentInnerNonEmptyBaseAndOuterEmptyBase() {
+        testFieldWithTransformsAndRollback("""
+. . + + + . .
+. + . . . + .
++ . . + . . +
++ . + * + . +
++ . . . . . +
+. + + . + + .
+""") { field, transformFunc ->
+            assertNotNull(field.makeMove( transformFunc(4 x 5), Player.Second))
+            assertEquals(1, field.player2Score)
+            assertNotNull(field.makeMove(transformFunc(4 x 2), Player.First))
+            assertEquals(2, field.player2Score)
         }
     }
 }
