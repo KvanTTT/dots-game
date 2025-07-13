@@ -85,29 +85,6 @@ class Field {
     private val startPositionsList = ArrayList<Position>(4)
     private val closuresList = ArrayList<ClosureData>(4)
 
-    fun clear() {
-        val numberOfMoveResultsToRemove = moveResults.size - initialMovesCount
-        for (i in 0 until numberOfMoveResultsToRemove) {
-            moveResults.removeLast()
-        }
-
-        numberOfLegalMoves = width * height - initialMovesCount
-        gameResult = null
-        player1Score = 0
-        player2Score = 0
-
-        for (y in 0 until realHeight) {
-            for (x in 0 until realWidth) {
-                Position(x, y).setState(
-                    if (!rules.captureByBorder || checkPositionWithinBounds(x, y))
-                        DotState.Empty
-                    else
-                        DotState.Border
-                )
-            }
-        }
-    }
-
     fun clone(): Field {
         val new = Field(rules)
         new.initialMovesCount = initialMovesCount
