@@ -177,6 +177,7 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
 }
 
 fun Position.transform(type: TransformType, width: Int, height: Int): Position {
+    if (isGameOverMove()) return this
     val (x, y) = this
     return when (type) {
         TransformType.RotateCw90 -> Position(height - 1 - y, x)
