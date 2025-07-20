@@ -24,9 +24,10 @@ fun Field.getStrongConnectionLinePositions(position: Position): List<Position> {
  */
 fun Field.getPositionsOfConnection(position: Position, diagonalConnections: Boolean = false): List<Position> {
     val state = position.getState()
-    if (!state.checkActive()) return emptyList()
+    if (state.checkTerritory()) return emptyList()
 
-    val player = state.getPlacedPlayer()
+    val player = state.getTerritoryOrPlacedPlayer()
+    if (player == Player.None) return emptyList()
     val playerPlaced = player.createPlacedState()
     val (x, y) = position
 
