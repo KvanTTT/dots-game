@@ -166,9 +166,11 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
     var actualInitialMovesCount = 0
     for (x in 0 until realWidth) {
         for (y in 0 until realHeight) {
-            val position = Position(x, y)
-            val borderOrEmptyState = if (rules.captureByBorder && position.isBorder()) DotState.Border else DotState.Empty
-            if (borderOrEmptyState != Position(x, y).getState()) {
+            val wallOrEmptyState = if (x == 0 || x == realWidth - 1 || y == 0 || y == realHeight - 1)
+                DotState.Wall
+            else
+                DotState.Empty
+            if (wallOrEmptyState != Position(x, y).getState()) {
                 actualInitialMovesCount++
             }
         }

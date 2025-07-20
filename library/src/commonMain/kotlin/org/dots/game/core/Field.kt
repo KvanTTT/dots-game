@@ -42,19 +42,19 @@ class Field {
         this.height = rules.height
         this.realWidth = width + OFFSET * 2
         this.realHeight = height + OFFSET * 2
-        this.dots = IntArray(realWidth * realHeight) { DotState.Empty.value }
+        this.dots = IntArray(realWidth * realHeight) {
+            val x = it % realWidth
+            val y = it / realWidth
+            if (x == 0 || x == realWidth - 1 || y == 0 || y == realHeight - 1) {
+                DotState.Wall.value
+            } else {
+                DotState.Empty.value
+            }
+        }
         this.numberOfLegalMoves = width * height
         require(checkWidth(width) && checkHeight(height))
 
-        if (rules.captureByBorder) {
-            for (y in 0 until realHeight) {
-                for (x in 0 until realWidth) {
-                    if (!checkPositionWithinBounds(x, y)) {
-                        Position(x, y).setState(DotState.Border)
-                    }
-                }
-            }
-        }
+        captureByBorder = rules.captureByBorder
     }
 
     val rules: Rules
@@ -64,6 +64,7 @@ class Field {
     val realHeight: Int
     var initialMovesCount: Int = 0
         private set
+    val captureByBorder: Boolean
 
     // Use primitive int array with expanded borders to get rid of extra range checks and boxing
     private val dots: IntArray
@@ -203,7 +204,7 @@ class Field {
     }
 
     fun checkValidMove(position: Position, player: Player?): Boolean {
-        return !position.getState().checkActive() && (
+        return position.getState().getActivePlayer() == Player.None && (
                 rules.suicideAllowed ||
                         makeMoveUnsafe(position, player).let { moveResult ->
                             if (moveResult != null) {
@@ -404,11 +405,12 @@ class Field {
             if (position.getState().checkActive(player)) {
                 var grounded = false
                 val territoryPositions = getTerritoryPositions(oppositePlayer, position) {
-                    if (it.isBorder()) {
+                    val state = it.getState()
+                    if (state.getActivePlayer() == Player.WallOrBoth) {
                         grounded = true
                         false
                     } else {
-                        it.getState().checkActive(player)
+                        state.checkActive(player)
                     }
                 }
 
@@ -450,7 +452,7 @@ class Field {
             val position = Position(x, y)
 
             // Try to peek an active opposite player dot
-            if (!position.getState().checkActive(oppositePlayer)) continue
+            if (!position.getState().checkActiveAndWall(oppositePlayer)) continue
 
             val oppositePlayerBased = tryCapture(position, oppositePlayer, emptyBaseCapturing = true)
             // The found base always should be real and include the `initialPosition`
@@ -590,10 +592,10 @@ class Field {
             addPosition2: Position,
             addPosition2State: DotState
         ) {
-            if (!checkState.checkActive(player)) {
-                if (addPosition1.getState().checkActive(player)) {
+            if (!checkState.checkActiveAndWall(player)) {
+                if (addPosition1.getState().checkActiveAndWall(player)) {
                     startPositionsList.add(addPosition1)
-                } else if (addPosition2State.checkActive(player)) {
+                } else if (addPosition2State.checkActiveAndWall(player)) {
                     startPositionsList.add(addPosition2)
                 }
             }
@@ -647,12 +649,19 @@ class Field {
         loop@ do {
             val clockwiseWalkCompleted = currentPosition.clockwiseBigJumpWalk(nextPosition) {
                 val state = it.getState()
-                val isActive = state.checkActive(player)
+                val activePlayer = state.getActivePlayer()
 
-                if (!rules.captureByBorder && !checkPositionWithinBounds(it)) {
-                    // Optimization: there is no need to walk anymore because the border can't enclosure anything
-                    square = 0
-                    break@loop
+                val isActive = if (activePlayer == Player.WallOrBoth) {
+                    if (!rules.captureByBorder) {
+                        // Optimization: there is no need to walk anymore because the border can't enclosure anything
+                        square = 0
+                        break@loop
+                    } else {
+                        containsBorder = true
+                        true
+                    }
+                } else {
+                    activePlayer == player
                 }
 
                 if (isActive) {
@@ -660,10 +669,6 @@ class Field {
 
                     if (it == initialPosition) {
                         break@loop
-                    }
-
-                    if (state.checkBorder()) {
-                        containsBorder = true
                     }
 
                     closurePositions.add(it)
@@ -727,15 +732,16 @@ class Field {
 
         fun Position.checkAndAdd(): Boolean {
             val state = getState()
+            val activePlayer = state.getActivePlayer()
 
-            if (state.checkBorder()) {
+            if (activePlayer == Player.WallOrBoth) {
                 return if (!rules.captureByBorder) {
                     false
                 } else {
                     closurePositions.add(this)
                     true
                 }
-            } else if (!state.checkActive()) {
+            } else if (activePlayer == Player.None) {
                 return false // early return if encounter an empty position
             }
 
@@ -926,8 +932,8 @@ class Field {
         this@Field.dots[y * realWidth + x] = state.value
     }
 
-    fun Position.isBorder(): Boolean {
-        return x < OFFSET || x >= width + OFFSET || y < OFFSET || y >= height + OFFSET
+    fun DotState.checkActiveAndWall(player: Player): Boolean {
+        return getActivePlayer().let { it == player || captureByBorder && it == Player.WallOrBoth }
     }
 
     override fun toString(): String = render()
