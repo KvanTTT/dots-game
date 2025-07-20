@@ -74,7 +74,7 @@ fun Field.getPositionsAtDistance(distanceId: Int): Set<Position> {
             val position = move.position
             with(this) {
                 val state = position.getState()
-                val player = state.getTerritoryOrPlacedPlayer()
+                val player = state.getActivePlayer()
                 if (player == Player.None) continue
 
                 if (contains(position)) continue
@@ -83,7 +83,7 @@ fun Field.getPositionsAtDistance(distanceId: Int): Set<Position> {
                 fun checkAndAdd(x: Int, y: Int) {
                     if (!checkPositionWithinBounds(x, y)) return
                     Position(x, y).let {
-                        if (it.getState().checkTerritoryOrPlacedPlayer(player)) {
+                        if (it.getState().checkActive(player)) {
                             add(it)
                             addPosition = true
                         }
@@ -93,7 +93,7 @@ fun Field.getPositionsAtDistance(distanceId: Int): Set<Position> {
                 val (x, y) = position
                 when (distanceId) {
                     0 -> { // just a position on the field
-                        if (position.getState().checkTerritoryOrPlacedPlayer(player)) {
+                        if (position.getState().checkActive(player)) {
                             addPosition = true
                         }
                     }

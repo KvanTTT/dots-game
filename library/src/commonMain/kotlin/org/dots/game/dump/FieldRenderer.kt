@@ -1,6 +1,7 @@
-import org.dots.game.core.EMPTY_POSITION
+import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.EMPTY_TERRITORY_MARKER
 import org.dots.game.core.Field
+import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.core.TERRITORY_EMPTY_MARKER
 import org.dots.game.core.playerMarker
@@ -9,7 +10,7 @@ data class DumpParameters(
     val printNumbers: Boolean = true,
     val padding: Int = Int.MAX_VALUE,
     val printCoordinates: Boolean = true,
-    val debugInfo: Boolean = false
+    val debugInfo: Boolean = false,
 ) {
     companion object {
         val DEFAULT = DumpParameters()
@@ -17,7 +18,7 @@ data class DumpParameters(
 }
 
 fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): String {
-    val (printNumbers: Boolean, padding: Int, printCoordinates: Boolean, debugInfo: Boolean) = dumpParameters
+    val (printNumbers, padding, printCoordinates, debugInfo) = dumpParameters
 
     var minX = realWidth - 1
     var maxX = 0
@@ -35,22 +36,29 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
         Array(realHeight) { y ->
             val position = Position(x, y)
             val state = position.getState()
-            val isTerritory = debugInfo && state.checkTerritory()
-            val isPlaced = state.checkPlaced()
+            val activePlayer = state.getActivePlayer()
+            val placedPlayer = state.getPlacedPlayer()
+            val emptyTerritoryPlayer = state.getEmptyTerritoryPlayer()
 
             buildString {
-                if (isTerritory) {
-                    append(playerMarker.getValue(state.getTerritoryPlayer()))
-                }
-                if (state.checkPlaced()) {
-                    append(playerMarker.getValue(state.getPlacedPlayer()))
-                } else if (isTerritory) {
-                    append(TERRITORY_EMPTY_MARKER)
-                }
-                if (debugInfo && state.checkWithinEmptyTerritory()) {
-                    require(!isTerritory && !isPlaced)
-                    append(EMPTY_TERRITORY_MARKER)
-                    append(playerMarker.getValue(state.getEmptyTerritoryPlayer()))
+                if (emptyTerritoryPlayer != Player.None) {
+                    require(activePlayer == Player.None && placedPlayer == Player.None)
+                    if (debugInfo) {
+                        append(EMPTY_TERRITORY_MARKER)
+                        append(playerMarker.getValue(emptyTerritoryPlayer))
+                    }
+                } else if (checkPositionWithinBounds(position)) {
+                    if (debugInfo && state.checkTerritory()) {
+                        append(playerMarker.getValue(activePlayer))
+                        append(
+                            if (placedPlayer == Player.None)
+                                TERRITORY_EMPTY_MARKER
+                            else
+                                playerMarker.getValue(placedPlayer)
+                        )
+                    } else {
+                        append(playerMarker.getValue(placedPlayer))
+                    }
                 }
                 if (isEmpty()) {
                     append(
@@ -74,7 +82,7 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
                             else -> {
                                 when (y) {
                                     0, realHeight - 1 -> '─'
-                                    else -> EMPTY_POSITION
+                                    else -> EMPTY_POSITION_MARKER
                                 }
                             }
                         }

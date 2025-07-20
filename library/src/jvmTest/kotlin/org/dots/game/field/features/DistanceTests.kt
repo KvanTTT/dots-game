@@ -164,10 +164,10 @@ class DistanceTests {
         val distantPositions = field.getPositionsAtDistance(distance)
 
         with(field) {
-            val oneDistancePositionsFailure = checkFeatures(
+            checkFeatures(
                 field,
                 expectedDistanceData,
-                distantPositions.associateWith { it.getState().getTerritoryOrPlacedPlayer() },
+                distantPositions.associateWith { it.getState().getActivePlayer() },
                 "Different $distance square distance positions"
             )?.let {
                 assertAll(it)

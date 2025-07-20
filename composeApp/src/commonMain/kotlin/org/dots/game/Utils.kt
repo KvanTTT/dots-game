@@ -1,6 +1,6 @@
 package org.dots.game
 
-import org.dots.game.core.EMPTY_POSITION
+import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Game
 import org.dots.game.core.GameInfo
@@ -162,7 +162,7 @@ internal fun getInputType(input: String): InputType {
         notWhitespaceCharIndex++
     }
 
-    if (input.elementAtOrNull(notWhitespaceCharIndex).let { it == FIRST_PLAYER_MARKER || it == SECOND_PLAYER_MARKER || it == EMPTY_POSITION }
+    if (input.elementAtOrNull(notWhitespaceCharIndex).let { it == FIRST_PLAYER_MARKER || it == SECOND_PLAYER_MARKER || it == EMPTY_POSITION_MARKER }
     ) {
         return InputType.FieldContent
     }

@@ -323,13 +323,13 @@ private fun AllConnections(currentMove: MoveResult?, field: Field, uiSettings: U
                         val stateState = startPosition.getState()
                         if (stateState.checkTerritory()) continue
 
-                        val player = stateState.getTerritoryOrPlacedPlayer()
+                        val player = stateState.getActivePlayer()
                         for (j in i + 1 until distantPositions.size) {
                             val endPosition = distantPositions[j]
 
                             if (endPosition.getState().let {
                                 !it.checkTerritory() &&
-                                it.getTerritoryOrPlacedPlayer() == player
+                                it.getActivePlayer() == player
                             } &&
                                 startPosition.squareDistanceTo(endPosition) == squaredDistance
                             ) {
@@ -342,7 +342,7 @@ private fun AllConnections(currentMove: MoveResult?, field: Field, uiSettings: U
                 for (line in lines) {
                     val (start, end) = line
                     drawLine(
-                        uiSettings.toColor(start.getState().getTerritoryOrPlacedPlayer()),
+                        uiSettings.toColor(start.getState().getActivePlayer()),
                         start.toPxOffset(this@Canvas),
                         end.toPxOffset(this@Canvas),
                         strokeWidth = connectionThickness.toPx(),
@@ -374,7 +374,7 @@ private fun ThreatsAndSurroundings(currentMove: MoveResult?, field: Field, uiSet
                 strokeWidth = 3.dp.toPx(),
             )
             drawLine(
-                uiSettings.toColor(if (player == Player.Both) player.opposite() else player).copy(0.7f),
+                uiSettings.toColor(if (player == Player.WallOrBoth) player.opposite() else player).copy(0.7f),
                 Offset(xPx, yPx - capturingMarkerSize),
                 Offset(xPx, yPx + capturingMarkerSize),
                 strokeWidth = 3.dp.toPx(),
@@ -393,7 +393,7 @@ private fun ThreatsAndSurroundings(currentMove: MoveResult?, field: Field, uiSet
                     strokeWidth = 2.dp.toPx(),
                 )
                 drawLine(
-                    uiSettings.toColor(if (player == Player.Both) player.opposite() else player).copy(0.7f),
+                    uiSettings.toColor(if (player == Player.WallOrBoth) player.opposite() else player).copy(0.7f),
                     Offset(xPx + baseMarkerSize, yPx - baseMarkerSize),
                     Offset(xPx - baseMarkerSize, yPx + baseMarkerSize),
                     strokeWidth = 2.dp.toPx(),

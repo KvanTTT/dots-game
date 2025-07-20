@@ -1,7 +1,7 @@
 package org.dots.game.dump
 
 import org.dots.game.Diagnostic
-import org.dots.game.core.EMPTY_POSITION
+import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Field
 import org.dots.game.core.MoveInfo
@@ -79,7 +79,7 @@ object FieldParser {
                     val opponentMarker = if (char == FIRST_PLAYER_MARKER) SECOND_PLAYER_MARKER else FIRST_PLAYER_MARKER
                     val player = if (data.elementAtOrNull(charIndex) == opponentMarker) {
                         charIndex++
-                        Player.Both
+                        Player.WallOrBoth
                     } else if (char == FIRST_PLAYER_MARKER) {
                         Player.First
                     } else {
@@ -132,10 +132,10 @@ object FieldParser {
 
                     currentWidth++
                 }
-                EMPTY_POSITION -> {
+                EMPTY_POSITION_MARKER -> {
                     charIndex++
 
-                    while (data.elementAtOrNull(charIndex) == EMPTY_POSITION) {
+                    while (data.elementAtOrNull(charIndex) == EMPTY_POSITION_MARKER) {
                         charIndex++
                     }
 
@@ -144,7 +144,7 @@ object FieldParser {
                 else -> {
                     diagnosticReporter(
                         Diagnostic(
-                            "The marker should be either `$FIRST_PLAYER_MARKER` (first player), `$SECOND_PLAYER_MARKER` (second player) or `$EMPTY_POSITION`.",
+                            "The marker should be either `$FIRST_PLAYER_MARKER` (first player), `$SECOND_PLAYER_MARKER` (second player) or `$EMPTY_POSITION_MARKER`.",
                             TextSpan(charIndex, 1)
                         )
                     )

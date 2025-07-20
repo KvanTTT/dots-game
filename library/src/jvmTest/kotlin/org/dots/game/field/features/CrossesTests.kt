@@ -57,7 +57,7 @@ class CrossesTests {
 
     private fun checkCrosses(fieldData: String, crossesData: String?) {
         val field = FieldParser.parseAndConvertWithNoInitialMoves(fieldData)
-        val crosses = field.getCrosses().associateWith { Player.Both }
+        val crosses = field.getCrosses().associateWith { Player.WallOrBoth }
         checkFeatures(
             field,
             expectedPositionsData = crossesData,

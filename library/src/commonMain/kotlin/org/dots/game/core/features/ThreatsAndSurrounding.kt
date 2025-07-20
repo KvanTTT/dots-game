@@ -15,8 +15,8 @@ fun Field.getOneMoveCapturingAndBasePositions(): OneMoveCapturingAndBasePosition
             fun collectCapturingAndPotentiallyBasePositions(player: Player) {
                 with (this) {
                     val state = position.getState()
-                    if (state.checkWithinEmptyTerritory()) {
-                        val emptyTerritoryPlayer = state.getEmptyTerritoryPlayer()
+                    val emptyTerritoryPlayer = state.getEmptyTerritoryPlayer()
+                    if (emptyTerritoryPlayer != Player.None) {
                         oneMoveBasePositions[position] = (oneMoveBasePositions[position] ?: Player.None) + emptyTerritoryPlayer
                         // Optimization: the dot placed into own empty territory never captures anything
                         if (emptyTerritoryPlayer == player) return

@@ -4,14 +4,14 @@ import kotlin.reflect.KProperty
 
 fun Field.getStrongConnectionLinePositions(position: Position): List<Position> {
     val state = position.getState()
-    if (!state.checkActive()) return emptyList()
+    if (state.checkTerritory()) return emptyList()
 
-    val player = state.getPlacedPlayer()
-    val playerPlaced = player.createPlacedState()
+    val player = state.getActivePlayer()
+    if (player == Player.None) return emptyList()
 
     return buildList {
         position.forEachAdjacent {
-            if (it.getState().checkActive(playerPlaced)) {
+            if (it.getState().checkActiveAndNotTerritory(player)) {
                 add(it)
             }
             true
@@ -26,14 +26,14 @@ fun Field.getPositionsOfConnection(position: Position, diagonalConnections: Bool
     val state = position.getState()
     if (state.checkTerritory()) return emptyList()
 
-    val player = state.getTerritoryOrPlacedPlayer()
+    val player = state.getActivePlayer()
     if (player == Player.None) return emptyList()
-    val playerPlaced = player.createPlacedState()
+
     val (x, y) = position
 
     val activePositions = buildList {
         position.clockwiseBigJumpWalk(Position(x - 1, y - 1)) {
-            if (it.getState().checkActive(playerPlaced)) {
+            if (it.getState().checkActiveAndNotTerritory(player)) {
                 add(it)
             }
             true

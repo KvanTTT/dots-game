@@ -1,6 +1,6 @@
 package org.dots.game.field.features
 
-import org.dots.game.core.EMPTY_POSITION
+import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Field
 import org.dots.game.core.Player
@@ -38,8 +38,8 @@ fun checkFeatures(
                                 when (this@dump[Position(x, y)]) {
                                     Player.First -> "$FIRST_PLAYER_MARKER "
                                     Player.Second -> "$SECOND_PLAYER_MARKER "
-                                    Player.Both -> "$FIRST_PLAYER_MARKER$SECOND_PLAYER_MARKER"
-                                    else -> "$EMPTY_POSITION "
+                                    Player.WallOrBoth -> "$FIRST_PLAYER_MARKER$SECOND_PLAYER_MARKER"
+                                    else -> "$EMPTY_POSITION_MARKER "
                                 }
                             )
                             if (x != originalField.width) {

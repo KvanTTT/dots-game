@@ -1,164 +1,123 @@
 package org.dots.game.core
 
-import org.dots.game.core.Player.First
-import org.dots.game.core.Player.Second
 import kotlin.jvm.JvmInline
 
 @JvmInline
-value class DotState(val value: Int) {
+value class DotState internal constructor(val value: Int) {
     companion object {
-        val Empty = DotState(0)
-        val Border = DotState(DotStateFlags.Border.value)
-        val Player1Placed = DotState(0 or DotStateFlags.Placed.value)
-        val Player2Placed = DotState(DotStateFlags.PlacedPlayer.value or DotStateFlags.Placed.value)
-        val BothPlayersPlaced = DotState(DotStateFlags.PlacedPlayer.value or 0) // Special value
+        private const val PLAYER_BITS_COUNT = 2
 
-        private val PlacedTerritoryMask = DotStateFlags.Placed.value or DotStateFlags.Territory.value
-        private val PlacedMask = DotStateFlags.Placed.value or DotStateFlags.PlacedPlayer.value
-        private val TerritoryMask = DotStateFlags.Territory.value or DotStateFlags.TerritoryPlayer.value
-        private val EmptyTerritoryMask = DotStateFlags.EmptyTerritory.value or DotStateFlags.EmptyTerritoryPlayer.value
-        private val InvalidateTerritoryMask = (DotStateFlags.Territory.value or DotStateFlags.TerritoryPlayer.value or EmptyTerritoryMask).inv()
+        private const val PLACED_PLAYER_SHIFT = PLAYER_BITS_COUNT
+        private const val EMPTY_TERRITORY_SHIFT = PLACED_PLAYER_SHIFT + PLAYER_BITS_COUNT
+        private const val TERRITORY_FLAG_SHIFT = EMPTY_TERRITORY_SHIFT + PLAYER_BITS_COUNT
+        private const val BOARDER_FLAG_SHIFT = TERRITORY_FLAG_SHIFT + 1
+
+        private const val ACTIVE_MASK: Int = (1 shl PLAYER_BITS_COUNT) - 1
+        private const val TERRITORY_FLAG: Int = 1 shl TERRITORY_FLAG_SHIFT
+        private const val BORDER_FLAG: Int = 1 shl BOARDER_FLAG_SHIFT
+        private const val ACTIVE_AND_TERRITORY_MASK: Int = ACTIVE_MASK or TERRITORY_FLAG
+        private const val INVALIDATE_TERRITORY_MASK: Int = (ACTIVE_MASK or (ACTIVE_MASK shl EMPTY_TERRITORY_SHIFT)).inv()
+
+        val Empty: DotState = DotState(0)
+        val Border: DotState = DotState(BORDER_FLAG)
+
+        fun createPlaced(player: Player): DotState {
+            return DotState(player.value or (player.value shl PLACED_PLAYER_SHIFT))
+        }
+
+        fun createEmptyTerritory(player: Player): DotState {
+            return DotState(player.value shl EMPTY_TERRITORY_SHIFT)
+        }
     }
 
-    fun checkPlacedOrTerritory(): Boolean {
-        return value and PlacedTerritoryMask != 0
-    }
-
-    fun checkPlaced(): Boolean {
-        return value and DotStateFlags.Placed.value != 0
-    }
-
-    fun checkPlaced(playerPlacedValue: DotState): Boolean {
-        return value and PlacedMask == playerPlacedValue.value
+    fun getActivePlayer(): Player {
+        return Player(value and ACTIVE_MASK)
     }
 
     fun checkActive(): Boolean {
-        return value and PlacedTerritoryMask != 0
+        return value and ACTIVE_MASK != 0 || value and BORDER_FLAG != 0
     }
 
-    fun checkActive(playerActiveValue: DotState): Boolean {
-        val placedPlayer = playerActiveValue.getPlacedPlayer()
-        return checkTerritoryOrPlacedPlayer(placedPlayer) || value and DotStateFlags.Border.value != 0
+    fun checkActive(player: Player): Boolean {
+        return value and ACTIVE_MASK == player.value || value and BORDER_FLAG != 0
     }
 
-    fun checkTerritory(): Boolean {
-        return value and DotStateFlags.Territory.value != 0
+    fun checkActiveAndTerritory(player: Player): Boolean {
+        return value and ACTIVE_AND_TERRITORY_MASK == player.value or TERRITORY_FLAG
     }
 
-    fun checkTerritory(playerAndTerritory: DotState): Boolean {
-        return value and TerritoryMask == playerAndTerritory.value
+    fun checkActiveAndNotTerritory(player: Player): Boolean {
+        return value and ACTIVE_AND_TERRITORY_MASK == player.value
     }
 
-    fun getTerritoryPlayer(): Player {
-        return if (value and DotStateFlags.TerritoryPlayer.value == 0) First else Second
-    }
-
-    fun checkWithinEmptyTerritory(): Boolean {
-        return value and DotStateFlags.EmptyTerritory.value != 0
-    }
-
-    fun checkWithinEmptyTerritory(player: Player): Boolean {
-        return value and EmptyTerritoryMask ==
-                (if (player == First) 0 else DotStateFlags.EmptyTerritoryPlayer.value) or DotStateFlags.EmptyTerritory.value
-    }
-
-    fun getEmptyTerritoryPlayer(): Player {
-        return if (value and DotStateFlags.EmptyTerritoryPlayer.value == 0) First else Second
-    }
-
-    fun checkBorder(): Boolean {
-        return value and DotStateFlags.Border.value != 0
+    fun checkPlaced(player: Player): Boolean {
+        return value shr PLACED_PLAYER_SHIFT and ACTIVE_MASK == player.value
     }
 
     fun getPlacedPlayer(): Player {
-        return if (value and DotStateFlags.PlacedPlayer.value == 0) First else Second
+        return Player(value shr PLACED_PLAYER_SHIFT and ACTIVE_MASK)
     }
 
-    fun getTerritoryOrPlacedPlayer(): Player {
-        return when {
-            value and DotStateFlags.Territory.value != 0 -> {
-                if (value and DotStateFlags.TerritoryPlayer.value == 0) First else Second
-            }
-            value and DotStateFlags.Placed.value != 0 -> {
-                if (value and DotStateFlags.PlacedPlayer.value == 0) First else Second
-            }
-            else -> {
-                Player.None
-            }
-        }
+    fun getEmptyTerritoryPlayer(): Player {
+        return Player(value shr EMPTY_TERRITORY_SHIFT and ACTIVE_MASK)
     }
 
-    fun checkTerritoryOrPlacedPlayer(player: Player): Boolean {
-        return when {
-            value and DotStateFlags.Territory.value != 0 -> {
-                ((value shr 2) and 0x3) == player.value
-            }
-            value and DotStateFlags.Placed.value != 0 -> {
-                (value and 0x3) == player.value
-            }
-            else -> {
-                false
-            }
-        }
+    fun checkWithinEmptyTerritory(player: Player): Boolean {
+        return value shr EMPTY_TERRITORY_SHIFT and ACTIVE_MASK == player.value
     }
 
-    fun setTerritory(playerAndTerritory: DotState): DotState {
-        return DotState(value and InvalidateTerritoryMask or playerAndTerritory.value)
+    fun checkTerritory(): Boolean {
+        return value and TERRITORY_FLAG != 0
+    }
+
+    fun setTerritory(player: Player): DotState {
+        return DotState(TERRITORY_FLAG or (value and INVALIDATE_TERRITORY_MASK) or player.value)
+    }
+
+    fun checkBorder(): Boolean {
+        return value and BORDER_FLAG != 0
     }
 
     override fun toString(): String {
         return buildString {
-            if (value and DotStateFlags.Placed.value != 0) {
+            val activePlayer = getActivePlayer()
+            if (activePlayer != Player.None) {
+                append("Active: Player")
+                append(activePlayer.value)
+                append("; ")
+            }
+
+            val placedPlayer = getPlacedPlayer()
+            if (placedPlayer != Player.None) {
                 append("Placed: Player ")
-                append(if (value and DotStateFlags.PlacedPlayer.value == 0) "0" else "1")
+                append(placedPlayer.value)
                 append("; ")
             }
 
-            if (value and DotStateFlags.Territory.value != 0) {
-                append("Territory: Player")
-                append(if (value and DotStateFlags.TerritoryPlayer.value == 0) "0" else "1")
-                append("; ")
-            }
-
-            if (value and DotStateFlags.EmptyTerritory.value != 0) {
+            val emptyTerritoryPlayer = getEmptyTerritoryPlayer()
+            if (emptyTerritoryPlayer != Player.None) {
                 append("WithinEmptyTerritory: Player")
-                append(if (value and DotStateFlags.EmptyTerritoryPlayer.value == 0) "0" else "1")
+                append(emptyTerritoryPlayer.value)
                 append("; ")
             }
 
-            if (value and DotStateFlags.Border.value != 0) {
+            if (checkBorder()) {
                 append("Border; ")
             }
         }
     }
 }
 
-private enum class DotStateFlags(val value: Int) {
-    Placed(0x1),
-    PlacedPlayer(0x2),
-    Territory(0x4),
-    TerritoryPlayer(0x8),
-    EmptyTerritory(0x10),
-    EmptyTerritoryPlayer(0x20),
-    Border(0x40),
-}
-
-fun Player.createPlacedState(): DotState {
-    return DotState(DotStateFlags.Placed.value or (if (this == First) 0 else DotStateFlags.PlacedPlayer.value))
-}
-
-fun Player.createTerritoryState(): DotState {
-    return DotState(DotStateFlags.Territory.value or (if (this == First) 0 else DotStateFlags.TerritoryPlayer.value))
-}
-
-fun Player.createEmptyTerritoryState(): DotState {
-    return DotState(DotStateFlags.EmptyTerritory.value or (if (this == First) 0 else DotStateFlags.EmptyTerritoryPlayer.value))
-}
-
 const val FIRST_PLAYER_MARKER = '*'
 const val SECOND_PLAYER_MARKER = '+'
 const val TERRITORY_EMPTY_MARKER = '^'
 const val EMPTY_TERRITORY_MARKER = '`'
-const val EMPTY_POSITION = '.'
+const val EMPTY_POSITION_MARKER = '.'
+const val BOARDER_MARKER = '#'
 
-val playerMarker = mapOf(First to FIRST_PLAYER_MARKER, Second to SECOND_PLAYER_MARKER)
+val playerMarker = mapOf(
+    Player.First to FIRST_PLAYER_MARKER,
+    Player.Second to SECOND_PLAYER_MARKER,
+    Player.None to EMPTY_POSITION_MARKER,
+    Player.WallOrBoth to BOARDER_MARKER,
+)

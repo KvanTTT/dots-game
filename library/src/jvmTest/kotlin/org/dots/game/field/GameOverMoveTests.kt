@@ -118,8 +118,8 @@ class GameOverMoveTests : FieldTests() {
             assertEquals(4, moveResult.bases!!.size)
 
             with (it) {
-                assertFalse(Position(3, 3).getState().checkWithinEmptyTerritory())
-                assertFalse(Position(3, 4).getState().checkWithinEmptyTerritory())
+                assertEquals(Player.None, Position(3, 3).getState().getEmptyTerritoryPlayer())
+                assertEquals(Player.None, Position(3, 4).getState().getEmptyTerritoryPlayer())
             }
         }
     }

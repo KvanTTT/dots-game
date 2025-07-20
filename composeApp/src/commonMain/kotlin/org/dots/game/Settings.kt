@@ -27,7 +27,7 @@ fun loadRules(): Rules {
                         if (initialMovesData.isNotEmpty()) {
                             initialMovesData.split(secondLevelSeparator).forEach { moveInfo ->
                                 val parts = moveInfo.split(firstLevelSeparator)
-                                add(MoveInfo(Position(parts[0].toInt(), parts[1].toInt()), Player.valueOf(parts[2])))
+                                add(MoveInfo(Position(parts[0].toInt(), parts[1].toInt()), Player.validateAndCreate(parts[2].toInt())))
                             }
                         }
                     }
@@ -51,7 +51,7 @@ fun saveRules(rules: Rules) {
         putBoolean(Rules::suicideAllowed.rulesSettingName, rules.suicideAllowed)
         putString(
             Rules::initialMoves.rulesSettingName,
-            rules.initialMoves.joinToString(secondLevelSeparator) { "${it.position.x}$firstLevelSeparator${it.position.y}$firstLevelSeparator${it.player.name}" })
+            rules.initialMoves.joinToString(secondLevelSeparator) { "${it.position.x}$firstLevelSeparator${it.position.y}$firstLevelSeparator${it.player.value}" })
     }
 }
 
