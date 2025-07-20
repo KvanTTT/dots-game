@@ -94,10 +94,9 @@ class CliArgs : CliktCommand() {
                 seed ?: 0L,
                 checkRollback,
                 measureNanos = { System.nanoTime() },
-                formatDouble = { String.format(Locale.ENGLISH, "%.4f", it) }
-            ) {
-                outputStream.println(it)
-            }
+                formatDouble = { String.format(Locale.ENGLISH, "%.4f", it) },
+                outputStream = { outputStream.println(it) },
+            )
         }
     }
     fun PrintStream.reportSpecifiedButUnusedParameter(property: KProperty<*>, value: Any?) {

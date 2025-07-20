@@ -16,7 +16,8 @@ object RandomGameAnalyser {
         checkRollback: Boolean,
         measureNanos: () -> Long,
         formatDouble: (Double) -> String,
-        outputStream: (String) -> Unit
+        outputStream: (String) -> Unit,
+        errorStream: (String) -> Unit = outputStream,
     ) {
         val random = if (seed == 0L) Random.Default else Random(seed)
 
@@ -56,43 +57,47 @@ object RandomGameAnalyser {
         for (gameNumber in 0 until gamesCount) {
             randomMoves.shuffle(random)
 
-            val field = Field.create(rules) { moveInfo: MoveInfo, _: Boolean, moveNumber: Int ->
-                outputStream("Incorrect initial move #$moveNumber at ${moveInfo.position} (${moveInfo.player})")
-            }
+            try {
+                val field = Field.create(rules) { moveInfo: MoveInfo, _: Boolean, moveNumber: Int ->
+                    outputStream("Incorrect initial move #$moveNumber at ${moveInfo.position} (${moveInfo.player})")
+                }
 
-            for (randomMove in randomMoves) {
-                val moveResult = field.makeMove(randomMove)
+                for (randomMove in randomMoves) {
+                    val moveResult = field.makeMove(randomMove)
 
-                if (moveResult != null) {
-                    movesCount++
-                    if (moveResult.bases != null) {
-                        for (base in moveResult.bases) {
-                            if (base.isReal) {
-                                capturedDotsCount += base.playerDiff
-                                freedDotsCount -= base.oppositePlayerDiff
-                                basesCount++
-                            } else {
-                                emptyBasesCount++
+                    if (moveResult != null) {
+                        movesCount++
+                        if (moveResult.bases != null) {
+                            for (base in moveResult.bases) {
+                                if (base.isReal) {
+                                    capturedDotsCount += base.playerDiff
+                                    freedDotsCount -= base.oppositePlayerDiff
+                                    basesCount++
+                                } else {
+                                    emptyBasesCount++
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            val gameResult = field.gameResult!!
-            if (gameResult is GameResult.Draw) {
-                drawCount++
-            } else {
-                require(gameResult is GameResult.WinGameResult)
-                if (gameResult.winner == Player.First) {
-                    firstPlayerWins++
+                val gameResult = field.gameResult!!
+                if (gameResult is GameResult.Draw) {
+                    drawCount++
                 } else {
-                    secondPlayerWins++
+                    require(gameResult is GameResult.WinGameResult)
+                    if (gameResult.winner == Player.First) {
+                        firstPlayerWins++
+                    } else {
+                        secondPlayerWins++
+                    }
                 }
-            }
 
-            if (checkRollback) {
-                field.unmakeAllMovesAndCheck { outputStream(it) }
+                if (checkRollback) {
+                    field.unmakeAllMovesAndCheck { errorStream(it) }
+                }
+            } catch(ex: Exception) {
+                errorStream("Exception during running the game #$gameNumber: ${ex.message}")
             }
         }
 
