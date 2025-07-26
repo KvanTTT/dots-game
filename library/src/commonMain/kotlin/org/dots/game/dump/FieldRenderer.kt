@@ -3,6 +3,7 @@ import org.dots.game.core.EMPTY_TERRITORY_MARKER
 import org.dots.game.core.Field
 import org.dots.game.core.Player
 import org.dots.game.core.Position
+import org.dots.game.core.SURROUNDING_MARKER
 import org.dots.game.core.TERRITORY_EMPTY_MARKER
 import org.dots.game.core.playerMarker
 
@@ -39,16 +40,24 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
             val activePlayer = state.getActivePlayer()
             val placedPlayer = state.getPlacedPlayer()
             val emptyTerritoryPlayer = state.getEmptyTerritoryPlayer()
+            val isTerritory = state.isTerritory()
+            val isSurrounding = state.isSurrounding()
 
             buildString {
                 if (emptyTerritoryPlayer != Player.None) {
-                    require(activePlayer == Player.None && placedPlayer == Player.None)
+                    require(activePlayer == Player.None && placedPlayer == Player.None && !isSurrounding && !isTerritory)
                     if (debugInfo) {
                         append(EMPTY_TERRITORY_MARKER)
                         append(playerMarker.getValue(emptyTerritoryPlayer))
                     }
                 } else if (checkPositionWithinBounds(position)) {
-                    if (debugInfo && state.checkTerritory()) {
+                    if (isTerritory) {
+                        require(!isSurrounding)
+                    } else if (isSurrounding) {
+                        require(!isTerritory)
+                    }
+
+                    if (debugInfo && isTerritory) {
                         append(playerMarker.getValue(activePlayer))
                         append(
                             if (placedPlayer == Player.None)
@@ -58,6 +67,10 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
                         )
                     } else {
                         append(playerMarker.getValue(placedPlayer))
+                    }
+
+                    if (debugInfo && isSurrounding) {
+                        append(SURROUNDING_MARKER)
                     }
                 }
                 if (isEmpty()) {

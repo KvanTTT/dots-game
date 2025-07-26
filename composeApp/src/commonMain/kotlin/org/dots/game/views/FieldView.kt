@@ -321,14 +321,14 @@ private fun AllConnections(currentMove: MoveResult?, field: Field, uiSettings: U
                     for (i in 0 until distantPositions.size) {
                         val startPosition = distantPositions[i]
                         val stateState = startPosition.getState()
-                        if (stateState.checkTerritory()) continue
+                        if (stateState.isTerritory()) continue
 
                         val player = stateState.getActivePlayer()
                         for (j in i + 1 until distantPositions.size) {
                             val endPosition = distantPositions[j]
 
                             if (endPosition.getState().let {
-                                !it.checkTerritory() &&
+                                !it.isTerritory() &&
                                 it.getActivePlayer() == player
                             } &&
                                 startPosition.squareDistanceTo(endPosition) == squaredDistance

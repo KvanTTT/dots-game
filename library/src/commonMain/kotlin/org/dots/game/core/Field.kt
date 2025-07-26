@@ -335,7 +335,7 @@ class Field {
             } else {
                 resultBases = bases
                 extraPreviousStates = if (rules.baseMode != BaseMode.AllOpponentDots &&
-                    originalState.checkWithinEmptyTerritory(currentPlayer.opposite())
+                    originalState.isWithinEmptyTerritory(currentPlayer.opposite())
                 ) {
                     // Invalidate empty territory of the opposite player in case of capturing that is more prioritized
                     // It makes the positions legal for further game.
@@ -347,7 +347,7 @@ class Field {
 
             for (resultBase in resultBases) {
                 for ((_, previousState) in resultBase.previousPositionStates) {
-                    if (!previousState.checkActive()) {
+                    if (!previousState.isActive()) {
                         if (resultBase.isReal) {
                             numberOfLegalMoves--
                         } else {
@@ -402,7 +402,7 @@ class Field {
 
             if (!processedPositions.add(position)) continue
 
-            if (position.getState().checkActive(player)) {
+            if (position.getState().isActive(player)) {
                 var grounded = false
                 val territoryPositions = getTerritoryPositions(oppositePlayer, position) {
                     val state = it.getState()
@@ -410,7 +410,7 @@ class Field {
                         grounded = true
                         false
                     } else {
-                        state.checkActive(player)
+                        state.isActive(player)
                     }
                 }
 
@@ -419,7 +419,7 @@ class Field {
                 if (!isGrounding || !grounded) {
                     for (position in territoryPositions) {
                         position.forEachAdjacent {
-                            if (it.getState().checkWithinEmptyTerritory(player)) {
+                            if (it.getState().isWithinEmptyTerritory(player)) {
                                 extraPreviousStates.addAll(invalidateEmptyTerritory(position))
                                 false
                             } else {
@@ -611,7 +611,7 @@ class Field {
         startPositionsList.clear()
         val oppositePlayer = player.opposite()
         position.forEachAdjacent {
-            if (it.getState().checkActive(oppositePlayer)) {
+            if (it.getState().isActive(oppositePlayer)) {
                 startPositionsList.add(it)
             }
             true
@@ -619,11 +619,12 @@ class Field {
     }
 
     private fun buildBase(player: Player, closurePositions: List<Position>): Base {
-        val closurePositionsSet = HashSet<Position>(closurePositions.size).also { it.addAll(closurePositions) }
+        closurePositions.forEach { it.setState(it.getState().setSurrounding()) }
         val territoryFirstPosition = closurePositions[1].getNextClockwisePosition(closurePositions[0])
         val territoryPositions = getTerritoryPositions(player, territoryFirstPosition) {
-            it !in closurePositionsSet
+            !it.getState().isSurrounding()
         }
+        closurePositions.forEach { it.setState(it.getState().clearSurrounding()) }
         return calculateBase(closurePositions, territoryPositions, player)
     }
 
@@ -691,7 +692,7 @@ class Field {
         val territoryPositions = hashSetOf<Position>()
 
         fun Position.checkAndAdd() {
-            if (getState().checkActiveAndTerritory(player)) return // Ignore already captured territory
+            if (getState().isActiveAndTerritory(player)) return // Ignore already captured territory
 
             if (!positionCheck(this)) return
             if (!territoryPositions.add(this)) return
@@ -720,7 +721,7 @@ class Field {
 
         val oppositePlayer = player.opposite()
 
-        if (territoryFirstPosition.getState().checkActive(player)) {
+        if (territoryFirstPosition.getState().isActive(player)) {
             return null // Ignore already processed bases
         }
 
@@ -747,15 +748,15 @@ class Field {
 
             if (territoryPositions.contains(this)) return true
 
-            if (state.checkPlaced(player)) {
-                if (state.checkActive(oppositePlayer)) {
+            if (state.isPlaced(player)) {
+                if (state.isActive(oppositePlayer)) {
                     oppositePlayerDiff--
                 } else {
                     closurePositions.add(this)
                     return true
                 }
             } else { // Opposite player placed
-                if (!state.checkActive(player)) {
+                if (!state.isActive(player)) {
                     currentPlayerDiff++
                 }
             }
@@ -811,11 +812,11 @@ class Field {
         val oppositePlayer = player.opposite()
 
         fun DotState.updateScoreDiff() {
-            if (checkPlaced(oppositePlayer)) {
+            if (isPlaced(oppositePlayer)) {
                 // The `getTerritoryPositions` never returns positions inside already owned territory,
                 // so there is no need to check for the territory flag.
                 currentPlayerDiff++
-            } else if (checkPlaced(player) && checkActive(oppositePlayer)) {
+            } else if (isPlaced(player) && isActive(oppositePlayer)) {
                 // No diff for the territory of the current player
                 oppositePlayerDiff--
             }
@@ -864,7 +865,7 @@ class Field {
             }
 
             if (!isReal) {
-                if (!territoryPositionState.checkActive()) {
+                if (!territoryPositionState.isActive()) {
                     savePreviousStateAndSetNew(playerEmptyTerritory)
                 }
             } else {

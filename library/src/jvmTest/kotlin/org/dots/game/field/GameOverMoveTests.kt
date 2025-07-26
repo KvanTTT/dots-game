@@ -7,7 +7,6 @@ import org.dots.game.core.Position
 import org.dots.game.core.getSortedClosurePositions
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -137,7 +136,7 @@ class GameOverMoveTests : FieldTests() {
             assertNull(moveResult.bases)
 
             with (it) {
-                assertTrue(Position(2, 2).getState().checkWithinEmptyTerritory(Player.First))
+                assertTrue(Position(2, 2).getState().isWithinEmptyTerritory(Player.First))
             }
         }
     }
