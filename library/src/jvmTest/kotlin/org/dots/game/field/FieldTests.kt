@@ -3,7 +3,7 @@ package org.dots.game.field
 import org.dots.game.core.BaseMode
 import org.dots.game.core.Field
 import org.dots.game.core.MoveInfo
-import org.dots.game.core.Position
+import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import org.dots.game.core.TransformType
 import org.dots.game.core.transform
@@ -19,16 +19,17 @@ abstract class FieldTests {
 
     fun initRules(width: Int, height: Int): Rules =  Rules(width, height, captureByBorder, baseMode, suicideAllowed, initialMoves)
 
-    fun testFieldWithTransformsAndRollback(fieldData: String, check: (field: Field, transformFunc: (Position) -> Position) -> Unit) {
+    fun testFieldWithTransformsAndRollback(fieldData: String, check: (field: Field, transformFunc: (x: Int, y: Int) -> PositionXY) -> Unit) {
         val originalField = FieldParser.parseAndConvert(fieldData, initializeRules = { width, height -> initRules(width, height) })
 
         fun check(transformType: TransformType?) {
             val field = transformType?.let { originalField.transform(transformType) } ?: originalField.clone()
-            check(field) {
+            check(field) { x, y ->
+                val positionXY = PositionXY(x, y)
                 if (transformType != null) {
-                    it.transform(transformType, originalField.realWidth, originalField.realHeight)
+                    positionXY.transform(transformType, originalField.realWidth, originalField.realHeight, field.realWidth)
                 } else {
-                    it
+                    positionXY
                 }
             }
             field.unmakeAllMovesAndCheck { fail(it) }

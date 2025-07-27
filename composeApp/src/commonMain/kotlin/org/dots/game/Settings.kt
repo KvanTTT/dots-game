@@ -4,7 +4,7 @@ import DumpParameters
 import org.dots.game.core.BaseMode
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
-import org.dots.game.core.Position
+import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -27,7 +27,7 @@ fun loadRules(): Rules {
                         if (initialMovesData.isNotEmpty()) {
                             initialMovesData.split(secondLevelSeparator).forEach { moveInfo ->
                                 val parts = moveInfo.split(firstLevelSeparator)
-                                add(MoveInfo(Position(parts[0].toInt(), parts[1].toInt()), Player.validateAndCreate(parts[2].toInt())))
+                                add(MoveInfo(PositionXY(parts[0].toInt(), parts[1].toInt()), Player.validateAndCreate(parts[2].toInt())))
                             }
                         }
                     }
@@ -51,7 +51,7 @@ fun saveRules(rules: Rules) {
         putBoolean(Rules::suicideAllowed.rulesSettingName, rules.suicideAllowed)
         putString(
             Rules::initialMoves.rulesSettingName,
-            rules.initialMoves.joinToString(secondLevelSeparator) { "${it.position.x}$firstLevelSeparator${it.position.y}$firstLevelSeparator${it.player.value}" })
+            rules.initialMoves.joinToString(secondLevelSeparator) { "${it.positionXY.x}$firstLevelSeparator${it.positionXY.y}$firstLevelSeparator${it.player.value}" })
     }
 }
 

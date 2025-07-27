@@ -6,6 +6,7 @@ import org.dots.game.LineColumnDiagnostic
 import org.dots.game.core.Label
 import org.dots.game.core.Player
 import org.dots.game.core.Position
+import org.dots.game.core.PositionXY
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -13,13 +14,14 @@ import kotlin.test.assertTrue
 class SgfConverterMovesTests {
     @Test
     fun initialPositionsAreCorrect() {
-        val rules = parseConvertAndCheck(
+        val game = parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[62:62]AB[az][mm]AW[AZ][])"
-        ).single().rules
+        ).single()
+        val rules = game.rules
         assertEquals(3, rules.initialMoves.size)
-        checkMoveDisregardExtraInfo(Position(1, 26), Player.First, rules.initialMoves[0])
-        checkMoveDisregardExtraInfo(Position(13, 13), Player.First,rules.initialMoves[1])
-        checkMoveDisregardExtraInfo(Position(27, 52), Player.Second,rules.initialMoves[2])
+        checkMoveDisregardExtraInfo(1, 26, Player.First, rules.initialMoves[0])
+        checkMoveDisregardExtraInfo(13, 13, Player.First, rules.initialMoves[1])
+        checkMoveDisregardExtraInfo(27, 52, Player.Second, rules.initialMoves[2])
     }
 
     @Test
@@ -58,7 +60,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun initialPositionsOverwriting() {
-        val rules = parseConvertAndCheck(
+        val game = parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[39:32]AB[ab][mm][ab])", listOf(
                 LineColumnDiagnostic(
                     "Property AB (Player1 initial dots) value `ab` overwrites one the previous position.",
@@ -66,15 +68,16 @@ class SgfConverterMovesTests {
                     DiagnosticSeverity.Warning
                 ),
             )
-        ).single().rules
+        ).single()
+        val rules = game.rules
         assertEquals(2, rules.initialMoves.size)
-        checkMoveDisregardExtraInfo(Position(13, 13), Player.First,rules.initialMoves[0])
-        checkMoveDisregardExtraInfo(Position(1, 2), Player.First,rules.initialMoves[1])
+        checkMoveDisregardExtraInfo(13, 13, Player.First,rules.initialMoves[0])
+        checkMoveDisregardExtraInfo(1, 2, Player.First,rules.initialMoves[1])
     }
 
     @Test
     fun initialPositionsOfPlayer2OverwritesPlayer1() {
-        val rules = parseConvertAndCheck(
+        val game = parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[39:32]AB[ab]AW[ab])", listOf(
                 LineColumnDiagnostic(
                     "Property AW (Player2 initial dots) value `ab` overwrites one the previous position of first player AB (Player1 initial dots).",
@@ -82,8 +85,9 @@ class SgfConverterMovesTests {
                     DiagnosticSeverity.Warning
                 ),
             )
-        ).single().rules
-        checkMoveDisregardExtraInfo(Position(1, 2), Player.Second, rules.initialMoves.single())
+        ).single()
+        val rules = game.rules
+        checkMoveDisregardExtraInfo(1, 2, Player.Second, rules.initialMoves.single())
     }
 
     @Test
@@ -104,25 +108,27 @@ class SgfConverterMovesTests {
 
     @Test
     fun branches() {
-        val rootNode = parseConvertAndCheck(
+        val gameTree = parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[39:32];B[bb](;B[bc];W[bd])(;B[cc];W[cd]))"
-        ).single().gameTree.rootNode
+        ).single().gameTree
+        val rootNode = gameTree.rootNode
+        val fieldStride = gameTree.field.realWidth
         assertEquals(1, rootNode.nextNodes.size)
-        val mainBranchNode = rootNode.getNextNode(2, 2, Player.First)!!
+        val mainBranchNode = rootNode.getNextNode(2, 2, fieldStride, Player.First)!!
         assertEquals(2, mainBranchNode.nextNodes.size)
 
-        var branch1Node = mainBranchNode.getNextNode(2, 3, Player.First)!!
-        branch1Node = branch1Node.getNextNode(2, 4, Player.Second)!!
+        var branch1Node = mainBranchNode.getNextNode(2, 3, fieldStride, Player.First)!!
+        branch1Node = branch1Node.getNextNode(2, 4, fieldStride, Player.Second)!!
         assertTrue(branch1Node.nextNodes.isEmpty())
 
-        var branch2Node = mainBranchNode.getNextNode(3, 3, Player.First)!!
-        branch2Node = branch2Node.getNextNode(3, 4, Player.Second)!!
+        var branch2Node = mainBranchNode.getNextNode(3, 3, fieldStride, Player.First)!!
+        branch2Node = branch2Node.getNextNode(3, 4, fieldStride, Player.Second)!!
         assertTrue(branch2Node.nextNodes.isEmpty())
     }
 
     @Test
     fun incorrectMovesSequence() {
-        val rootNode = parseConvertAndCheck(
+        val gameTree = parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[10:10];B[bb];B[__];W[bb];W[c];W[ml])", listOf(
                 LineColumnDiagnostic(
                     "Property B (Player1 move) has incorrect x coordinate `_`.",
@@ -150,14 +156,14 @@ class SgfConverterMovesTests {
                     DiagnosticSeverity.Error
                 ),
             )
-        ).single().gameTree.rootNode
-        val nextNode = rootNode.getNextNode(2, 2, Player.First)!!
+        ).single().gameTree
+        val nextNode = gameTree.rootNode.getNextNode(2, 2, gameTree.field.realWidth, Player.First)!!
         assertEquals(1, nextNode.nextNodes.size)
     }
 
     @Test
     fun movesInRootNode() {
-        val rootNode = parseConvertAndCheck(
+        val gameTree = parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[39:32]B[cc]W[dd])",
             listOf(
                 LineColumnDiagnostic(
@@ -171,9 +177,10 @@ class SgfConverterMovesTests {
                     DiagnosticSeverity.Warning
                 ),
             )
-        ).single().gameTree.rootNode
-        var nextNode = rootNode.getNextNode(3, 3, Player.First)!!
-        nextNode = nextNode.getNextNode(4, 4, Player.Second)!!
+        ).single().gameTree
+        val fieldStride = gameTree.field.realWidth
+        var nextNode = gameTree.rootNode.getNextNode(3, 3, fieldStride, Player.First)!!
+        nextNode = nextNode.getNextNode(4, 4, fieldStride, Player.Second)!!
         assertTrue(nextNode.nextNodes.isEmpty())
     }
 
@@ -189,7 +196,7 @@ class SgfConverterMovesTests {
                 ),
             )
         ).single().gameTree
-        val nextNode = gameTree.rootNode.getNextNode(3, 3, Player.First)!!
+        val nextNode = gameTree.rootNode.getNextNode(3, 3, gameTree.field.realWidth, Player.First)!!
         assertTrue(nextNode.nextNodes.isEmpty())
     }
 
@@ -208,18 +215,19 @@ class SgfConverterMovesTests {
             )
         ).single().gameTree
 
-        var node = gameTree.rootNode.getNextNode(2, 2, Player.First)!!
-        node = node.getNextNode(1, 2, Player.Second)!!
-        node = node.getNextNode(2, 1, Player.Second)!!
-        node = node.getNextNode(3, 2, Player.Second)!!
-        node = node.getNextNode(2, 3, Player.Second)!!
+        val fieldStride = gameTree.field.realWidth
+        var node = gameTree.rootNode.getNextNode(2, 2, fieldStride, Player.First)!!
+        node = node.getNextNode(1, 2, fieldStride, Player.Second)!!
+        node = node.getNextNode(2, 1, fieldStride, Player.Second)!!
+        node = node.getNextNode(3, 2, fieldStride, Player.Second)!!
+        node = node.getNextNode(2, 3, fieldStride, Player.Second)!!
 
         assertEquals(
             listOf(
-                Position(2, 3),
-                Position(3, 2),
-                Position(2, 1),
-                Position(1, 2),
+                Position(2, 3, fieldStride),
+                Position(3, 2, fieldStride),
+                Position(2, 1, fieldStride),
+                Position(1, 2, fieldStride),
             ),
             node.moveResult!!.bases!!.single().closurePositions
         )
@@ -335,13 +343,14 @@ class SgfConverterMovesTests {
         val gameTree = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];W[aa]LB[aa:])").single().gameTree
         gameTree.next()
         val label = gameTree.currentNode.labels!!.single()
-        assertEquals(Position(1, 1), label.position)
+        assertEquals(PositionXY(1, 1), label.positionXY)
         assertEquals("", label.text)
 
         val gameTree2 = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];W[cc]LB[aa:label][bb:label2])").single().gameTree
         gameTree2.next()
         val labels = gameTree2.currentNode.labels
-        assertEquals(listOf(Label(Position(1, 1), "label"), Label(Position(2, 2), "label2")), labels)
+        val fieldStride = gameTree2.field.realWidth
+        assertEquals(listOf(Label(PositionXY(1, 1), "label"), Label(PositionXY(2, 2), "label2")), labels)
     }
 
     @Test
@@ -349,7 +358,15 @@ class SgfConverterMovesTests {
         val gameTree = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];B[bb]CR[ba][cb][bc][ab])").single().gameTree
         gameTree.next()
         val circles = gameTree.currentNode.circles
-        assertEquals(listOf(Position(2, 1), Position(3, 2), Position(2, 3), Position(1, 2)), circles)
+        val fieldStride = gameTree.field.realWidth
+        assertEquals(
+            listOf(
+                Position(2, 1, fieldStride),
+                Position(3, 2, fieldStride),
+                Position(2, 3, fieldStride),
+                Position(1, 2, fieldStride)
+            ), circles
+        )
     }
 
     @Test
@@ -359,7 +376,8 @@ class SgfConverterMovesTests {
         )).single().gameTree
         gameTree.next()
         val circles = gameTree.currentNode.circles
-        assertEquals(listOf(Position(2, 1)), circles)
+        val fieldStride = gameTree.field.realWidth
+        assertEquals(listOf(Position(2, 1, fieldStride)), circles)
     }
 
     @Test
@@ -367,7 +385,15 @@ class SgfConverterMovesTests {
         val gameTree = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];B[bb]SQ[ba][cb][bc][ab])").single().gameTree
         gameTree.next()
         val squares = gameTree.currentNode.squares
-        assertEquals(listOf(Position(2, 1), Position(3, 2), Position(2, 3), Position(1, 2)), squares)
+        val fieldStride = gameTree.field.realWidth
+        assertEquals(
+            listOf(
+                Position(2, 1, fieldStride),
+                Position(3, 2, fieldStride),
+                Position(2, 3, fieldStride),
+                Position(1, 2, fieldStride)
+            ), squares
+        )
     }
 
     @Test

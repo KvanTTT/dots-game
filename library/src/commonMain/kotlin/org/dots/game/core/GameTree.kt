@@ -1,7 +1,7 @@
 package org.dots.game.core
 
 class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player2TimeLeft: Double? = null) {
-    val rootNode: GameTreeNode = GameTreeNode(null, null, 0, mutableMapOf())
+    val rootNode: GameTreeNode = GameTreeNode(null, null, null, 0, mutableMapOf())
     private val allNodes: MutableSet<GameTreeNode> = mutableSetOf(rootNode)
     private val memoizedNextChild: MutableMap<GameTreeNode, GameTreeNode> = mutableMapOf()
     var currentNode: GameTreeNode = rootNode
@@ -19,6 +19,7 @@ class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player
      */
     fun add(
         move: MoveResult?,
+        gameResult: GameResult? = null,
         timeLeft: Double? = null,
         comment: String? = null,
         labels: List<Label>? = null,
@@ -31,7 +32,7 @@ class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player
         var result: Boolean
         currentNode = if (existingNode == null) {
             result = true
-            GameTreeNode(move, previousNode = currentNode, currentNode.number + 1, timeLeft = timeLeft, comment = comment, labels = labels, circles = circles, squares = squares).also {
+            GameTreeNode(move, gameResult, previousNode = currentNode, currentNode.number + 1, timeLeft = timeLeft, comment = comment, labels = labels, circles = circles, squares = squares).also {
                 currentNode.nextNodes[positionPlayer] = it
                 allNodes.add(it)
             }
@@ -81,7 +82,7 @@ class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player
         while (counter < count) {
             val nextNode =
                 (memoizedNextChild[currentNode] ?: currentNode.nextNodes.values.firstOrNull()) ?: break
-            nextNode.moveResult.makeMoveIfNeeded()
+            nextNode.makeMoveIfNeeded()
             currentNode = nextNode
             counter++
         }
@@ -123,7 +124,7 @@ class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player
         }
 
         unmakeMoveIfNeeded()
-        targetSiblingNode.moveResult.makeMoveIfNeeded()
+        targetSiblingNode.makeMoveIfNeeded()
         currentNode = targetSiblingNode
 
         previousNode.memoizeCurrentNodeIfNeeded()
@@ -168,9 +169,8 @@ class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player
         }
 
         for (nextNode in nextNodes) {
-            val moveResult = nextNode.moveResult
-            moveResult.makeMoveIfNeeded()
-            currentNode = currentNode.nextNodes.getValue(moveResult?.positionPlayer)
+            nextNode.makeMoveIfNeeded()
+            currentNode = currentNode.nextNodes.getValue(nextNode.moveResult?.positionPlayer)
         }
 
         require(currentNode == targetNode)
@@ -210,14 +210,21 @@ class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player
         }
     }
 
-    private fun MoveResult?.makeMoveIfNeeded() {
-        if (this != null) {
-            requireNotNull(field.makeMoveUnsafe(position, player))
-        }
+    private fun GameTreeNode.makeMoveIfNeeded() {
+        requireNotNull(
+            if (gameResult == null) {
+                moveResult?.let {
+                    field.makeMoveUnsafe(it.position, it.player)
+                }
+            } else {
+                val (externalGameResult, looser) = gameResult.toExternalFinishReason()
+                field.finishGame(externalGameResult!!, looser)
+            }
+        )
     }
 
     private fun unmakeMoveIfNeeded() {
-        if (currentNode.moveResult != null) {
+        if (currentNode.let { it.moveResult != null || it.gameResult != null }) {
             requireNotNull(field.unmakeMove())
         }
     }
@@ -236,6 +243,7 @@ class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player
 
 class GameTreeNode(
     val moveResult: MoveResult?,
+    val gameResult: GameResult?,
     val previousNode: GameTreeNode?,
     val number: Int,
     val nextNodes: MutableMap<PositionPlayer?, GameTreeNode> = mutableMapOf(),

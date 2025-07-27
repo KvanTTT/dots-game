@@ -228,9 +228,12 @@ fun App() {
                     fun EndMoveButton(isGrounding: Boolean) {
                         Button(
                             onClick = {
-                                val moveResult = field.makeMove(if (isGrounding) Position.GROUND else Position.RESIGN, moveMode.getMovePlayer())
-                                if (moveResult != null) {
-                                    gameTree.add(moveResult)
+                                val gameResult = field.finishGame(
+                                    if (isGrounding) ExternalFinishReason.Grounding else ExternalFinishReason.Resign,
+                                    moveMode.getMovePlayer()
+                                )
+                                if (gameResult != null) {
+                                    gameTree.add(move = field.lastMove, gameResult = gameResult)
                                     updateFieldAndGameTree()
                                     focusRequester.requestFocus()
                                 }

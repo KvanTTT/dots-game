@@ -1,6 +1,6 @@
 package org.dots.game
 
-import org.dots.game.core.Offset
+import org.dots.game.core.Field
 import org.dots.game.core.Position
 import org.dots.game.core.clockwiseBigJumpWalk
 import kotlin.test.Test
@@ -9,50 +9,35 @@ import kotlin.test.assertFails
 
 class PositionTests {
     @Test
-    fun testPosition() {
-        assertEquals("(0;0)", Position(0, 0).toString())
-        assertEquals("(5;5)", Position(5, 5).toString())
-    }
-
-    @Test
-    fun testOffset() {
-        assertEquals("(0;0)", Offset(0, 0).toString())
-        assertEquals("(1;1)", Offset(1, 1).toString())
-        assertEquals("(-1;1)", Offset(-1, 1).toString())
-        assertEquals("(1;-1)", Offset(1, -1).toString())
-        assertEquals("(-1;-1)", Offset(-1, -1).toString())
-        assertEquals("(-10;-10)", Offset(-10, -10).toString())
-    }
-
-    @Test
     fun testClockwiseBigJumpWalk() {
         val x = 2
         val y = 2
-        val position = Position(2, 2)
+        val fieldStride = Field.getStride(5)
+        val position = Position(2, 2, fieldStride)
         var counter = 0
 
         val positionsToCheck = listOf(
-            Position(x - 1, y - 1),
-            Position(x, y - 1),
-            Position(x + 1, y - 1),
-            Position(x + 1, y),
-            Position(x + 1, y + 1),
-            Position(x, y + 1),
-            Position(x - 1, y + 1),
-            Position(x - 1, y),
+            Position(x - 1, y - 1, fieldStride),
+            Position(x, y - 1, fieldStride),
+            Position(x + 1, y - 1, fieldStride),
+            Position(x + 1, y, fieldStride),
+            Position(x + 1, y + 1, fieldStride),
+            Position(x, y + 1, fieldStride),
+            Position(x - 1, y + 1, fieldStride),
+            Position(x - 1, y, fieldStride),
         )
 
         for (positionToCheck in positionsToCheck) {
-            position.clockwiseBigJumpWalk(positionToCheck) {
+            position.clockwiseBigJumpWalk(positionToCheck, fieldStride) {
                 val expectedPosition = when (counter) {
-                    0 -> Position(x + 1, y - 1)
-                    1 -> Position(x + 1, y + 1)
-                    2 -> Position(x + 1, y + 1)
-                    3 -> Position(x - 1, y + 1)
-                    4 -> Position(x - 1, y + 1)
-                    5 -> Position(x - 1, y - 1)
-                    6 -> Position(x - 1, y - 1)
-                    7 -> Position(x + 1, y - 1)
+                    0 -> Position(x + 1, y - 1, fieldStride)
+                    1 -> Position(x + 1, y + 1, fieldStride)
+                    2 -> Position(x + 1, y + 1, fieldStride)
+                    3 -> Position(x - 1, y + 1, fieldStride)
+                    4 -> Position(x - 1, y + 1, fieldStride)
+                    5 -> Position(x - 1, y - 1, fieldStride)
+                    6 -> Position(x - 1, y - 1, fieldStride)
+                    7 -> Position(x + 1, y - 1, fieldStride)
                     else -> assertFails { "Incorrect clockwiseBigJump walk" }
                 }
 

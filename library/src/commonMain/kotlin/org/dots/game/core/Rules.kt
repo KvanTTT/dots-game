@@ -23,6 +23,7 @@ class Rules(
      * The recognizer doesn't consider crosses orientation and positions.
      */
     val initialPositionType: InitialPositionType by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        val fieldStride = Field.getStride(width)
         when (initialMoves.size) {
             0 -> Empty
             1 -> Single
@@ -30,29 +31,31 @@ class Rules(
                 var maxX = 0
                 var maxY = 0
                 for (initialMove in initialMoves) {
-                    initialMove.position.let {
-                        if (it.x > maxX) maxX = it.x
-                        if (it.y > maxY) maxY = it.y
+                    initialMove.positionXY.let {
+                        val (x, y) = it
+                        if (x > maxX) maxX = x
+                        if (y > maxY) maxY = y
                     }
                 }
 
                 val movesArray: Array<Array<Player?>> = Array(maxX) { Array(maxY) { null } }
 
                 for (initialMove in initialMoves) {
-                    val (position, player, _) = initialMove
-                    movesArray[position.x - 1][position.y - 1] = player
+                    val (positionXY, player, _) = initialMove
+                    val (x, y) = positionXY
+                    movesArray[x - 1][y - 1] = player
                 }
 
                 var crossesCount = 0
-                val ignoredPositions = hashSetOf<Pair<Int, Int>>()
+                val ignoredPositions = hashSetOf<PositionXY>()
                 for (y in 0 until maxY) {
                     for (x in 0 until maxX) {
-                        if (!ignoredPositions.contains(x to y) && movesArray.recognizeCross(x, y)) {
+                        if (!ignoredPositions.contains(PositionXY(x, y)) && movesArray.recognizeCross(x, y)) {
                             ignoredPositions.apply {
-                                add(Pair(x, y))
-                                add(Pair(x + 1, y))
-                                add(Pair(x + 1, y + 1))
-                                add(Pair(x, y + 1))
+                                add(PositionXY(x, y))
+                                add(PositionXY(x + 1, y))
+                                add(PositionXY(x + 1, y + 1))
+                                add(PositionXY(x, y + 1))
                             }
                             crossesCount++
                         }
@@ -123,6 +126,7 @@ enum class BaseMode {
  * The generator tries to obey notago and bbs implementations
  */
 fun InitialPositionType.generateDefaultInitialPositions(width: Int, height: Int): List<MoveInfo>? {
+    val fieldStride = Field.getStride(width)
     when (this) {
         Empty -> {
             return emptyList()
@@ -130,13 +134,13 @@ fun InitialPositionType.generateDefaultInitialPositions(width: Int, height: Int)
         Single -> {
             if (width < 1 || height < 1) return null
 
-            return listOf(MoveInfo(Position(width / 2 + 1, height / 2 + 1), Player.First))
+            return listOf(MoveInfo(PositionXY(width / 2 + 1, height / 2 + 1), Player.First))
         }
         Cross -> {
             if (width < 2 || height < 2) return null
 
             // Obey notago implementation for odd height
-            return mutableListOf<MoveInfo>().apply { addCross(Position((width + 1) / 2, height / 2), Player.Second) }
+            return mutableListOf<MoveInfo>().apply { addCross((width + 1) / 2, height / 2, Player.Second) }
         }
         DoubleCross -> {
             if (width < 4 || height < 2) return null
@@ -144,8 +148,8 @@ fun InitialPositionType.generateDefaultInitialPositions(width: Int, height: Int)
             val middleX = (width + 1) / 2 + 1
             val middleY = height / 2 // Obey notago implementation for odd height
             return mutableListOf<MoveInfo>().apply {
-                addCross(Position(middleX - 2, middleY), Player.Second)
-                addCross(Position(middleX, middleY), Player.First)
+                addCross(middleX - 2, middleY, Player.Second)
+                addCross(middleX, middleY, Player.First)
             }
         }
         QuadrupleCross -> {
@@ -162,10 +166,10 @@ fun InitialPositionType.generateDefaultInitialPositions(width: Int, height: Int)
                 offsetY = (height - 3) / 3 + 1
             }
             return mutableListOf<MoveInfo>().apply {
-                addCross(Position(offsetX, offsetY), Player.Second)
-                addCross(Position(width - offsetX, offsetY), Player.Second)
-                addCross(Position(width - offsetX, height - offsetY), Player.Second)
-                addCross(Position(offsetX, height - offsetY), Player.Second)
+                addCross(offsetX, offsetY, Player.Second)
+                addCross(width - offsetX, offsetY, Player.Second)
+                addCross(width - offsetX, height - offsetY, Player.Second)
+                addCross(offsetX, height - offsetY, Player.Second)
             }
         }
         else -> {
@@ -174,10 +178,10 @@ fun InitialPositionType.generateDefaultInitialPositions(width: Int, height: Int)
     }
 }
 
-private fun MutableList<MoveInfo>.addCross(position: Position, startPlayer: Player) {
+private fun MutableList<MoveInfo>.addCross(x: Int, y: Int, startPlayer: Player) {
     val oppPlayer = startPlayer.opposite()
-    add(MoveInfo(position, startPlayer))
-    add(MoveInfo(Position(position.x + 1, position.y), oppPlayer))
-    add(MoveInfo(Position(position.x + 1, position.y + 1), startPlayer))
-    add(MoveInfo(Position(position.x, position.y + 1), oppPlayer))
+    add(MoveInfo(PositionXY(x, y), startPlayer))
+    add(MoveInfo(PositionXY(x + 1, y), oppPlayer))
+    add(MoveInfo(PositionXY(x + 1, y + 1), startPlayer))
+    add(MoveInfo(PositionXY(x, y + 1), oppPlayer))
 }

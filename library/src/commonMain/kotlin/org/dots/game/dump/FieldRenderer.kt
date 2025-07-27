@@ -35,7 +35,7 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
 
     val dotsRepresentation = Array(realWidth) { x ->
         Array(realHeight) { y ->
-            val position = Position(x, y)
+            val position = Position(x, y, realWidth)
             val state = position.getState()
             val activePlayer = state.getActivePlayer()
             val placedPlayer = state.getPlacedPlayer()
@@ -50,7 +50,7 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
                         append(EMPTY_TERRITORY_MARKER)
                         append(playerMarker.getValue(emptyTerritoryPlayer))
                     }
-                } else if (checkPositionWithinBounds(position)) {
+                } else if (getPositionIfWithinBounds(x, y) != null) {
                     if (isTerritory) {
                         require(!isSurrounding)
                     } else if (isSurrounding) {

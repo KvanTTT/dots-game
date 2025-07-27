@@ -115,12 +115,31 @@ sealed class GameResult {
 
     class TimeWin(winner: Player) : WinGameResult(winner)
 
+    class InterruptWin(winner: Player) : WinGameResult(winner)
+
     class UnknownWin(winner: Player) : WinGameResult(winner)
+
+    fun toExternalFinishReason(): Pair<ExternalFinishReason?, Player?> {
+        return when (this) {
+            is Draw -> ExternalFinishReason.Draw to null
+            is ResignWin -> ExternalFinishReason.Resign to winner.opposite()
+            is TimeWin -> ExternalFinishReason.Time to winner.opposite()
+            is InterruptWin -> ExternalFinishReason.Interrupt to winner.opposite()
+            is UnknownWin -> ExternalFinishReason.Unknown to winner.opposite()
+            is ScoreWin -> {
+                when (endGameKind) {
+                    EndGameKind.Grounding -> ExternalFinishReason.Grounding to winner.opposite()
+                    EndGameKind.NoLegalMoves -> null to winner.opposite()
+                    null -> ExternalFinishReason.Unknown to winner.opposite()
+                }
+            }
+        }
+    }
 }
 
-data class MoveInfo(val position: Position, val player: Player, val extraInfo: Any? = null)
+data class MoveInfo(val positionXY: PositionXY, val player: Player, val extraInfo: Any? = null)
 
-data class Label(val position: Position, val text: String)
+data class Label(val positionXY: PositionXY, val text: String)
 
 enum class AppType(val value: String) {
     Zagram("zagram.org"),

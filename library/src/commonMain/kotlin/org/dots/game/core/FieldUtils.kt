@@ -10,7 +10,7 @@ fun Field.getStrongConnectionLinePositions(position: Position): List<Position> {
     if (player == Player.None) return emptyList()
 
     return buildList {
-        position.forEachAdjacent {
+        position.forEachAdjacent(realWidth) {
             if (it.getState().isActiveAndNotTerritory(player)) {
                 add(it)
             }
@@ -29,10 +29,8 @@ fun Field.getPositionsOfConnection(position: Position, diagonalConnections: Bool
     val player = state.getActivePlayer()
     if (player == Player.None) return emptyList()
 
-    val (x, y) = position
-
     val activePositions = buildList {
-        position.clockwiseBigJumpWalk(Position(x - 1, y - 1)) {
+        position.clockwiseBigJumpWalk(position.xm1ym1(realWidth), realWidth) {
             if (it.getState().isActiveAndNotTerritory(player)) {
                 add(it)
             }
@@ -42,18 +40,18 @@ fun Field.getPositionsOfConnection(position: Position, diagonalConnections: Bool
 
     return buildList {
         fun addCurrentAndOriginalIfNeeded(currentPosition: Position) {
-            if (isNotEmpty() && currentPosition.squareDistanceTo(last()) > 2) {
+            if (isNotEmpty() && currentPosition.squareDistanceTo(last(), realWidth) > 2) {
                 add(position)
             }
             add(currentPosition)
         }
 
         for ((index, activePosition) in activePositions.withIndex()) {
-            if (activePosition.squareDistanceTo(position) > 1) { // weak connection
+            if (activePosition.squareDistanceTo(position, realWidth) > 1) { // weak connection
                 val prevActivePosition = activePositions[(index - 1 + activePositions.size) % activePositions.size]
                 val nextActivePosition = activePositions[(index + 1) % activePositions.size]
-                val distanceToPrev = activePosition.squareDistanceTo(prevActivePosition)
-                val distanceToNext = activePosition.squareDistanceTo(nextActivePosition)
+                val distanceToPrev = activePosition.squareDistanceTo(prevActivePosition, realWidth)
+                val distanceToNext = activePosition.squareDistanceTo(nextActivePosition, realWidth)
                 if ((prevActivePosition == nextActivePosition && distanceToPrev == 1) ||
                     (distanceToPrev == 1 && distanceToNext > 1 || distanceToPrev > 1 && distanceToNext == 1) ||
                     diagonalConnections && (distanceToPrev > 1 || distanceToNext > 1)
@@ -65,7 +63,7 @@ fun Field.getPositionsOfConnection(position: Position, diagonalConnections: Bool
             }
         }
 
-        if (isNotEmpty() && (last().squareDistanceTo(first()) > 2 || size <= 2)) {
+        if (isNotEmpty() && (last().squareDistanceTo(first(), realWidth) > 2 || size <= 2)) {
             add(position)
         }
     }
@@ -86,13 +84,14 @@ fun Base.getSortedClosurePositions(field: Field, considerTerritoryPositions: Boo
 
         var firstClosure = true
         while (closureSet.isNotEmpty()) {
-            val positionClosestToHorizontalBorder = closureSet.minBy { it.y }
+            val positionClosestToHorizontalBorder = closureSet.minBy { it.getY(field.realWidth) }
             // The outer closure should be minimal, the inner closure should be maximal
             val newClosure = closureSet.extractClosure(
                 positionClosestToHorizontalBorder,
                 // The next position should be inner for outer closure and outer for inner closure for AllOpponentDots
                 // However, in case of territory positions there is only a single outer closure that should be outer-walked
                 innerWalk = !considerTerritoryPositions && firstClosure,
+                field.realWidth,
             )
             if (firstClosure) {
                 outerClosure = newClosure
@@ -111,17 +110,21 @@ fun Base.getSortedClosurePositions(field: Field, considerTerritoryPositions: Boo
 
 data class ExtendedClosureInfo(val outerClosure: List<Position>, val innerClosures: List<List<Position>>)
 
-private fun HashSet<Position>.extractClosure(initialPosition: Position, innerWalk: Boolean): List<Position> {
+private fun HashSet<Position>.extractClosure(initialPosition: Position, innerWalk: Boolean, fieldStride: Int): List<Position> {
     val closurePositions = mutableListOf(initialPosition)
     var square = 0
     var currentPosition: Position = initialPosition
     // The next position should always be inner for outer closure and outer for inner closure
-    var nextPosition = Position(currentPosition.x + (if (innerWalk) +1 else -1), currentPosition.y + (if (innerWalk) +1 else -1))
+    var nextPosition = if (innerWalk) {
+        currentPosition.xp1yp1(fieldStride)
+    } else {
+        currentPosition.xm1ym1(fieldStride)
+    }
 
     loop@ do {
-        val walkCompleted = currentPosition.clockwiseBigJumpWalk(nextPosition) {
+        val walkCompleted = currentPosition.clockwiseBigJumpWalk(nextPosition, fieldStride) {
             return@clockwiseBigJumpWalk if (contains(it)) {
-                square += currentPosition.getSquare(it)
+                square += currentPosition.getSquare(it, fieldStride)
 
                 if (it == initialPosition) {
                     break@loop
@@ -170,7 +173,7 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
                 DotState.Wall
             else
                 DotState.Empty
-            if (wallOrEmptyState != Position(x, y).getState()) {
+            if (wallOrEmptyState != Position(x, y, realWidth).getState()) {
                 actualInitialMovesCount++
             }
         }
@@ -179,14 +182,26 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
     check(initialMovesCount == actualInitialMovesCount, ::initialMovesCount)
 }
 
-fun Position.transform(type: TransformType, width: Int, height: Int): Position {
-    if (isGameOverMove()) return this
+fun Position.transform(type: TransformType, width: Int, height: Int, newWidth: Int): Position {
+    if (isGameOverMove) return this
+    val (x, y) = toXY(width)
+    return when (type) {
+        TransformType.RotateCw90 -> Position(height - 1 - y, x, newWidth)
+        TransformType.Rotate180 -> Position(width - 1 - x, height - y - 1, newWidth)
+        TransformType.RotateCw270 -> Position(y, width - 1 - x, newWidth)
+        TransformType.FlipHorizontal -> Position(width - 1 - x, y, newWidth)
+        TransformType.FlipVertical -> Position(x, height - 1 - y, newWidth)
+    }
+}
+
+fun PositionXY.transform(type: TransformType, width: Int, height: Int, newWidth: Int): PositionXY {
+    if (isGameOverMove) return this
     val (x, y) = this
     return when (type) {
-        TransformType.RotateCw90 -> Position(height - 1 - y, x)
-        TransformType.Rotate180 -> Position(width - 1 - x, height - y - 1)
-        TransformType.RotateCw270 -> Position(y, width - 1 - x)
-        TransformType.FlipHorizontal -> Position(width - 1 - x, y)
-        TransformType.FlipVertical -> Position(x, height - 1 - y)
+        TransformType.RotateCw90 -> PositionXY(height - 1 - y, x)
+        TransformType.Rotate180 -> PositionXY(width - 1 - x, height - y - 1)
+        TransformType.RotateCw270 -> PositionXY(y, width - 1 - x)
+        TransformType.FlipHorizontal -> PositionXY(width - 1 - x, y)
+        TransformType.FlipVertical -> PositionXY(x, height - 1 - y)
     }
 }

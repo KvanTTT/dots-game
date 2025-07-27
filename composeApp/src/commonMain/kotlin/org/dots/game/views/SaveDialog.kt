@@ -37,7 +37,7 @@ fun SaveDialog(
 
     if (field.moveSequence.isNotEmpty()) {
         for (move in field.moveSequence) {
-            val (x, y) = move.position
+            val (x, y) = move.position.toXY(field.realWidth)
             if (x < minX) minX = x
             if (x > maxX) maxX = x
             if (y < minY) minY = y

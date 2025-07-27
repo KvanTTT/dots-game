@@ -3,39 +3,45 @@ package org.dots.game.core
 import kotlin.jvm.JvmInline
 
 @JvmInline
-value class Position internal constructor(val position: Int) : Comparable<Position> {
+value class Position internal constructor(val value: Int) : Comparable<Position> {
     companion object {
-        val ZERO = Position(0, 0)
-        val GROUND = Position(1, 0)
-        val RESIGN = Position(2, 0)
-        val STOP = Position(3, 0)
-        val TIME = Position(4, 0)
-        val INTERRUPT = Position(5, 0)
-        val DRAW = Position(6, 0)
-        const val COORDINATE_BITS_COUNT = 6
-        const val MASK = (1 shl COORDINATE_BITS_COUNT) - 1
+        val GAME_OVER = Position(1, 0, 0) // It's also equivalent to PASS in Go
     }
 
-    constructor(x: Int, y: Int) : this((x shl COORDINATE_BITS_COUNT) or (y and MASK))
+    internal constructor(x: Int, y: Int, fieldStride: Int) : this(y * fieldStride + x)
 
-    override fun toString(): String = "($x;$y)"
+    fun getX(fieldStride: Int): Int = value % fieldStride
 
-    val x: Int get() = position shr COORDINATE_BITS_COUNT
+    fun getY(fieldStride: Int): Int = value / fieldStride
 
-    val y: Int get() = position and MASK
+    fun toXY(fieldStride: Int): PositionXY {
+        return PositionXY(getX(fieldStride), getY(fieldStride))
+    }
 
-    fun isGameOverMove(): Boolean = isGrounding() || isResigning() || this == STOP || this == TIME || this == INTERRUPT || this == DRAW
+    fun xm1y(): Position = Position(value - 1)
 
-    fun isGrounding(): Boolean = this == GROUND
+    fun xm1ym1(fieldStride: Int): Position = Position(value - 1 - fieldStride)
 
-    fun isResigning(): Boolean = this == RESIGN
+    fun xym1(fieldStride: Int): Position = Position(value - fieldStride)
 
-    operator fun component1(): Int = x
-    operator fun component2(): Int = y
+    fun xp1ym1(fieldStride: Int): Position = Position(value + 1 - fieldStride)
+
+    fun xp1y(): Position = Position(value + 1)
+
+    fun xp1yp1(fieldStride: Int): Position = Position(value + 1 + fieldStride)
+
+    fun xyp1(fieldStride: Int): Position = Position(value + fieldStride)
+
+    fun xm1yp1(fieldStride: Int): Position = Position(value - 1 + fieldStride)
+
+    val isGameOverMove: Boolean
+        get() = this == GAME_OVER
 
     override fun compareTo(other: Position): Int {
-        return position.compareTo(other.position)
+        return value.compareTo(other.value)
+    }
+
+    override fun toString(): String {
+        return value.toString()
     }
 }
-
-infix fun Int.x(that: Int): Position = Position(this, that)

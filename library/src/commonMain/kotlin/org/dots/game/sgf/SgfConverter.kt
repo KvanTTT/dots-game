@@ -8,6 +8,7 @@ import org.dots.game.convertText
 import org.dots.game.core.EndGameKind
 import org.dots.game.core.Field
 import org.dots.game.core.Game
+import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.GameInfo
 import org.dots.game.core.GameResult
 import org.dots.game.core.GameTree
@@ -16,6 +17,7 @@ import org.dots.game.core.MoveInfo
 import org.dots.game.core.MoveResult
 import org.dots.game.core.Player
 import org.dots.game.core.Position
+import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_KEY
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_NAME
@@ -175,7 +177,8 @@ class SgfConverter(
         if (definedGameResult is GameResult.Draw) {
             // Check if the game is not automatically over because of no legal moves
             if (useEndingMove && field.gameResult == null) {
-                gameTree.add(field.makeMove(Position.DRAW)!!)
+                val gameResult = field.finishGame(ExternalFinishReason.Draw, player = null)!!
+                gameTree.add(field.lastMove, gameResult)
                 addedMovesCount = 1
             }
 
@@ -188,43 +191,35 @@ class SgfConverter(
                 )
             }
         } else if (definedGameResult is GameResult.WinGameResult) {
-            val lastPosition = when (definedGameResult) {
-                is GameResult.ScoreWin -> {
-                    if (definedGameResult.endGameKind == EndGameKind.Grounding)
-                        Position.GROUND
-                    else
-                        Position.STOP
-                }
-                is GameResult.ResignWin -> Position.RESIGN
-                is GameResult.TimeWin -> Position.TIME
-                is GameResult.UnknownWin -> Position.INTERRUPT
-            }
+            val (definedFinishReason, looser) = definedGameResult.toExternalFinishReason()
+            val definedWinner = looser?.opposite()
 
-            val expectedWinner = definedGameResult.winner
-
-            if (useEndingMove && field.gameResult == null) {
+            // TODO: report warning when `externalFinishReason` is null (no legal moves),
+            //  but actual field result is also null (legal moves still exist)
+            if (useEndingMove && field.gameResult == null && definedFinishReason != null) {
                 // Check if the game is not automatically over because of no legal moves
-                gameTree.add(field.makeMove(lastPosition, expectedWinner.opposite())!!)
+                val gameResult = field.finishGame(definedFinishReason, looser)!!
+                gameTree.add(field.lastMove, gameResult)
                 addedMovesCount = 1
             }
 
             val actualWinner = if (field.gameResult != null) {
                 (field.gameResult as? GameResult.WinGameResult)?.winner
             } else {
-                expectedWinner
+                definedWinner
             }
 
-            if (expectedWinner != actualWinner) {
+            if (definedWinner != actualWinner) {
                 gameResultProperty.info.reportPropertyDiagnostic(
-                    "has `${expectedWinner}` player as winner but the result of the game from field: ${actualWinner?.let { "$it wins" } ?: "Draw/Unknown"}.",
+                    "has `${definedWinner}` player as winner but the result of the game from field: ${actualWinner?.let { "$it wins" } ?: "Draw/Unknown"}.",
                     TextSpan(currentGameTree.textSpan.end, 0),
                     DiagnosticSeverity.Warning,
                 )
             } else {
                 // Don't check for GROUND because typical SGF (notago) doesn't contain info about score in case of grounding
-                if (definedGameResult is GameResult.ScoreWin && lastPosition != Position.GROUND) {
+                if (definedGameResult is GameResult.ScoreWin && definedFinishReason != ExternalFinishReason.Grounding) {
                     val definedGameScore = definedGameResult.score.toInt()
-                    val scoreFromField = game.gameTree.field.getScoreDiff(expectedWinner)
+                    val scoreFromField = game.gameTree.field.getScoreDiff(definedWinner)
                     if (definedGameScore != scoreFromField) {
                         gameResultProperty.info.reportPropertyDiagnostic(
                             "has value `${definedGameScore}` that doesn't match score from game field `${scoreFromField}`.",
@@ -272,7 +267,7 @@ class SgfConverter(
             addAll(gameInfoProperties.getPropertyValue<List<MoveInfo>>(PLAYER1_ADD_DOTS_KEY) ?: emptyList())
             for (player2InitialMoveInfo in (gameInfoProperties.getPropertyValue<List<MoveInfo>>(PLAYER2_ADD_DOTS_KEY)
                 ?: emptyList())) {
-                if (removeAll { it.position == player2InitialMoveInfo.position }) {
+                if (removeAll { it.positionXY == player2InitialMoveInfo.positionXY }) {
                     val (propertyInfo, textSpan) = player2InitialMoveInfo.extraInfo as PropertyInfoAndTextSpan
                     propertyInfo.reportPropertyDiagnostic(
                         "value `${textSpan.getText()}` overwrites one the previous position of first player ${
@@ -337,8 +332,8 @@ class SgfConverter(
         val player2TimeLeft = convertedProperties.getPropertyValue<Double>(PLAYER2_TIME_LEFT_KEY)
         val comment = convertedProperties.getPropertyValue<String>(COMMENT_KEY)
         val labels = convertedProperties.getPropertyValue<List<Label>>(LABEL_KEY)
-        val circles = convertedProperties.getPropertyValue<List<Position>>(CIRCLE_KEY)
-        val squares = convertedProperties.getPropertyValue<List<Position>>(SQUARE_KEY)
+        val circles = convertedProperties.getPropertyValue<List<PositionXY>>(CIRCLE_KEY)
+        val squares = convertedProperties.getPropertyValue<List<PositionXY>>(SQUARE_KEY)
         var movesCount = 0
 
         fun processMoves(moveInfos: List<MoveInfo>?) {
@@ -347,9 +342,10 @@ class SgfConverter(
             for (moveInfo in moveInfos) {
                 var moveResult: MoveResult?
                 val withinBounds: Boolean
-                if (field.checkPositionWithinBounds(moveInfo.position)) {
+                val position = field.getPositionIfWithinBounds(moveInfo.positionXY)
+                if (position != null) {
                     val startNanos = measureNanos?.invoke()
-                    moveResult = field.makeMove(moveInfo.position, moveInfo.player)
+                    moveResult = field.makeMoveUnsafe(position, moveInfo.player)
                     if (measureNanos != null) {
                         fieldNanos += measureNanos() - startNanos!!
                     }
@@ -359,7 +355,10 @@ class SgfConverter(
                     withinBounds = false
                 }
                 val timeLeft = if (moveInfo.player == Player.First) player1TimeLeft else player2TimeLeft
-                gameTree.add(moveResult, timeLeft, comment, labels, circles, squares)
+                gameTree.add(moveResult, gameResult = null, timeLeft, comment, labels,
+                    circles?.map { Position(it.x, it.y, field.realWidth) },
+                    squares?.map { Position(it.x, it.y, field.realWidth) }
+                )
                 movesCount++
 
                 if (moveResult == null) {
@@ -382,9 +381,9 @@ class SgfConverter(
     private fun MoveInfo.reportPositionThatViolatesRules(withinBounds: Boolean, width: Int, height: Int, currentMoveNumber: Int) {
         val (propertyInfo, textSpan) = extraInfo as PropertyInfoAndTextSpan
         val errorMessageSuffix = if (!withinBounds) {
-            "The position $position is out of bounds $width:$height"
+            "The position $positionXY is out of bounds $width:$height"
         } else {
-            "The dot at position $position is already placed or captured"
+            "The dot at position $positionXY is already placed or captured"
         }
         propertyInfo.reportPropertyDiagnostic(
             "has incorrect value `${textSpan.getText()}`. $errorMessageSuffix (move number: ${currentMoveNumber + 1}).",
@@ -543,7 +542,7 @@ class SgfConverter(
                 SgfPropertyType.AppInfo -> propertyValue.convertAppInfo()
                 SgfPropertyType.MovePosition -> {
                     propertyValueToken.convertPosition<MoveInfo>(propertyInfo)?.also { moveInfo ->
-                        if (convertedValues.removeAll { (it as MoveInfo).position == moveInfo.position }) {
+                        if (convertedValues.removeAll { (it as MoveInfo).positionXY == moveInfo.positionXY }) {
                             propertyInfo.reportPropertyDiagnostic(
                                 "value `${propertyValue}` overwrites one the previous position.",
                                 propertyValueToken.textSpan,
@@ -552,7 +551,7 @@ class SgfConverter(
                         }
                     }
                 }
-                SgfPropertyType.Position -> propertyValueToken.convertPosition<Position>(propertyInfo)
+                SgfPropertyType.Position -> propertyValueToken.convertPosition<PositionXY>(propertyInfo)
                 SgfPropertyType.Label -> propertyValueToken.convertLabel(propertyInfo)
                 SgfPropertyType.GameResult -> propertyValueToken.convertGameResult(propertyInfo)
             }
@@ -632,7 +631,7 @@ class SgfConverter(
         when (dimensions.size) {
             1 -> {
                 val maxDimension = minOf(Field.MAX_WIDTH, Field.MAX_HEIGHT)
-                val size = dimensions[0].toIntOrNull()?.takeIf { it >= 0 && it <= maxDimension }
+                val size = dimensions[0].toIntOrNull()?.takeIf { it in 0..maxDimension }
                 if (size == null) {
                     width = null
                     height = null
@@ -684,7 +683,8 @@ class SgfConverter(
                 )
             }
         }
-        return Pair(width, height)
+
+        return width to height
     }
 
     private inline fun <reified T> PropertyValueToken.convertPosition(propertyInfo: SgfPropertyInfo): T? {
@@ -702,7 +702,7 @@ class SgfConverter(
                 val capturingMoveInfos = buildList {
                     for (internalIndex in EXTRA_MOVE_INFO_INDEX until value.length step 2) {
                         convertCoordinates(propertyInfo, internalIndex).let { coordinates ->
-                            coordinates.toPosition()?.let { add(it) }
+                            coordinates.toPositionXY()?.let { add(it) }
                         }
                     }
                 }
@@ -727,12 +727,12 @@ class SgfConverter(
         return if (coordinates == null) {
             null
         } else {
-            val position = coordinates.toPosition()
+            val position = coordinates.toPositionXY()
             if (position != null) {
                 val textSpan = TextSpan(textSpan.start, 2)
                 when {
                     isMoveInfo -> MoveInfo(position, propertyInfo.getPlayer(), PropertyInfoAndTextSpan(propertyInfo, textSpan)) as T
-                    T::class == Position::class -> position as T
+                    T::class == PositionXY::class -> position as T
                     else -> error("Unexpected type ${T::class.simpleName}")
                 }
             } else {
@@ -753,7 +753,7 @@ class SgfConverter(
                 ""
             }
 
-        return coordinates.toPosition()?.let { Label(it, labelText) }
+        return coordinates.toPositionXY()?.let { Label(it, labelText) }
     }
 
     private fun PropertyValueToken.convertCoordinates(propertyInfo: SgfPropertyInfo, internalIndex: Int): Coordinates {
@@ -777,8 +777,8 @@ class SgfConverter(
         return Coordinates(x, y)
     }
 
-    private data class Coordinates(val x: Int?, val y: Int?) {
-        fun toPosition(): Position? = if (x != null && y != null) Position(x, y) else null
+    private class Coordinates(val x: Int?, val y: Int?) {
+        fun toPositionXY(): PositionXY? = if (x != null && y != null) PositionXY(x, y) else null
     }
 
     private fun PropertyValueToken.convertGameResult(propertyInfo: SgfPropertyInfo): GameResult? {
@@ -854,9 +854,9 @@ class SgfConverter(
     private data class PropertyInfoAndTextSpan(val propertyInfo: SgfPropertyInfo, val textSpan: TextSpan)
 
     private fun Char.convertToCoordinateOrNull(): Int? {
-        return when {
-            this >= 'a' && this <= 'z' -> this - LOWER_CHAR_OFFSET
-            this >= 'A' && this <= 'Z' -> this - UPPER_CHAR_OFFSET
+        return when (this) {
+            in 'a'..'z' -> this - LOWER_CHAR_OFFSET
+            in 'A'..'Z' -> this - UPPER_CHAR_OFFSET
             else -> null
         }
     }

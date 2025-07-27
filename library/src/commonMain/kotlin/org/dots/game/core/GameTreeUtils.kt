@@ -128,7 +128,8 @@ fun GameTree.transform(transformType: TransformType): GameTree {
         }
     }
 
-    fun Position.transform() = transform(transformType, field.realWidth, field.realHeight)
+    val newFieldStride = Field.getStride(newWidth)
+    fun Position.transform() = transform(transformType, field.realWidth, field.realHeight, newFieldStride)
 
     val newField = Field.create(Rules(
         width = newWidth,
@@ -136,8 +137,8 @@ fun GameTree.transform(transformType: TransformType): GameTree {
         captureByBorder = rules.captureByBorder,
         baseMode = rules.baseMode,
         suicideAllowed = rules.suicideAllowed,
-        initialMoves = rules.initialMoves.map { (position, player, extraInfo) ->
-            MoveInfo(position.transform(), player, extraInfo)
+        initialMoves = rules.initialMoves.map { (positionXY, player, extraInfo) ->
+            MoveInfo(positionXY.transform(transformType, field.realWidth, field.realHeight, newFieldStride), player, extraInfo)
         }
     ))
 
@@ -152,10 +153,11 @@ fun GameTree.transform(transformType: TransformType): GameTree {
         if (!isRoot) {
             val positionPlayer = moveResult?.positionPlayer
             val newMoveResult = positionPlayer?.let {
-                newField.makeMove(it.position.transform(), it.player)
+                newField.makeMoveUnsafe(it.position.transform(), it.player)
             }
             newGameTree.add(
                 newMoveResult,
+                newField.gameResult,
                 timeLeft,
                 comment,
                 labels,

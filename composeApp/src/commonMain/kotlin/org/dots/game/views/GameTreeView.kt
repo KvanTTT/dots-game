@@ -232,13 +232,12 @@ private fun ConnectionsAndNodes(
                         color = rootNodeColor
                         moveNumber = 0
                     } else {
-                        color = node.moveResult?.let {
-                            if (it.position.isGameOverMove()) {
-                                endNodeColor
-                            } else {
-                                uiSettings.toColor(it.player)
-                            }
-                        } ?: incorrectNodeColor
+                        color = when {
+                            node.gameResult != null -> endNodeColor
+                            node.moveResult != null -> uiSettings.toColor(node.moveResult!!.player)
+                            else -> incorrectNodeColor
+                        }
+
                         moveNumber = node.number
 
                         val lineXOffset: Dp

@@ -25,10 +25,10 @@ value class Player internal constructor(val value: Int) {
 
     override fun toString(): String {
         return when (value) {
-            0 -> ::None.name
-            1 -> ::First.name
-            2 -> ::Second.name
-            3 -> ::WallOrBoth.name
+            None.value -> ::None.name
+            First.value -> ::First.name
+            Second.value -> ::Second.name
+            WallOrBoth.value -> ::WallOrBoth.name
             else -> error("Incorrect player $value")
         }
     }

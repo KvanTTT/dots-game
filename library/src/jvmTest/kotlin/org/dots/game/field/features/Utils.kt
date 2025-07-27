@@ -21,7 +21,10 @@ fun checkFeatures(
         val (width, height, expectedLightMoves) = FieldParser.parse(expectedPositionsData)
         assertEquals(originalField.width, width)
         assertEquals(originalField.height, height)
-        expectedLightMoves.map { it.value }.associate { it.position to it.player }.toSortedMap()
+        expectedLightMoves.map { it.value }.associate {
+            val (x, y) = it.positionXY
+            Position(x, y, originalField.realWidth) to it.player
+        }.toSortedMap()
     } else {
         sortedMapOf()
     }
@@ -35,7 +38,7 @@ fun checkFeatures(
                     for (y in 1..originalField.height) {
                         for (x in 1..originalField.width) {
                             append(
-                                when (this@dump[Position(x, y)]) {
+                                when (this@dump[Position(x, y, originalField.realWidth)]) {
                                     Player.First -> "$FIRST_PLAYER_MARKER "
                                     Player.Second -> "$SECOND_PLAYER_MARKER "
                                     Player.WallOrBoth -> "$FIRST_PLAYER_MARKER$SECOND_PLAYER_MARKER"

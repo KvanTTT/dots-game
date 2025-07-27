@@ -24,7 +24,7 @@ class GameTreeTests : FieldTests() {
             assertTrue(makeMove(2, 1)) // True, because it's a new node
             assertTrue(back())
             assertTrue(next()) // True, the current node should be (2;1) (the second branch, because the previous path is memorized)
-            assertEquals(Position(2, 1), field.lastMove!!.positionPlayer.position)
+            assertEquals(Position(2, 1, field.realWidth), field.lastMove!!.positionPlayer.position)
             assertFalse(next()) // False, there are no more moves
         }
     }
@@ -189,7 +189,7 @@ class GameTreeTests : FieldTests() {
         gameTree.makeMove(1, 1)
         gameTree.makeMove(2, 2)
 
-        assertFalse(gameTree.switch(GameTreeNode(null, null, 0))) // Try switching to unrelated node, no change
+        assertFalse(gameTree.switch(GameTreeNode(null, null, null, 0))) // Try switching to unrelated node, no change
     }
 
     @Test
@@ -227,6 +227,6 @@ class GameTreeTests : FieldTests() {
     }
 
     private fun GameTree.makeMove(x: Int, y: Int, player: Player? = null): Boolean {
-        return add(field.makeMoveUnsafe(Position(x, y), player)!!)
+        return add(field.makeMoveUnsafe(Position(x, y, field.realWidth), player)!!)
     }
 }

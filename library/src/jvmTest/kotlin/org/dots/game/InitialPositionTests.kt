@@ -3,7 +3,7 @@ package org.dots.game
 import org.dots.game.core.InitialPositionType
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
-import org.dots.game.core.Position
+import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import org.dots.game.core.generateDefaultInitialPositions
 import kotlin.test.Test
@@ -43,10 +43,10 @@ class InitialPositionTests {
     @Test
     fun singlePositionGeneration() {
         assertNull(InitialPositionType.Single.generateDefaultInitialPositions(0, 0))
-        assertEquals(MoveInfo(Position(1, 1), Player.First), InitialPositionType.Single.generateDefaultInitialPositions(1, 1)!!.single())
-        assertEquals(MoveInfo(Position(2, 2), Player.First), InitialPositionType.Single.generateDefaultInitialPositions(2, 2)!!.single())
-        assertEquals(MoveInfo(Position(10, 10), Player.First), InitialPositionType.Single.generateDefaultInitialPositions(19, 19)!!.single())
-        assertEquals(MoveInfo(Position(20, 17), Player.First), InitialPositionType.Single.generateDefaultInitialPositions(39, 32)!!.single())
+        assertEquals(MoveInfo(PositionXY(1, 1), Player.First), InitialPositionType.Single.generateDefaultInitialPositions(1, 1)!!.single())
+        assertEquals(MoveInfo(PositionXY(2, 2), Player.First), InitialPositionType.Single.generateDefaultInitialPositions(2, 2)!!.single())
+        assertEquals(MoveInfo(PositionXY(10, 10), Player.First), InitialPositionType.Single.generateDefaultInitialPositions(19, 19)!!.single())
+        assertEquals(MoveInfo(PositionXY(20, 17), Player.First), InitialPositionType.Single.generateDefaultInitialPositions(39, 32)!!.single())
     }
 
     @Test
@@ -137,76 +137,76 @@ class InitialPositionTests {
     fun initialPositionTypeRecognition() {
         checkRecognition(InitialPositionType.Empty)
 
-        checkRecognition(InitialPositionType.Single, MoveInfo(Position(19, 19), Player.First))
-        checkRecognition(InitialPositionType.Single, MoveInfo(Position(19, 19), Player.Second))
+        checkRecognition(InitialPositionType.Single, MoveInfo(PositionXY(19, 19), Player.First))
+        checkRecognition(InitialPositionType.Single, MoveInfo(PositionXY(19, 19), Player.Second))
 
         checkRecognition(InitialPositionType.Cross,
-            MoveInfo(Position(19, 19), Player.First),
-            MoveInfo(Position(20, 19), Player.Second),
-            MoveInfo(Position(20, 20), Player.First),
-            MoveInfo(Position(19, 20), Player.Second),
+            MoveInfo(PositionXY(19, 19), Player.First),
+            MoveInfo(PositionXY(20, 19), Player.Second),
+            MoveInfo(PositionXY(20, 20), Player.First),
+            MoveInfo(PositionXY(19, 20), Player.Second),
         )
 
         checkRecognition(InitialPositionType.Cross,
-            MoveInfo(Position(19, 19), Player.First),
-            MoveInfo(Position(20, 20), Player.First),
-            MoveInfo(Position(20, 19), Player.Second),
-            MoveInfo(Position(19, 20), Player.Second),
+            MoveInfo(PositionXY(19, 19), Player.First),
+            MoveInfo(PositionXY(20, 20), Player.First),
+            MoveInfo(PositionXY(20, 19), Player.Second),
+            MoveInfo(PositionXY(19, 20), Player.Second),
         )
 
         checkRecognition(InitialPositionType.Cross,
-            MoveInfo(Position(19, 19), Player.Second),
-            MoveInfo(Position(20, 19), Player.First),
-            MoveInfo(Position(20, 20), Player.Second),
-            MoveInfo(Position(19, 20), Player.First),
+            MoveInfo(PositionXY(19, 19), Player.Second),
+            MoveInfo(PositionXY(20, 19), Player.First),
+            MoveInfo(PositionXY(20, 20), Player.Second),
+            MoveInfo(PositionXY(19, 20), Player.First),
         )
 
         checkRecognition(InitialPositionType.Custom,
-            MoveInfo(Position(19, 19), Player.First),
-            MoveInfo(Position(20, 19), Player.Second),
-            MoveInfo(Position(20, 20), Player.First),
-            MoveInfo(Position(19, 20), Player.First),
+            MoveInfo(PositionXY(19, 19), Player.First),
+            MoveInfo(PositionXY(20, 19), Player.Second),
+            MoveInfo(PositionXY(20, 20), Player.First),
+            MoveInfo(PositionXY(19, 20), Player.First),
         )
 
         checkRecognition(InitialPositionType.Custom,
-            MoveInfo(Position(19, 19), Player.First),
-            MoveInfo(Position(20, 19), Player.Second),
-            MoveInfo(Position(21, 21), Player.First),
-            MoveInfo(Position(19, 20), Player.Second),
+            MoveInfo(PositionXY(19, 19), Player.First),
+            MoveInfo(PositionXY(20, 19), Player.Second),
+            MoveInfo(PositionXY(21, 21), Player.First),
+            MoveInfo(PositionXY(19, 20), Player.Second),
         )
 
         checkRecognition(InitialPositionType.DoubleCross,
-            MoveInfo(Position(19, 19), Player.First),
-            MoveInfo(Position(20, 19), Player.Second),
-            MoveInfo(Position(20, 20), Player.First),
-            MoveInfo(Position(19, 20), Player.Second),
+            MoveInfo(PositionXY(19, 19), Player.First),
+            MoveInfo(PositionXY(20, 19), Player.Second),
+            MoveInfo(PositionXY(20, 20), Player.First),
+            MoveInfo(PositionXY(19, 20), Player.Second),
 
-            MoveInfo(Position(21, 19), Player.Second),
-            MoveInfo(Position(22, 19), Player.First),
-            MoveInfo(Position(22, 20), Player.Second),
-            MoveInfo(Position(21, 20), Player.First),
+            MoveInfo(PositionXY(21, 19), Player.Second),
+            MoveInfo(PositionXY(22, 19), Player.First),
+            MoveInfo(PositionXY(22, 20), Player.Second),
+            MoveInfo(PositionXY(21, 20), Player.First),
         )
 
         checkRecognition(InitialPositionType.QuadrupleCross,
-            MoveInfo(Position(19, 19), Player.First),
-            MoveInfo(Position(20, 19), Player.Second),
-            MoveInfo(Position(20, 20), Player.First),
-            MoveInfo(Position(19, 20), Player.Second),
+            MoveInfo(PositionXY(19, 19), Player.First),
+            MoveInfo(PositionXY(20, 19), Player.Second),
+            MoveInfo(PositionXY(20, 20), Player.First),
+            MoveInfo(PositionXY(19, 20), Player.Second),
 
-            MoveInfo(Position(22, 19), Player.First),
-            MoveInfo(Position(23, 19), Player.Second),
-            MoveInfo(Position(23, 20), Player.First),
-            MoveInfo(Position(22, 20), Player.Second),
+            MoveInfo(PositionXY(22, 19), Player.First),
+            MoveInfo(PositionXY(23, 19), Player.Second),
+            MoveInfo(PositionXY(23, 20), Player.First),
+            MoveInfo(PositionXY(22, 20), Player.Second),
 
-            MoveInfo(Position(22, 22), Player.First),
-            MoveInfo(Position(23, 22), Player.Second),
-            MoveInfo(Position(23, 23), Player.First),
-            MoveInfo(Position(22, 23), Player.Second),
+            MoveInfo(PositionXY(22, 22), Player.First),
+            MoveInfo(PositionXY(23, 22), Player.Second),
+            MoveInfo(PositionXY(23, 23), Player.First),
+            MoveInfo(PositionXY(22, 23), Player.Second),
 
-            MoveInfo(Position(19, 22), Player.First),
-            MoveInfo(Position(20, 22), Player.Second),
-            MoveInfo(Position(20, 23), Player.First),
-            MoveInfo(Position(19, 23), Player.Second),
+            MoveInfo(PositionXY(19, 22), Player.First),
+            MoveInfo(PositionXY(20, 22), Player.Second),
+            MoveInfo(PositionXY(20, 23), Player.First),
+            MoveInfo(PositionXY(19, 23), Player.Second),
         )
     }
 
@@ -217,9 +217,9 @@ class InitialPositionTests {
     private fun List<MoveInfo>.checkCross(x: Int, y: Int, startPlayer: Player = Player.Second) {
         assertEquals(4, this.size)
         val oppositePlayer = startPlayer.opposite()
-        assertEquals(MoveInfo(Position(x, y), startPlayer), this[0])
-        assertEquals(MoveInfo(Position(x + 1, y), oppositePlayer), this[1])
-        assertEquals(MoveInfo(Position(x + 1, y + 1), startPlayer), this[2])
-        assertEquals(MoveInfo(Position(x, y + 1), oppositePlayer), this[3])
+        assertEquals(MoveInfo(PositionXY(x, y), startPlayer), this[0])
+        assertEquals(MoveInfo(PositionXY(x + 1, y), oppositePlayer), this[1])
+        assertEquals(MoveInfo(PositionXY(x + 1, y + 1), startPlayer), this[2])
+        assertEquals(MoveInfo(PositionXY(x, y + 1), oppositePlayer), this[3])
     }
 }

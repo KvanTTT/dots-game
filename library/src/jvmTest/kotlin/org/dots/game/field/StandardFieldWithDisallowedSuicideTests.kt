@@ -17,9 +17,9 @@ class StandardFieldWithDisallowedSuicideTests : FieldTests() {
             * . *
             . * .
         """) {
-            assertNull(it.makeMove(Position(2, 2), Player.Second))
-            assertNotNull(it.makeMove(Position(2, 2), Player.First))
-            assertNull(it.makeMove(Position(2, 2), Player.First))
+            assertNull(it.makeMove(2, 2, Player.Second))
+            assertNotNull(it.makeMove(2, 2, Player.First))
+            assertNull(it.makeMove(2, 2, Player.First))
         }
     }
 
@@ -48,10 +48,10 @@ class StandardFieldWithDisallowedSuicideTests : FieldTests() {
             ... ... +17 +18 +19
         """
         ) {
-            assertNull(it.makeMove(Position(4, 4), Player.First))
-            assertNull(it.makeMove(Position(2, 4), Player.First))
-            assertNotNull(it.makeMove(Position(4, 4), Player.Second))
-            assertNotNull(it.makeMove(Position(2, 4), Player.Second))
+            assertNull(it.makeMove(4, 4, Player.First))
+            assertNull(it.makeMove(2, 4, Player.First))
+            assertNotNull(it.makeMove(4, 4, Player.Second))
+            assertNotNull(it.makeMove(2, 4, Player.Second))
         }
     }
 }

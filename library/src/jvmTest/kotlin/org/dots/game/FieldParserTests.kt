@@ -2,8 +2,7 @@ package org.dots.game
 
 import org.dots.game.core.MoveResult
 import org.dots.game.core.Player
-import org.dots.game.core.Position
-import org.dots.game.core.x
+import org.dots.game.core.PositionXY
 import org.dots.game.dump.FieldParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,10 +35,10 @@ class FieldParserTests {
         assertEquals(4, parsedField.width)
         assertEquals(4, parsedField.height)
         val moveSequence = parsedField.moveSequence
-        moveSequence[0].checkPositionAndPlayer(2 x 2, Player.First)
-        moveSequence[1].checkPositionAndPlayer(3 x 2, Player.Second)
-        moveSequence[2].checkPositionAndPlayer(2 x 3, Player.Second)
-        moveSequence[3].checkPositionAndPlayer(3 x 3, Player.First)
+        moveSequence[0].checkPositionAndPlayer(2, 2, Player.First, parsedField.realWidth)
+        moveSequence[1].checkPositionAndPlayer(3, 2, Player.Second, parsedField.realWidth)
+        moveSequence[2].checkPositionAndPlayer(2, 3, Player.Second, parsedField.realWidth)
+        moveSequence[3].checkPositionAndPlayer(3, 3, Player.First, parsedField.realWidth)
     }
 
     @Test
@@ -52,10 +51,10 @@ class FieldParserTests {
         """)
 
         val moveSequence = parsedField.moveSequence
-        moveSequence[0].checkPositionAndPlayer(2 x 2, Player.First)
-        moveSequence[1].checkPositionAndPlayer(2 x 3, Player.Second)
-        moveSequence[2].checkPositionAndPlayer(3 x 3, Player.First)
-        moveSequence[3].checkPositionAndPlayer(3 x 2, Player.Second)
+        moveSequence[0].checkPositionAndPlayer(2, 2, Player.First, parsedField.realWidth)
+        moveSequence[1].checkPositionAndPlayer(2, 3, Player.Second, parsedField.realWidth)
+        moveSequence[2].checkPositionAndPlayer(3, 3, Player.First, parsedField.realWidth)
+        moveSequence[3].checkPositionAndPlayer(3, 2, Player.Second, parsedField.realWidth)
     }
 
     @Test
@@ -68,10 +67,10 @@ class FieldParserTests {
         """)
 
         val moveSequence = parsedField.moveSequence
-        moveSequence[0].checkPositionAndPlayer(2 x 2, Player.First)
-        moveSequence[1].checkPositionAndPlayer(2 x 3, Player.Second)
-        moveSequence[2].checkPositionAndPlayer(3 x 3, Player.First)
-        moveSequence[3].checkPositionAndPlayer(3 x 2, Player.Second)
+        moveSequence[0].checkPositionAndPlayer(2, 2, Player.First, parsedField.realWidth)
+        moveSequence[1].checkPositionAndPlayer(2, 3, Player.Second, parsedField.realWidth)
+        moveSequence[2].checkPositionAndPlayer(3, 3, Player.First, parsedField.realWidth)
+        moveSequence[3].checkPositionAndPlayer(3, 2, Player.Second, parsedField.realWidth)
     }
 
     @Test
@@ -83,11 +82,11 @@ class FieldParserTests {
         """)
 
         val moveSequence = parsedField.moveSequence
-        moveSequence[0].checkPositionAndPlayer(2 x 1, Player.First)
-        moveSequence[1].checkPositionAndPlayer(1 x 2, Player.First)
-        moveSequence[2].checkPositionAndPlayer(2 x 2, Player.Second)
-        moveSequence[3].checkPositionAndPlayer(3 x 2, Player.First)
-        moveSequence[4].checkPositionAndPlayer(2 x 3, Player.First)
+        moveSequence[0].checkPositionAndPlayer(2, 1, Player.First, parsedField.realWidth)
+        moveSequence[1].checkPositionAndPlayer(1, 2, Player.First, parsedField.realWidth)
+        moveSequence[2].checkPositionAndPlayer(2, 2, Player.Second, parsedField.realWidth)
+        moveSequence[3].checkPositionAndPlayer(3, 2, Player.First, parsedField.realWidth)
+        moveSequence[4].checkPositionAndPlayer(2, 3, Player.First, parsedField.realWidth)
     }
 
     @Test
@@ -98,7 +97,7 @@ class FieldParserTests {
         """)
         val moveSequence = parsedField.moveSequence
         assertEquals(4, moveSequence.size)
-        moveSequence[3].checkPositionAndPlayer(2 x 2, Player.First)
+        moveSequence[3].checkPositionAndPlayer(2, 2, Player.First, parsedField.realWidth)
     }
 
     @Test
@@ -141,8 +140,8 @@ class FieldParserTests {
         )
     }
 
-    private fun MoveResult.checkPositionAndPlayer(expectedPosition: Position, expectedPlayer: Player) {
-        assertEquals(expectedPosition, position)
+    private fun MoveResult.checkPositionAndPlayer(x: Int, y: Int, expectedPlayer: Player, fieldStride: Int) {
+        assertEquals(PositionXY(x, y), position.toXY(fieldStride))
         assertEquals(expectedPlayer, player)
     }
 }

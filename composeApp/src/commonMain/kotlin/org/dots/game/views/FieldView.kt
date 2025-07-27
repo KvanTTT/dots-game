@@ -218,15 +218,15 @@ private fun Grid(field: Field) {
 private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings) {
     val fieldWithIncrementalUpdate = Field.create(field.rules) // TODO: rewrite without using temp field
 
-    val gameOverMove = field.moveSequence.lastOrNull()?.takeIf { it.position.isGameOverMove() }
+    val gameOverMove = field.moveSequence.lastOrNull()?.takeIf { it.position.isGameOverMove }
 
     Canvas(Modifier.fillMaxSize().graphicsLayer()) {
         val dotRadiusPx = dotRadius.toPx()
 
         for (moveResult in field.moveSequence) {
-            fieldWithIncrementalUpdate.makeMove(moveResult.position, moveResult.player)
+            fieldWithIncrementalUpdate.makeMoveUnsafe(moveResult.position, moveResult.player)
 
-            val moveResultPosition = moveResult.position.takeUnless { it.isGameOverMove() } ?: continue
+            val moveResultPosition = moveResult.position.takeUnless { it.isGameOverMove } ?: continue
             val color = uiSettings.toColor(moveResult.player)
 
             if (connectionDrawMode == ConnectionDrawMode.Lines) {
@@ -238,6 +238,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
                     emptyList(),
                     moveResult.player,
                     connectionDrawMode.polygonDrawMode,
+                    field.realWidth,
                     uiSettings,
                 )
             }
@@ -245,7 +246,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
             drawCircle(
                 color,
                 dotRadiusPx,
-                moveResultPosition.toPxOffset(this)
+                moveResultPosition.toPxOffset(field,this)
             )
 
             if (moveResult.bases != null) {
@@ -258,6 +259,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
                         innerClosures,
                         base.player,
                         baseDrawMode,
+                        field.realWidth,
                         uiSettings,
                     )
                 }
@@ -268,7 +270,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
             drawCircle(
                 lastMoveColor,
                 lastMoveRadius.toPx(),
-                it.position.toPxOffset(this)
+                it.position.toPxOffset(field,this)
             )
         }
     }
@@ -291,7 +293,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
                         drawCircle(
                             uiSettings.toColor(base.player),
                             dotRadiusPx,
-                            outerClosure.single().toPxOffset(this)
+                            outerClosure.single().toPxOffset(field,this)
                         )
                     } else {
                         drawPolygon(
@@ -299,6 +301,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
                             innerClosures,
                             base.player,
                             baseDrawMode,
+                            field.realWidth,
                             uiSettings,
                             isGrounding = true
                         )
@@ -331,7 +334,7 @@ private fun AllConnections(currentMove: MoveResult?, field: Field, uiSettings: U
                                 !it.isTerritory() &&
                                 it.getActivePlayer() == player
                             } &&
-                                startPosition.squareDistanceTo(endPosition) == squaredDistance
+                                startPosition.squareDistanceTo(endPosition, realWidth) == squaredDistance
                             ) {
                                 add(startPosition to endPosition)
                             }
@@ -343,8 +346,8 @@ private fun AllConnections(currentMove: MoveResult?, field: Field, uiSettings: U
                     val (start, end) = line
                     drawLine(
                         uiSettings.toColor(start.getState().getActivePlayer()),
-                        start.toPxOffset(this@Canvas),
-                        end.toPxOffset(this@Canvas),
+                        start.toPxOffset(field, this@Canvas),
+                        end.toPxOffset(field,this@Canvas),
                         strokeWidth = connectionThickness.toPx(),
                         alpha = 0.3f
                     )
@@ -366,7 +369,7 @@ private fun ThreatsAndSurroundings(currentMove: MoveResult?, field: Field, uiSet
         val capturingMarkerSize = capturingMoveMarkerSize.toPx()
         oneMoveCapturingPositions.forEach  {
             val (position, player) = it
-            val (xPx, yPx) = position.toPxOffset(this)
+            val (xPx, yPx) = position.toPxOffset(field,this)
             drawLine(
                 uiSettings.toColor(player).copy(0.7f),
                 Offset(xPx - capturingMarkerSize, yPx),
@@ -385,7 +388,7 @@ private fun ThreatsAndSurroundings(currentMove: MoveResult?, field: Field, uiSet
             val baseMarkerSize = capturingBaseMoveMarkerSize.toPx()
             oneMoveBasePositions.forEach {
                 val (position, player) = it
-                val (xPx, yPx) = position.toPxOffset(this)
+                val (xPx, yPx) = position.toPxOffset(field,this)
                 drawLine(
                     uiSettings.toColor(player).copy(0.7f),
                     Offset(xPx - baseMarkerSize, yPx - baseMarkerSize),
@@ -413,15 +416,18 @@ private fun DrawScope.drawStrongConnectionLines(
     val connections = field.getStrongConnectionLinePositions(moveResultPosition)
     if (connections.isEmpty()) return
 
-    val dotOffsetPx = moveResultPosition.toPxOffset(this)
+    val dotOffsetPx = with(field) {
+         moveResultPosition.toPxOffset(field,this@drawStrongConnectionLines)
+    }
     for (connection in connections) {
-        val connectionXEndPx = (connection.x + when (connection.x) {
+        val (x, y) = connection.toXY(field.realWidth)
+        val connectionXEndPx = (x + when (x) {
             0 -> 1 - outOfBoundDrawRatio
             field.realWidth - 1 -> -(1 - outOfBoundDrawRatio)
             else -> 0f
         }).coordinateToPx(this)
 
-        val connectionYEndPx = (connection.y + when (connection.y) {
+        val connectionYEndPx = (y + when (y) {
             0 -> 1 - outOfBoundDrawRatio
             field.realHeight - 1 -> -(1 - outOfBoundDrawRatio)
             else -> 0f
@@ -441,6 +447,7 @@ private fun DrawScope.drawPolygon(
     innerClosures: List<List<Position>>,
     player: Player,
     polygonDrawMode: PolygonDrawMode,
+    fieldStride: Int,
     uiSettings: UiSettings,
     isGrounding: Boolean = false,
 ) {
@@ -450,7 +457,7 @@ private fun DrawScope.drawPolygon(
         return Path().apply {
             // TODO: implement clipping
             for ((index, position) in positions.withIndex()) {
-                val (x, y) = position
+                val (x, y) = position.toXY(fieldStride)
                 val xCoordinate = x.toFloat().coordinateToPx(this@drawPolygon)
                 val yCoordinate = y.toFloat().coordinateToPx(this@drawPolygon)
 
@@ -502,7 +509,7 @@ private fun Pointer(position: Position?, moveMode: MoveMode, field: Field, uiSet
         drawCircle(
             uiSettings.toColor(moveMode.getMovePlayer() ?: field.getCurrentPlayer()).copy(alpha = 0.5f),
             dotRadius.toPx(),
-            position.toPxOffset(this)
+            position.toPxOffset(field,this)
         )
     }
 }
@@ -511,16 +518,15 @@ private fun PointerEvent.toFieldPositionIfValid(field: Field, currentPlayer: Pla
     val offset = changes.first().position
 
     with (currentDensity) {
-        val x = round((offset.x.toDp() - fieldPadding) / cellSize).toInt()
-        val y = round((offset.y.toDp() - fieldPadding) / cellSize).toInt()
+        val x = round((offset.x.toDp() - fieldPadding) / cellSize).toInt() + Field.OFFSET
+        val y = round((offset.y.toDp() - fieldPadding) / cellSize).toInt() + Field.OFFSET
 
-        return Position(x + Field.OFFSET, y + Field.OFFSET).takeIf {
-            !field.isGameOver() && field.checkPositionWithinBounds(it) && field.checkValidMove(it, currentPlayer)
-        }
+        return field.getPositionIfValid(x, y, currentPlayer)
     }
 }
 
-private fun Position.toPxOffset(density: Density): Offset {
+private fun Position.toPxOffset(field: Field, density: Density): Offset {
+    val (x, y) = toXY(field.realWidth)
     return Offset(x.coordinateToPx(density), y.coordinateToPx(density))
 }
 

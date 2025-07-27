@@ -13,6 +13,7 @@ import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionPlayer
 import org.dots.game.core.Position
+import org.dots.game.core.PositionXY
 import org.dots.game.toLineColumnDiagnostic
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -300,9 +301,10 @@ class SgfConverterTests {
         ).single().gameTree
         assertEquals(gameTree.player1TimeLeft, 315.0)
         assertEquals(gameTree.player2TimeLeft, 312.0)
-        var nextNode = gameTree.rootNode.getNextNode(2, 3, Player.First)!!
+        val fieldStride = gameTree.field.realWidth
+        var nextNode = gameTree.rootNode.getNextNode(2, 3, fieldStride, Player.First)!!
         assertEquals(308.3, nextNode.timeLeft)
-        nextNode = nextNode.getNextNode(4, 5, Player.Second)!!
+        nextNode = nextNode.getNextNode(4, 5, fieldStride, Player.Second)!!
         assertEquals(294.23, nextNode.timeLeft)
     }
 
@@ -427,11 +429,11 @@ internal fun parseConvertAndCheck(input: String, expectedDiagnostics: List<LineC
     return games
 }
 
-internal fun checkMoveDisregardExtraInfo(expectedPosition: Position, expectedPlayer: Player, actualMoveInfo: MoveInfo) {
-    assertEquals(expectedPosition, actualMoveInfo.position)
+internal fun checkMoveDisregardExtraInfo(x: Int, y: Int, expectedPlayer: Player, actualMoveInfo: MoveInfo) {
+    assertEquals(PositionXY(x, y), actualMoveInfo.positionXY)
     assertEquals(expectedPlayer, actualMoveInfo.player)
 }
 
-internal fun GameTreeNode.getNextNode(x: Int, y: Int, player: Player): GameTreeNode? {
-    return nextNodes[PositionPlayer(Position(x, y), player)]
+internal fun GameTreeNode.getNextNode(x: Int, y: Int, fieldStride: Int, player: Player): GameTreeNode? {
+    return nextNodes[PositionPlayer(Position(x, y, fieldStride), player)]
 }

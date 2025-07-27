@@ -237,7 +237,7 @@ class GameTreeElementTests {
     }
 
     private fun GameTree.makeMove(x: Int, y: Int): GameTreeNode {
-        assertTrue(add(field.makeMoveUnsafe(Position(x, y))!!))
+        assertTrue(add(field.makeMoveUnsafe(Position(x, y, field.realWidth))!!))
         return currentNode
     }
 }

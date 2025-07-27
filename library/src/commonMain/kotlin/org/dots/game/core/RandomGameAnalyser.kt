@@ -4,6 +4,7 @@ import org.dots.game.core.GameResult
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.Position
+import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import org.dots.game.core.unmakeAllMovesAndCheck
 import kotlin.random.Random
@@ -42,12 +43,13 @@ object RandomGameAnalyser {
 
         val startNanos = measureNanos()
 
+        val fieldStride = Field.getStride(rules.width)
         val randomMoves = buildList {
             for (y in 1..rules.height) {
                 for (x in 1..rules.width) {
-                    Position(x, y).let { position ->
-                        if (rules.initialMoves.none { it.position == position }) {
-                            add(position)
+                    PositionXY(x, y).let { positionXY ->
+                        if (rules.initialMoves.none { it.positionXY == positionXY }) {
+                            add(Position(x, y, fieldStride))
                         }
                     }
                 }
@@ -59,11 +61,11 @@ object RandomGameAnalyser {
 
             try {
                 val field = Field.create(rules) { moveInfo: MoveInfo, _: Boolean, moveNumber: Int ->
-                    outputStream("Incorrect initial move #$moveNumber at ${moveInfo.position} (${moveInfo.player})")
+                    outputStream("Incorrect initial move #$moveNumber at ${moveInfo.positionXY} (${moveInfo.player})")
                 }
 
                 for (randomMove in randomMoves) {
-                    val moveResult = field.makeMove(randomMove)
+                    val moveResult = field.makeMoveUnsafe(randomMove)
 
                     if (moveResult != null) {
                         movesCount++

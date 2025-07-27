@@ -91,22 +91,22 @@ value class DotState internal constructor(val value: Int) {
         return buildString {
             val activePlayer = getActivePlayer()
             if (activePlayer != Player.None) {
-                append("Active: Player")
-                append(activePlayer.value)
+                append("Active: ")
+                append(activePlayer)
                 append("; ")
             }
 
             val placedPlayer = getPlacedPlayer()
             if (placedPlayer != Player.None) {
-                append("Placed: Player ")
-                append(placedPlayer.value)
+                append("Placed: ")
+                append(placedPlayer)
                 append("; ")
             }
 
             val emptyTerritoryPlayer = getEmptyTerritoryPlayer()
             if (emptyTerritoryPlayer != Player.None) {
-                append("WithinEmptyTerritory: Player")
-                append(emptyTerritoryPlayer.value)
+                append("WithinEmptyTerritory: ")
+                append(emptyTerritoryPlayer)
                 append("; ")
             }
 

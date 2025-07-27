@@ -1,10 +1,12 @@
 package org.dots.game.field
 
+import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.Field
 import org.dots.game.core.GameResult
 import org.dots.game.core.InitialPositionType.Cross
 import org.dots.game.core.Player
 import org.dots.game.core.Position
+import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import org.dots.game.core.generateDefaultInitialPositions
 import org.dots.game.core.getPositionsOfConnection
@@ -29,25 +31,25 @@ class FieldUtilsTests : FieldTests() {
 
     @Test
     fun positionsOfStrongConnectionEmpty() {
-        assertTrue(sampleField.getPositionsOfConnection(Position(2, 2)).isEmpty())
+        assertTrue(sampleField.getPositionsOfConnection(2, 2).isEmpty())
     }
 
     @Test
     fun positionsOfStrongConnectionInsideTerritory() {
-        assertTrue(sampleField.getPositionsOfConnection(Position(3, 3)).isEmpty())
-        assertTrue(sampleField.getPositionsOfConnection(Position(4, 3)).isEmpty())
+        assertTrue(sampleField.getPositionsOfConnection(3, 3).isEmpty())
+        assertTrue(sampleField.getPositionsOfConnection(4, 3).isEmpty())
     }
 
     @Test
     fun positionsOfStrongConnectionIgnoreTerritory() {
         assertEquals(
             listOf(
-                Position(6, 2),
-                Position(5, 3),
-                Position(4, 2),
-                Position(5, 2),
+                PositionXY(6, 2),
+                PositionXY(5, 3),
+                PositionXY(4, 2),
+                PositionXY(5, 2),
             ),
-            sampleField.getPositionsOfConnection(Position(5, 2))
+            sampleField.getPositionsOfConnection(5, 2)
         )
     }
 
@@ -55,12 +57,12 @@ class FieldUtilsTests : FieldTests() {
     fun positionsOfStrongConnection() {
         assertEquals(
             listOf(
-                Position(6, 4),
-                Position(5, 5),
-                Position(4, 4),
-                Position(5, 4),
+                PositionXY(6, 4),
+                PositionXY(5, 5),
+                PositionXY(4, 4),
+                PositionXY(5, 4),
             ),
-            sampleField.getPositionsOfConnection(Position(5, 5))
+            sampleField.getPositionsOfConnection(5, 5)
         )
     }
 
@@ -68,12 +70,12 @@ class FieldUtilsTests : FieldTests() {
     fun positionsOfStrongConnectionExcludeCenterDot() {
         assertEquals(
             listOf(
-                Position(6, 4),
-                Position(5, 5),
-                Position(4, 4),
-                Position(5, 3),
+                PositionXY(6, 4),
+                PositionXY(5, 5),
+                PositionXY(4, 4),
+                PositionXY(5, 3),
             ),
-            sampleField.getPositionsOfConnection(Position(5, 4))
+            sampleField.getPositionsOfConnection(5, 4)
         )
     }
 
@@ -81,13 +83,13 @@ class FieldUtilsTests : FieldTests() {
     fun positionsOfStrongConnectionIncludeCenterDot() {
         assertEquals(
             listOf(
-                Position(7, 2),
-                Position(6, 2),
-                Position(5, 3),
-                Position(5, 2),
-                Position(6, 2),
+                PositionXY(7, 2),
+                PositionXY(6, 2),
+                PositionXY(5, 3),
+                PositionXY(5, 2),
+                PositionXY(6, 2),
             ),
-            sampleField.getPositionsOfConnection(Position(6, 2))
+            sampleField.getPositionsOfConnection(6, 2)
         )
     }
 
@@ -95,30 +97,38 @@ class FieldUtilsTests : FieldTests() {
     fun positionsOfStrongConnectionIncludeCenterDot2() {
         assertEquals(
             listOf(
-                Position(4, 7),
-                Position(4, 8),
-                Position(3, 8),
-                Position(2, 8),
-                Position(3, 8),
+                PositionXY(4, 7),
+                PositionXY(4, 8),
+                PositionXY(3, 8),
+                PositionXY(2, 8),
+                PositionXY(3, 8),
             ),
-            sampleField.getPositionsOfConnection(Position(3, 8))
+            sampleField.getPositionsOfConnection(3, 8)
         )
     }
 
     @Test
     fun positionsOfStrongConnectionIncludeCenterDot3() {
         assertEquals(
-            listOf(Position(7, 8), Position(6, 7), Position(7, 7)),
-            sampleField.getPositionsOfConnection(Position(7, 7))
+            listOf(
+                PositionXY(7, 8),
+                PositionXY(6, 7),
+                PositionXY(7, 7)
+            ),
+            sampleField.getPositionsOfConnection(7, 7)
         )
     }
 
     @Test
     fun positionsOfStrongConnectionIgnoreWeakGroup() {
         assertEquals(
-            listOf(Position(2, 6), Position(2, 5)),
-            sampleField.getPositionsOfConnection(Position(2, 5))
+            listOf(PositionXY(2, 6), PositionXY(2, 5)),
+            sampleField.getPositionsOfConnection(2, 5)
         )
+    }
+
+    private fun Field.getPositionsOfConnection(x: Int, y: Int): List<PositionXY> {
+        return getPositionsOfConnection(Position(x, y, realWidth)).map { it.toXY(realWidth) }
     }
 
     @Test
@@ -128,16 +138,16 @@ class FieldUtilsTests : FieldTests() {
         val rules = Rules(width, height, initialMoves = Cross.generateDefaultInitialPositions(width, height)!!)
         val field = Field.create(rules)
 
-        field.makeMove(Position(2, 1), Player.First)
-        field.makeMove(Position(1, 2), Player.First)
-        field.makeMove(Position.RESIGN, Player.Second)
+        field.makeMove(2, 1, Player.First)
+        field.makeMove(1, 2, Player.First)
+        field.finishGame(ExternalFinishReason.Resign, Player.Second)
 
         val newField = field.clone()
         assertEquals(field.width, newField.width)
         assertEquals(field.height, newField.height)
         assertEquals(field.realWidth, newField.realWidth)
         assertEquals(field.realHeight, newField.realHeight)
-        assertEquals(10, field.numberOfLegalMoves)
+        assertEquals(0, field.numberOfLegalMoves)
         assertEquals(field.numberOfLegalMoves, newField.numberOfLegalMoves)
         assertEquals(4, field.initialMovesCount)
         assertEquals(field.initialMovesCount, newField.initialMovesCount)

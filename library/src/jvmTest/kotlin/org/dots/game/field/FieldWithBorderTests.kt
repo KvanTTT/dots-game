@@ -1,7 +1,6 @@
 package org.dots.game.field
 
 import org.dots.game.core.Player
-import org.dots.game.core.x
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -74,7 +73,7 @@ class FieldWithBorderTests() : FieldTests() {
             . .  . .
         """) {
             assertEquals(2, it.player1Score)
-            assertNotNull(it.makeMove(4 x 2, Player.Second))
+            assertNotNull(it.makeMove(4, 2, Player.Second))
             assertEquals(2, it.player1Score)
         }
     }

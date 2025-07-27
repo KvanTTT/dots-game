@@ -10,7 +10,7 @@ fun Field.getOneMoveCapturingAndBasePositions(): OneMoveCapturingAndBasePosition
 
     for (x in 1..width) {
         for (y in 1..height) {
-            val position = Position(x, y)
+            val position = getPositionIfWithinBounds(x, y) ?: continue
 
             fun collectCapturingAndPotentiallyBasePositions(player: Player) {
                 with (this) {
@@ -22,7 +22,7 @@ fun Field.getOneMoveCapturingAndBasePositions(): OneMoveCapturingAndBasePosition
                         if (emptyTerritoryPlayer == player) return
                     }
 
-                    val moveResult = makeMove(position, player)
+                    val moveResult = makeMoveUnsafe(position, player)
                     if (moveResult != null) {
                         unmakeMove()
 
