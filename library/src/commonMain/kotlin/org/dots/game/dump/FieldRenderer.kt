@@ -3,7 +3,7 @@ import org.dots.game.core.EMPTY_TERRITORY_MARKER
 import org.dots.game.core.Field
 import org.dots.game.core.Player
 import org.dots.game.core.Position
-import org.dots.game.core.SURROUNDING_MARKER
+import org.dots.game.core.VISITED_MARKER
 import org.dots.game.core.TERRITORY_EMPTY_MARKER
 import org.dots.game.core.playerMarker
 
@@ -41,19 +41,19 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
             val placedPlayer = state.getPlacedPlayer()
             val emptyTerritoryPlayer = state.getEmptyTerritoryPlayer()
             val isTerritory = state.isTerritory()
-            val isSurrounding = state.isSurrounding()
+            val isVisited = state.isVisited()
 
             buildString {
                 if (emptyTerritoryPlayer != Player.None) {
-                    require(activePlayer == Player.None && placedPlayer == Player.None && !isSurrounding && !isTerritory)
+                    require(activePlayer == Player.None && placedPlayer == Player.None && !isVisited && !isTerritory)
                     if (debugInfo) {
                         append(EMPTY_TERRITORY_MARKER)
                         append(playerMarker.getValue(emptyTerritoryPlayer))
                     }
                 } else if (getPositionIfWithinBounds(x, y) != null) {
                     if (isTerritory) {
-                        require(!isSurrounding)
-                    } else if (isSurrounding) {
+                        require(!isVisited)
+                    } else if (isVisited) {
                         require(!isTerritory)
                     }
 
@@ -69,8 +69,8 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
                         append(playerMarker.getValue(placedPlayer))
                     }
 
-                    if (debugInfo && isSurrounding) {
-                        append(SURROUNDING_MARKER)
+                    if (debugInfo && isVisited) {
+                        append(VISITED_MARKER)
                     }
                 }
                 if (isEmpty()) {

@@ -430,7 +430,7 @@ class Field {
     }
 
     private fun captureNotGroundedGroups(player: Player): Pair<List<Base>, List<PositionState>> {
-        val processedPositions = hashSetOf<Position>()
+        val processedPositions = mutableListOf<Position>()
         val oppositePlayer = player.opposite()
         val extraPreviousStates = mutableListOf<PositionState>()
 
@@ -439,9 +439,7 @@ class Field {
         for (move in moveResults) {
             val position = move.position
 
-            if (!processedPositions.add(position)) continue
-
-            if (position.getState().isActive(player)) {
+            if (position.getState().let { !it.isVisited() && it.isActive(player) }) {
                 var grounded = false
                 val territoryPositions = getTerritoryPositions(oppositePlayer, position) {
                     val state = it.getState()
@@ -476,6 +474,8 @@ class Field {
                 }
             }
         }
+
+        processedPositions.clearVisited()
 
         return bases to extraPreviousStates
     }
@@ -655,12 +655,11 @@ class Field {
     }
 
     private fun buildBase(player: Player, closurePositions: List<Position>): Base {
-        closurePositions.forEach { it.setState(it.getState().setSurrounding()) }
+        closurePositions.forEach { it.setVisited() }
         val territoryFirstPosition = getNextPosition(closurePositions[1],closurePositions[0], realWidth)
-        val territoryPositions = getTerritoryPositions(player, territoryFirstPosition) {
-            !it.getState().isSurrounding()
-        }
-        closurePositions.forEach { it.setState(it.getState().clearSurrounding()) }
+        val territoryPositions = getTerritoryPositions(player, territoryFirstPosition) { true }
+        closurePositions.clearVisited()
+        territoryPositions.clearVisited()
         return calculateBase(closurePositions, territoryPositions, player)
     }
 
@@ -725,15 +724,19 @@ class Field {
         return if (square > 0) ClosureData(square, closurePositions.toList(), containsBorder) else null
     }
 
-    private fun getTerritoryPositions(player: Player, firstPosition: Position, positionCheck: (Position) -> Boolean): HashSet<Position> {
+    private fun getTerritoryPositions(player: Player, firstPosition: Position, positionCheck: (Position) -> Boolean): List<Position> {
         val walkStack = mutableListOf<Position>()
-        val territoryPositions = hashSetOf<Position>()
+        val territoryPositions = mutableListOf<Position>()
 
         fun Position.checkAndAdd() {
-            if (getState().isActiveAndTerritory(player)) return // Ignore already captured territory
+            val state = getState()
+            if (state.isActiveAndTerritory(player)) return // Ignore already captured territory
 
+            if (state.isVisited()) return
             if (!positionCheck(this)) return
-            if (!territoryPositions.add(this)) return
+
+            territoryPositions.add(this)
+            setVisited()
 
             walkStack.add(this)
         }
@@ -764,8 +767,8 @@ class Field {
         }
 
         val walkStack = mutableListOf<Position>()
-        val territoryPositions = hashSetOf<Position>()
-        val closurePositions = hashSetOf<Position>()
+        val territoryPositions = mutableListOf<Position>()
+        val closurePositions = mutableListOf<Position>()
         var currentPlayerDiff = 0
         var oppositePlayerDiff = 0
 
@@ -784,7 +787,7 @@ class Field {
                 return false // early return if encounter an empty position
             }
 
-            if (territoryPositions.contains(this)) return true
+            if (state.isVisited()) return true
 
             if (state.isPlaced(player)) {
                 if (state.isActive(oppositePlayer)) {
@@ -799,21 +802,28 @@ class Field {
                 }
             }
 
+            setVisited()
             territoryPositions.add(this)
             walkStack.add(this)
 
             return true
         }
 
-        if (!territoryFirstPosition.checkAndAdd()) return null
+        if (!territoryFirstPosition.checkAndAdd()) {
+            territoryPositions.clearVisited()
+            return null
+        }
 
         while (walkStack.isNotEmpty()) {
             if (!walkStack.removeLast().forEachAdjacent(realWidth) {
                 it.checkAndAdd()
             }) {
+                territoryPositions.clearVisited()
                 return null
             }
         }
+
+        territoryPositions.clearVisited()
 
         val base: Base?
         val suicidalMove: Boolean
@@ -840,7 +850,7 @@ class Field {
 
     private fun calculateBase(
         closurePositions: List<Position>,
-        territoryPositions: Set<Position>,
+        territoryPositions: List<Position>,
         player: Player,
     ): Base {
         var currentPlayerDiff = 0
@@ -884,7 +894,7 @@ class Field {
         currentPlayerDiff: Int,
         oppositePlayerDiff: Int,
         closurePositions: List<Position>,
-        territoryPositions: Set<Position>,
+        territoryPositions: List<Position>,
         isReal: Boolean,
     ): Base {
         val previousPositionStates = ArrayList<PositionState>(territoryPositions.size)
@@ -966,11 +976,19 @@ class Field {
         return DotState(dots[value])
     }
 
+    private fun Position.setVisited() {
+        setState(getState().setVisited())
+    }
+
+    private fun List<Position>.clearVisited() {
+        forEach { it.setState(it.getState().clearVisited()) }
+    }
+
     private fun Position.setState(state: DotState) {
         dots[value] = state.value
     }
 
-    fun DotState.checkActiveAndWall(player: Player): Boolean {
+    private fun DotState.checkActiveAndWall(player: Player): Boolean {
         return getActivePlayer().let { it == player || captureByBorder && it == Player.WallOrBoth }
     }
 
