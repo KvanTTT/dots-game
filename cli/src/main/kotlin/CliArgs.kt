@@ -88,6 +88,21 @@ class CliArgs : CliktCommand() {
                 suicideAllowed = true,
                 initialMoves = initialPosition?.generateDefaultInitialPositions(fieldWidth, fieldHeight) ?: emptyList(),
             )
+            val warmUpGamesCount = 10000
+            outputStream.println("Start warm-up on $warmUpGamesCount games...")
+            RandomGameAnalyser.process(
+                rules,
+                gamesCount = warmUpGamesCount,
+                seed ?: 0L,
+                checkRollback = true,
+                measureNanos = { 0 },
+                formatDouble = { it.toString() },
+                outputStream = { },
+            )
+            outputStream.println("Warm-up is finished.")
+            outputStream.println()
+
+            outputStream.println("Start main loop...")
             RandomGameAnalyser.process(
                 rules,
                 gamesCount,
@@ -97,6 +112,7 @@ class CliArgs : CliktCommand() {
                 formatDouble = { String.format(Locale.ENGLISH, "%.4f", it) },
                 outputStream = { outputStream.println(it) },
             )
+            outputStream.println("Main loop is finished.")
         }
     }
     fun PrintStream.reportSpecifiedButUnusedParameter(property: KProperty<*>, value: Any?) {
