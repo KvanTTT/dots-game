@@ -3,7 +3,7 @@ package org.dots.game.core
 import kotlin.jvm.JvmInline
 
 @JvmInline
-value class Player internal constructor(val value: Int) {
+value class Player internal constructor(val value: Byte) {
     companion object {
         val None = Player(0)
         val First = Player(1)
@@ -12,16 +12,16 @@ value class Player internal constructor(val value: Int) {
 
         fun validateAndCreate(playerId: Int): Player {
             if (playerId in 0..3) {
-                return Player(playerId)
+                return Player(playerId.toByte())
             } else {
                 error("The playerId mush be between 0 and 3, the passed value is $playerId")
             }
         }
     }
 
-    fun opposite(): Player = Player(value xor 3)
+    fun opposite(): Player = Player((value.toInt() xor 3).toByte())
 
-    operator fun plus(other: Player): Player = Player(value or other.value)
+    operator fun plus(other: Player): Player = Player((value.toInt() or other.value.toInt()).toByte())
 
     override fun toString(): String {
         return when (value) {

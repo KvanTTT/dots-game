@@ -1,26 +1,33 @@
 package org.dots.game.core
 
+import kotlin.experimental.and
+import kotlin.experimental.or
 import kotlin.jvm.JvmInline
 
 @JvmInline
-value class DotState internal constructor(val value: Int) {
+value class DotState internal constructor(val value: Byte) {
     companion object {
-        private const val PLAYER_BITS_COUNT = 2
+        private const val PLAYER_BITS_COUNT: Int = 2
+        private const val ZERO: Byte = 0.toByte()
 
-        private const val PLACED_PLAYER_SHIFT = PLAYER_BITS_COUNT
-        private const val EMPTY_TERRITORY_SHIFT = PLACED_PLAYER_SHIFT + PLAYER_BITS_COUNT
-        private const val TERRITORY_FLAG_SHIFT = EMPTY_TERRITORY_SHIFT + PLAYER_BITS_COUNT
-        private const val VISITED_FLAG_SHIFT = TERRITORY_FLAG_SHIFT + 1
+        private const val PLACED_PLAYER_SHIFT: Int = PLAYER_BITS_COUNT
+        private const val EMPTY_TERRITORY_SHIFT: Int = PLACED_PLAYER_SHIFT + PLAYER_BITS_COUNT
+        private const val TERRITORY_FLAG_SHIFT: Int = EMPTY_TERRITORY_SHIFT + PLAYER_BITS_COUNT
+        private const val VISITED_FLAG_SHIFT: Int = TERRITORY_FLAG_SHIFT + 1
 
-        private const val ACTIVE_MASK: Int = (1 shl PLAYER_BITS_COUNT) - 1
-        private const val TERRITORY_FLAG: Int = 1 shl TERRITORY_FLAG_SHIFT
-        private const val VISITED_FLAG: Int = 1 shl VISITED_FLAG_SHIFT
-        private const val ACTIVE_AND_TERRITORY_MASK: Int = ACTIVE_MASK or TERRITORY_FLAG
-        private const val INVALIDATE_TERRITORY_MASK: Int = (ACTIVE_MASK or (ACTIVE_MASK shl EMPTY_TERRITORY_SHIFT)).inv()
-        private const val INVALIDATE_VISITED_MASK: Int = VISITED_FLAG.inv()
+        private const val ACTIVE_MASK: Byte = ((1 shl PLAYER_BITS_COUNT) - 1).toByte()
+        private const val TERRITORY_FLAG: Byte = (1 shl TERRITORY_FLAG_SHIFT).toByte()
+        private const val VISITED_FLAG: Byte = (1 shl VISITED_FLAG_SHIFT).toByte()
+        private const val ACTIVE_AND_TERRITORY_MASK: Byte = (ACTIVE_MASK.toInt() or TERRITORY_FLAG.toInt()).toByte()
+        private const val INVALIDATE_TERRITORY_MASK: Byte = (ACTIVE_MASK.toInt() or (ACTIVE_MASK.toInt() shl EMPTY_TERRITORY_SHIFT)).inv().toByte()
+        private const val INVALIDATE_VISITED_MASK: Byte = VISITED_FLAG.toInt().inv().toByte()
 
         val Empty: DotState = DotState(0)
         val Wall: DotState = DotState(Player.WallOrBoth.value)
+
+        init {
+            require(VISITED_FLAG_SHIFT <= Byte.SIZE_BITS - 1)
+        }
 
         fun createPlaced(player: Player): DotState {
             return DotState(player.value or (player.value shl PLACED_PLAYER_SHIFT))
@@ -29,6 +36,9 @@ value class DotState internal constructor(val value: Int) {
         fun createEmptyTerritory(player: Player): DotState {
             return DotState(player.value shl EMPTY_TERRITORY_SHIFT)
         }
+
+        private infix fun Byte.shl(other: Int): Byte = (toInt() shl other).toByte()
+        private infix fun Byte.shr(other: Int): Byte = (toInt() shr other).toByte()
     }
 
     fun getActivePlayer(): Player {
@@ -36,7 +46,7 @@ value class DotState internal constructor(val value: Int) {
     }
 
     fun isActive(): Boolean {
-        return value and ACTIVE_MASK != 0
+        return value and ACTIVE_MASK != ZERO
     }
 
     fun isActive(player: Player): Boolean {
@@ -68,7 +78,7 @@ value class DotState internal constructor(val value: Int) {
     }
 
     fun isTerritory(): Boolean {
-        return value and TERRITORY_FLAG != 0
+        return value and TERRITORY_FLAG != ZERO
     }
 
     fun setTerritory(player: Player): DotState {
@@ -80,7 +90,7 @@ value class DotState internal constructor(val value: Int) {
     }
 
     fun isVisited(): Boolean {
-        return value and VISITED_FLAG != 0
+        return value and VISITED_FLAG != ZERO
     }
 
     fun clearVisited(): DotState {

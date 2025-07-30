@@ -42,7 +42,7 @@ class Field {
         this.height = rules.height
         this.realWidth = width + OFFSET * 2
         this.realHeight = height + OFFSET * 2
-        this.dots = IntArray(realWidth * realHeight) {
+        this.dots = ByteArray(realWidth * realHeight) {
             val x = it % realWidth
             val y = it / realWidth
             if (x == 0 || x == realWidth - 1 || y == 0 || y == realHeight - 1) {
@@ -67,7 +67,7 @@ class Field {
     val captureByBorder: Boolean
 
     // Use primitive int array with expanded borders to get rid of extra range checks and boxing
-    private val dots: IntArray
+    private val dots: ByteArray
 
     private val moveResults = mutableListOf<MoveResult>()
 
@@ -1042,13 +1042,13 @@ value class PositionState(val value: Int) {
         }
     }
 
-    constructor(position: Position, state: DotState) : this((position.value shl STATE_BITS_COUNT) or (state.value and STATE_MASK))
+    constructor(position: Position, state: DotState) : this((position.value shl STATE_BITS_COUNT) or (state.value.toInt() and STATE_MASK))
 
     val position: Position
         get() = Position(value shr STATE_BITS_COUNT)
 
     val state: DotState
-        get() = DotState(value and STATE_MASK)
+        get() = DotState((value and STATE_MASK).toByte())
 
     operator fun component1(): Position = position
 
