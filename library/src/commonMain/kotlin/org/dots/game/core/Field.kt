@@ -133,7 +133,7 @@ class Field {
         newField.initialMovesCount = initialMovesCount
 
         for (posIndex in 0..<dots.size) {
-            val position = Position(posIndex)
+            val position = Position(posIndex.toShort())
             val oldState = position.getState()
             with(newField) {
                 position.transform().setState(oldState)
@@ -973,7 +973,7 @@ class Field {
     }
 
     fun Position.getState(): DotState {
-        return DotState(dots[value])
+        return DotState(dots[value.toInt()])
     }
 
     private fun Position.setVisited() {
@@ -985,7 +985,7 @@ class Field {
     }
 
     private fun Position.setState(state: DotState) {
-        dots[value] = state.value
+        dots[value.toInt()] = state.value
     }
 
     private fun DotState.checkActiveAndWall(player: Player): Boolean {
@@ -1042,10 +1042,10 @@ value class PositionState(val value: Int) {
         }
     }
 
-    constructor(position: Position, state: DotState) : this((position.value shl STATE_BITS_COUNT) or (state.value.toInt() and STATE_MASK))
+    constructor(position: Position, state: DotState) : this((position.value.toInt() shl STATE_BITS_COUNT) or (state.value.toInt() and STATE_MASK))
 
     val position: Position
-        get() = Position(value shr STATE_BITS_COUNT)
+        get() = Position((value shr STATE_BITS_COUNT).toShort())
 
     val state: DotState
         get() = DotState((value and STATE_MASK).toByte())
