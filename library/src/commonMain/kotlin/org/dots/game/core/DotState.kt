@@ -132,12 +132,12 @@ const val SECOND_PLAYER_MARKER = '+'
 const val TERRITORY_EMPTY_MARKER = '^'
 const val EMPTY_TERRITORY_MARKER = '`'
 const val EMPTY_POSITION_MARKER = '.'
-const val BOARDER_MARKER = '#'
+const val BORDER_MARKER = '#'
 const val VISITED_MARKER = '$'
 
 val playerMarker = mapOf(
     Player.First to FIRST_PLAYER_MARKER,
     Player.Second to SECOND_PLAYER_MARKER,
     Player.None to EMPTY_POSITION_MARKER,
-    Player.WallOrBoth to BOARDER_MARKER,
+    Player.WallOrBoth to BORDER_MARKER,
 )

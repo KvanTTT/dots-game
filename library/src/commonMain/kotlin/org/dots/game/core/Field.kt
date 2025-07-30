@@ -14,7 +14,7 @@ class Field {
         fun checkWidth(value: Int): Boolean = value in 0..MAX_WIDTH
         fun checkHeight(value: Int): Boolean = value in 0..MAX_HEIGHT
 
-        fun getStride(width: Int): Int = width + OFFSET * 2
+        fun getStride(width: Int): Int = width + OFFSET
 
         fun create(rules: Rules, onIncorrectInitialMove: (moveInfo: MoveInfo, incorrectMove: Boolean, moveNumber: Int) -> Unit = { _, _, _ -> }): Field {
             return Field(rules).apply {
@@ -40,12 +40,13 @@ class Field {
         this.rules = rules
         this.width = rules.width
         this.height = rules.height
-        this.realWidth = width + OFFSET * 2
+        this.realWidth = width + OFFSET + (if (rules.captureByBorder) OFFSET else 0)
         this.realHeight = height + OFFSET * 2
-        this.dots = ByteArray(realWidth * realHeight) {
+        this.size = realWidth * realHeight + (if (rules.captureByBorder) 0 else 1)
+        this.dots = ByteArray(size) {
             val x = it % realWidth
             val y = it / realWidth
-            if (x == 0 || x == realWidth - 1 || y == 0 || y == realHeight - 1) {
+            if (x == 0 || y == 0 || rules.captureByBorder && x == realWidth - 1 || y == realHeight - 1) {
                 DotState.Wall.value
             } else {
                 DotState.Empty.value
@@ -62,6 +63,7 @@ class Field {
     val height: Int
     val realWidth: Int
     val realHeight: Int
+    val size: Int
     var initialMovesCount: Int = 0
         private set
     val captureByBorder: Boolean
@@ -127,12 +129,12 @@ class Field {
             baseMode = rules.baseMode,
             suicideAllowed = rules.suicideAllowed,
             initialMoves = rules.initialMoves.map {
-                MoveInfo(it.positionXY.transform(transformType, width, height, newFieldStride), it.player, it.extraInfo)
+                MoveInfo(it.positionXY.transform(transformType, width, height), it.player, it.extraInfo)
             },
         ))
         newField.initialMovesCount = initialMovesCount
 
-        for (posIndex in 0..<dots.size) {
+        for (posIndex in 0..<dots.size - 1) {
             val position = Position(posIndex.toShort())
             val oldState = position.getState()
             with(newField) {

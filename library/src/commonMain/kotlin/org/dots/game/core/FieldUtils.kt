@@ -169,7 +169,7 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
     var actualInitialMovesCount = 0
     for (x in 0 until realWidth) {
         for (y in 0 until realHeight) {
-            val wallOrEmptyState = if (x == 0 || x == realWidth - 1 || y == 0 || y == realHeight - 1)
+            val wallOrEmptyState = if (x == 0 || y == 0 || rules.captureByBorder && x == realWidth - 1 || y == realHeight - 1)
                 DotState.Wall
             else
                 DotState.Empty
@@ -182,26 +182,26 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
     check(initialMovesCount == actualInitialMovesCount, ::initialMovesCount)
 }
 
-fun Position.transform(type: TransformType, width: Int, height: Int, newWidth: Int): Position {
+fun Position.transform(type: TransformType, fieldStride: Int, height: Int, newFieldStride: Int): Position {
     if (isGameOverMove) return this
-    val (x, y) = toXY(width)
+    val (x, y) = toXY(fieldStride)
     return when (type) {
-        TransformType.RotateCw90 -> Position(height - 1 - y, x, newWidth)
-        TransformType.Rotate180 -> Position(width - 1 - x, height - y - 1, newWidth)
-        TransformType.RotateCw270 -> Position(y, width - 1 - x, newWidth)
-        TransformType.FlipHorizontal -> Position(width - 1 - x, y, newWidth)
-        TransformType.FlipVertical -> Position(x, height - 1 - y, newWidth)
+        TransformType.RotateCw90 -> Position(height - 1 - y, x, newFieldStride)
+        TransformType.Rotate180 -> Position(fieldStride - x, height - y - 1, newFieldStride)
+        TransformType.RotateCw270 -> Position(y, fieldStride - x, newFieldStride)
+        TransformType.FlipHorizontal -> Position(fieldStride - x, y, newFieldStride)
+        TransformType.FlipVertical -> Position(x, height - 1 - y, newFieldStride)
     }
 }
 
-fun PositionXY.transform(type: TransformType, width: Int, height: Int, newWidth: Int): PositionXY {
+fun PositionXY.transform(type: TransformType, fieldStride: Int, height: Int): PositionXY {
     if (isGameOverMove) return this
     val (x, y) = this
     return when (type) {
         TransformType.RotateCw90 -> PositionXY(height - 1 - y, x)
-        TransformType.Rotate180 -> PositionXY(width - 1 - x, height - y - 1)
-        TransformType.RotateCw270 -> PositionXY(y, width - 1 - x)
-        TransformType.FlipHorizontal -> PositionXY(width - 1 - x, y)
+        TransformType.Rotate180 -> PositionXY(fieldStride - x, height - y - 1)
+        TransformType.RotateCw270 -> PositionXY(y, fieldStride - x)
+        TransformType.FlipHorizontal -> PositionXY(fieldStride - x, y)
         TransformType.FlipVertical -> PositionXY(x, height - 1 - y)
     }
 }

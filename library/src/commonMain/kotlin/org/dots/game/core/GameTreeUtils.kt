@@ -138,7 +138,7 @@ fun GameTree.transform(transformType: TransformType): GameTree {
         baseMode = rules.baseMode,
         suicideAllowed = rules.suicideAllowed,
         initialMoves = rules.initialMoves.map { (positionXY, player, extraInfo) ->
-            MoveInfo(positionXY.transform(transformType, field.realWidth, field.realHeight, newFieldStride), player, extraInfo)
+            MoveInfo(positionXY.transform(transformType, field.realWidth, field.realHeight), player, extraInfo)
         }
     ))
 

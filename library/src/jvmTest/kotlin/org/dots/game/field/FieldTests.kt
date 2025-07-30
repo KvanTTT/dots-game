@@ -27,7 +27,7 @@ abstract class FieldTests {
             check(field) { x, y ->
                 val positionXY = PositionXY(x, y)
                 if (transformType != null) {
-                    positionXY.transform(transformType, originalField.realWidth, originalField.realHeight, field.realWidth)
+                    positionXY.transform(transformType, originalField.realWidth, originalField.realHeight)
                 } else {
                     positionXY
                 }
