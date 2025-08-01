@@ -8,11 +8,9 @@ class Field {
     companion object {
         const val OFFSET: Int = 1
         // Max field size is 62 * 62 (2 positions are reserved for a border)
-        const val MAX_WIDTH = (1 shl COORDINATE_BITS_COUNT) - 2
-        const val MAX_HEIGHT = (1 shl COORDINATE_BITS_COUNT) - 2
+        const val MAX_SIZE = (1 shl COORDINATE_BITS_COUNT) - 2
 
-        fun checkWidth(value: Int): Boolean = value in 0..MAX_WIDTH
-        fun checkHeight(value: Int): Boolean = value in 0..MAX_HEIGHT
+        fun checkSize(value: Int): Boolean = value in 0..MAX_SIZE
 
         fun getStride(width: Int): Int = width + OFFSET
 
@@ -53,7 +51,8 @@ class Field {
             }
         }
         this.numberOfLegalMoves = width * height
-        require(checkWidth(width) && checkHeight(height))
+        this.positionHash = ZobristHash.widthHash[width] xor ZobristHash.heightHash[height]
+        require(checkSize(width) && checkSize(height))
 
         captureByBorder = rules.captureByBorder
     }
@@ -89,6 +88,9 @@ class Field {
     private val closuresList = ArrayList<ClosureData>(4)
     private val closurePositions: ArrayList<Position> = ArrayList()
 
+    var positionHash: Long
+        private set
+
     fun clone(): Field {
         val new = Field(rules)
         new.initialMovesCount = initialMovesCount
@@ -99,9 +101,13 @@ class Field {
         new.gameResult = gameResult
         new.player1Score = player1Score
         new.player2Score = player2Score
+        new.positionHash = positionHash
         return new
     }
 
+    /**
+     * Performs fast transformation without using base recalculating
+     */
     fun transform(transformType: TransformType): Field {
         val newWidth: Int
         val newHeight: Int
@@ -138,7 +144,12 @@ class Field {
             val position = Position(posIndex.toShort())
             val oldState = position.getState()
             with(newField) {
-                position.transform().setState(oldState)
+                val newPosition = position.transform()
+                newPosition.setState(oldState)
+                val activePlayer = oldState.getActivePlayer()
+                if (activePlayer != Player.None) {
+                    updateHash(newPosition, activePlayer)
+                }
             }
         }
 
@@ -243,6 +254,7 @@ class Field {
             resultBases,
             numberOfLegalMoves,
         ).also {
+            updateHash(Position.GAME_OVER, currentPlayer)
             numberOfLegalMoves = 0
         })
 
@@ -274,14 +286,20 @@ class Field {
 
         if (moveResult.bases != null) {
             for (base in moveResult.bases.reversed()) {
+                val basePlayer = base.player
                 for ((position, previousState) in base.previousPositionStates) {
                     position.setState(previousState)
+                    if (base.isReal) {
+                        updateHashForTerritory(position, previousState.getActivePlayer(), basePlayer)
+                    }
                 }
                 updateScoreCount(base.player, base.playerDiff, base.oppositePlayerDiff, rollback = true)
             }
         }
 
         moveResult.position.setState(moveResult.previousState)
+        updateHash(moveResult.position, moveResult.player)
+
         if (moveResult.extraPreviousPositionStates != null) {
             for ((position, previousState) in moveResult.extraPreviousPositionStates) {
                 position.setState(previousState)
@@ -338,6 +356,8 @@ class Field {
         numberOfLegalMoves--
 
         position.setState(DotState.createPlaced(currentPlayer))
+        val hashValue = ZobristHash.getPositionsValue(position, currentPlayer)
+        updateHash(hashValue)
 
         val bases = tryCapture(position, currentPlayer, emptyBaseCapturing = false)
 
@@ -353,6 +373,7 @@ class Field {
                         listOf(oppositeBase)
                     } else {
                         position.setState(originalState)
+                        updateHash(hashValue)
                         return null
                     }
                 } else {
@@ -367,6 +388,7 @@ class Field {
                     if (suicidalMove) {
                         // Rollback state in case of a suicidal move
                         position.setState(originalState)
+                        updateHash(hashValue)
                         return null
                     } else {
                         base?.let { listOf(it) } ?: bases
@@ -908,17 +930,19 @@ class Field {
         for (territoryPosition in territoryPositions) {
             val territoryPositionState = territoryPosition.getState()
 
-            fun savePreviousStateAndSetNew(newState: DotState) {
+            val territoryActivePlayer = territoryPositionState.getActivePlayer()
+            // Don't change the state and its zobrist hash if the position is in active state
+            // because the positions inside the base are filled with the current player dots
+            if (territoryActivePlayer != player) {
+                val newState = if (!isReal) {
+                    playerEmptyTerritory
+                } else {
+                    updateHashForTerritory(territoryPosition, territoryActivePlayer, player)
+                    territoryPositionState.setTerritoryAndActivePlayer(player)
+                }
+
                 previousPositionStates.add(PositionState(territoryPosition, territoryPositionState))
                 territoryPosition.setState(newState)
-            }
-
-            if (!isReal) {
-                if (!territoryPositionState.isActive()) {
-                    savePreviousStateAndSetNew(playerEmptyTerritory)
-                }
-            } else {
-                savePreviousStateAndSetNew(territoryPositionState.setTerritory(player))
             }
         }
 
@@ -992,6 +1016,28 @@ class Field {
 
     private fun DotState.checkActiveAndWall(player: Player): Boolean {
         return getActivePlayer().let { it == player || captureByBorder && it == Player.WallOrBoth }
+    }
+
+    private fun updateHashForTerritory(position: Position, currentPlayer: Player, basePlayer: Player) {
+        if (currentPlayer == Player.None) {
+            updateHash(position, basePlayer)
+        } else {
+            val baseOppositePlayer = basePlayer.opposite()
+            if (currentPlayer == baseOppositePlayer) {
+                val positionsHash = ZobristHash.positionsHash[position.value.toInt()]
+                // Simulate unmaking the opponent move and making the player's move
+                updateHash(positionsHash[baseOppositePlayer.value.toInt()])
+                updateHash(positionsHash[basePlayer.value.toInt()])
+            }
+        }
+    }
+
+    private fun updateHash(position: Position, player: Player) {
+        updateHash(ZobristHash.getPositionsValue(position, player))
+    }
+
+    private fun updateHash(value: Hash) {
+        positionHash = positionHash xor value
     }
 
     override fun toString(): String = render()

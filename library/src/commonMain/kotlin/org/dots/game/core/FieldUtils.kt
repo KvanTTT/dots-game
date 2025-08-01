@@ -180,6 +180,9 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
     }
 
     check(initialMovesCount == actualInitialMovesCount, ::initialMovesCount)
+
+    val emptyField = Field.create(rules)
+    check(positionHash == emptyField.positionHash, ::positionHash)
 }
 
 fun Position.transform(type: TransformType, fieldStride: Int, height: Int, newFieldStride: Int): Position {

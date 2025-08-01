@@ -5,6 +5,7 @@ import kotlin.jvm.JvmInline
 @JvmInline
 value class Player internal constructor(val value: Byte) {
     companion object {
+        const val Count = 4
         val None = Player(0)
         val First = Player(1)
         val Second = Player(2)

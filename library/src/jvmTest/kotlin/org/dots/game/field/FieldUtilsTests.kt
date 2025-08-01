@@ -159,6 +159,7 @@ class FieldUtilsTests : FieldTests() {
         assertEquals(field.player2Score, newField.player2Score)
         assertEquals(field.gameResult, GameResult.ResignWin(Player.First))
         assertEquals(field.gameResult, newField.gameResult)
+        assertEquals(field.positionHash, newField.positionHash)
 
         field.unmakeAllMovesAndCheck { fail(it) }
         newField.unmakeAllMovesAndCheck { fail(it) }

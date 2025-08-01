@@ -630,13 +630,12 @@ class SgfConverter(
 
         when (dimensions.size) {
             1 -> {
-                val maxDimension = minOf(Field.MAX_WIDTH, Field.MAX_HEIGHT)
-                val size = dimensions[0].toIntOrNull()?.takeIf { it in 0..maxDimension }
+                val size = dimensions[0].toIntOrNull()?.takeIf { it in 0..Field.MAX_SIZE }
                 if (size == null) {
                     width = null
                     height = null
                     propertyInfo.reportPropertyDiagnostic(
-                        "has invalid value `${dimensions[0]}`. Expected: 0..${maxDimension}.",
+                        "has invalid value `${dimensions[0]}`. Expected: 0..${Field.MAX_SIZE}.",
                         textSpan,
                         DiagnosticSeverity.Critical,
                     )
@@ -652,20 +651,20 @@ class SgfConverter(
                 val widthString = dimensions[0]
                 val heightString = dimensions[1]
 
-                width = widthString.toIntOrNull()?.takeIf { Field.checkWidth(it) }
+                width = widthString.toIntOrNull()?.takeIf { Field.checkSize(it) }
                 if (width == null) {
                     propertyInfo.reportPropertyDiagnostic(
-                        "has invalid width: `${widthString}`. Expected: 0..${Field.MAX_WIDTH}.",
+                        "has invalid width: `${widthString}`. Expected: 0..${Field.MAX_SIZE}.",
                         TextSpan(textSpan.start, widthString.length),
                         DiagnosticSeverity.Critical,
                     )
                 } else if (width == 0) {
                     reportZeroSize("width", textSpan.start, widthString.length)
                 }
-                height = heightString.toIntOrNull()?.takeIf { Field.checkHeight(it) }
+                height = heightString.toIntOrNull()?.takeIf { Field.checkSize(it) }
                 if (height == null) {
                     propertyInfo.reportPropertyDiagnostic(
-                        "has invalid height: `${heightString}`. Expected: 0..${Field.MAX_HEIGHT}.",
+                        "has invalid height: `${heightString}`. Expected: 0..${Field.MAX_SIZE}.",
                         TextSpan(textSpan.start + widthString.length + 1, heightString.length),
                         DiagnosticSeverity.Critical,
                     )

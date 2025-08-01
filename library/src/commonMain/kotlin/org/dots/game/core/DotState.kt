@@ -81,7 +81,7 @@ value class DotState internal constructor(val value: Byte) {
         return value and TERRITORY_FLAG != ZERO
     }
 
-    fun setTerritory(player: Player): DotState {
+    fun setTerritoryAndActivePlayer(player: Player): DotState {
         return DotState(TERRITORY_FLAG or (value and INVALIDATE_TERRITORY_MASK) or player.value)
     }
 

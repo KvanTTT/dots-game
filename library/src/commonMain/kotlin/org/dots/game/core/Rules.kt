@@ -13,7 +13,7 @@ class Rules(
     val captureByBorder: Boolean = false,
     val baseMode: BaseMode = BaseMode.AtLeastOneOpponentDot,
     val suicideAllowed: Boolean = true,
-    val initialMoves: List<MoveInfo> = Cross.generateDefaultInitialPositions(width, height) ?: emptyList(),
+    val initialMoves: List<MoveInfo> = Cross.generateDefaultInitialPositions(width, height)!!,
 ) {
     companion object {
         val Standard = Rules()
@@ -23,7 +23,6 @@ class Rules(
      * The recognizer doesn't consider crosses orientation and positions.
      */
     val initialPositionType: InitialPositionType by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        val fieldStride = Field.getStride(width)
         when (initialMoves.size) {
             0 -> Empty
             1 -> Single
@@ -126,7 +125,6 @@ enum class BaseMode {
  * The generator tries to obey notago and bbs implementations
  */
 fun InitialPositionType.generateDefaultInitialPositions(width: Int, height: Int): List<MoveInfo>? {
-    val fieldStride = Field.getStride(width)
     when (this) {
         Empty -> {
             return emptyList()
