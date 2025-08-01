@@ -704,7 +704,9 @@ class Field {
     ): ClosureData? {
         closureOrInvalidatePositionsBuffer.clear()
         closureOrInvalidatePositionsBuffer.add(initialPosition)
+        initialPosition.setVisited()
         closureOrInvalidatePositionsBuffer.add(startPosition)
+        startPosition.setVisited()
         var square = initialPosition.getSquare(startPosition, realWidth)
 
         var currentPosition: Position = startPosition
@@ -737,7 +739,19 @@ class Field {
                         break@loop
                     }
 
+                    if (state.isVisited()) {
+                        // Remove trailing dots
+                        var currentPosition = it
+                        do {
+                            val lastPosition = closureOrInvalidatePositionsBuffer.pop()
+                            square += currentPosition.getSquare(lastPosition, realWidth)
+                            currentPosition = lastPosition
+                            lastPosition.clearVisited()
+                        } while (lastPosition != it)
+                    }
+
                     closureOrInvalidatePositionsBuffer.add(it)
+                    it.setVisited()
                     nextPosition = currentPosition
                     currentPosition = it
                     return@clockwiseBigJumpWalk false
@@ -745,9 +759,12 @@ class Field {
                 return@clockwiseBigJumpWalk true
             }
             if (clockwiseWalkCompleted) {
-                return null
+                square = 0
+                break
             }
         } while (true)
+
+        closureOrInvalidatePositionsBuffer.clearVisited()
 
         return if (square > 0) ClosureData(square, closureOrInvalidatePositionsBuffer.copy(), containsBorder) else null
     }
@@ -1000,7 +1017,11 @@ class Field {
     }
 
     private fun PositionsList.clearVisited() {
-        iterate { it.setState(it.getState().clearVisited()) }
+        iterate { it.clearVisited() }
+    }
+
+    private fun Position.clearVisited() {
+        setState(getState().clearVisited())
     }
 
     private fun Position.setState(state: DotState) {

@@ -607,4 +607,21 @@ class StandardFieldTests : FieldTests() {
             assertEquals(2, field.player2Score)
         }
     }
+
+    @Test
+    fun noDanglingSurrounding() {
+        testFieldWithTransformsAndRollback("""
+. * * . * * .
+* . . * + . *
+* . * . * . *
+* . . * . . *
+. * . . . * .
+. . * . * . .
+""") { field, transformFunc ->
+            assertNotNull(field.makeMove(transformFunc(4, 6), Player.First))
+            assertEquals(1, field.player1Score)
+            assertNull(field.makeMove(transformFunc(4, 3), Player.Second))
+            assertNull(field.makeMove(transformFunc(4, 3), Player.First))
+        }
+    }
 }
