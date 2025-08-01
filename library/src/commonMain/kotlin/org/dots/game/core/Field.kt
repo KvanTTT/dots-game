@@ -88,6 +88,7 @@ class Field {
     private val closuresList = ArrayList<ClosureData>(4)
     private val closurePositions: ArrayList<Position> = ArrayList()
     private val walkStackPositions: ArrayList<Position> = ArrayList()
+    private val territoryPositions: ArrayList<Position> = ArrayList()
 
     var positionHash: Long
         private set
@@ -466,7 +467,7 @@ class Field {
 
             if (position.getState().let { !it.isVisited() && it.isActive(player) }) {
                 var grounded = false
-                val territoryPositions = getTerritoryPositions(oppositePlayer, position) {
+                getTerritoryPositions(oppositePlayer, position) {
                     val state = it.getState()
                     if (state.getActivePlayer() == Player.WallOrBoth) {
                         grounded = true
@@ -490,11 +491,7 @@ class Field {
                         }
                     }
                     bases.add(
-                        calculateBase(
-                            closurePositions = emptyList(),
-                            territoryPositions,
-                            oppositePlayer,
-                        )
+                        calculateBase(closurePositions = emptyList(), oppositePlayer)
                     )
                 }
             }
@@ -682,10 +679,10 @@ class Field {
     private fun buildBase(player: Player, closurePositions: List<Position>): Base {
         closurePositions.forEach { it.setVisited() }
         val territoryFirstPosition = getNextPosition(closurePositions[1],closurePositions[0], realWidth)
-        val territoryPositions = getTerritoryPositions(player, territoryFirstPosition) { true }
+        getTerritoryPositions(player, territoryFirstPosition) { true }
         closurePositions.clearVisited()
         territoryPositions.clearVisited()
-        return calculateBase(closurePositions, territoryPositions, player)
+        return calculateBase(closurePositions, player)
     }
 
     private data class ClosureData(
@@ -749,9 +746,9 @@ class Field {
         return if (square > 0) ClosureData(square, closurePositions.toList(), containsBorder) else null
     }
 
-    private fun getTerritoryPositions(player: Player, firstPosition: Position, positionCheck: (Position) -> Boolean): List<Position> {
+    private fun getTerritoryPositions(player: Player, firstPosition: Position, positionCheck: (Position) -> Boolean) {
         walkStackPositions.clear()
-        val territoryPositions = mutableListOf<Position>()
+        territoryPositions.clear()
 
         fun Position.checkAndAdd() {
             val state = getState()
@@ -774,8 +771,6 @@ class Field {
                 true
             }
         }
-
-        return territoryPositions
     }
 
     private fun tryGetBaseForAllOpponentDotsMode(
@@ -792,7 +787,7 @@ class Field {
         }
 
         walkStackPositions.clear()
-        val territoryPositions = mutableListOf<Position>()
+        territoryPositions.clear()
         closurePositions.clear()
         var currentPlayerDiff = 0
         var oppositePlayerDiff = 0
@@ -862,7 +857,6 @@ class Field {
                 currentPlayerDiff,
                 oppositePlayerDiff,
                 ArrayList(closurePositions),
-                territoryPositions,
                 isReal = true,
             )
             suicidalMove = false
@@ -873,11 +867,7 @@ class Field {
 
     private data class BaseWithRollbackInfo(val base: Base?, val suicidalMove: Boolean)
 
-    private fun calculateBase(
-        closurePositions: List<Position>,
-        territoryPositions: List<Position>,
-        player: Player,
-    ): Base {
+    private fun calculateBase(closurePositions: List<Position>, player: Player): Base {
         var currentPlayerDiff = 0
         var oppositePlayerDiff = 0
 
@@ -909,7 +899,6 @@ class Field {
             currentPlayerDiff,
             oppositePlayerDiff,
             closurePositions,
-            territoryPositions,
             isReal,
         )
     }
@@ -919,7 +908,6 @@ class Field {
         currentPlayerDiff: Int,
         oppositePlayerDiff: Int,
         closurePositions: List<Position>,
-        territoryPositions: List<Position>,
         isReal: Boolean,
     ): Base {
         val previousPositionStates = ArrayList<PositionState>(territoryPositions.size)
