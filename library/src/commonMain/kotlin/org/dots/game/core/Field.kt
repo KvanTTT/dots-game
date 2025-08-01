@@ -85,7 +85,7 @@ class Field {
 
     private val startPositionsList = ArrayList<Position>(4)
     private val closuresList = ArrayList<ClosureData>(4)
-    private val closurePositions: ArrayList<Position> = ArrayList()
+    private val closureOrInvalidatePositions: ArrayList<Position> = ArrayList()
     private val walkStackPositions: ArrayList<Position> = ArrayList()
     private val territoryPositions: ArrayList<Position> = ArrayList()
 
@@ -406,6 +406,7 @@ class Field {
                 // Invalidate empty territory of the opposite player in case of capturing that is more prioritized
                 // It makes the positions legal for further game.
                 invalidateEmptyTerritory(position)
+                closureOrInvalidatePositions.toList()
             } else {
                 emptyList()
             }
@@ -483,7 +484,8 @@ class Field {
                     for (position in territoryPositions) {
                         position.forEachAdjacent(realWidth) {
                             if (it.getState().isWithinEmptyTerritory(player)) {
-                                emptyBaseInvalidatePositions.addAll(invalidateEmptyTerritory(position))
+                                invalidateEmptyTerritory(position)
+                                emptyBaseInvalidatePositions.addAll(closureOrInvalidatePositions)
                                 false
                             } else {
                                 true
@@ -696,9 +698,9 @@ class Field {
         startPosition: Position,
         player: Player,
     ): ClosureData? {
-        closurePositions.clear()
-        closurePositions.add(initialPosition)
-        closurePositions.add(startPosition)
+        closureOrInvalidatePositions.clear()
+        closureOrInvalidatePositions.add(initialPosition)
+        closureOrInvalidatePositions.add(startPosition)
         var square = initialPosition.getSquare(startPosition, realWidth)
 
         var currentPosition: Position = startPosition
@@ -731,7 +733,7 @@ class Field {
                         break@loop
                     }
 
-                    closurePositions.add(it)
+                    closureOrInvalidatePositions.add(it)
                     nextPosition = currentPosition
                     currentPosition = it
                     return@clockwiseBigJumpWalk false
@@ -743,7 +745,7 @@ class Field {
             }
         } while (true)
 
-        return if (square > 0) ClosureData(square, closurePositions.toList(), containsBorder) else null
+        return if (square > 0) ClosureData(square, closureOrInvalidatePositions.toList(), containsBorder) else null
     }
 
     private fun getTerritoryPositions(player: Player, firstPosition: Position, positionCheck: (Position) -> Boolean) {
@@ -788,7 +790,7 @@ class Field {
 
         walkStackPositions.clear()
         territoryPositions.clear()
-        closurePositions.clear()
+        closureOrInvalidatePositions.clear()
         var currentPlayerDiff = 0
         var oppositePlayerDiff = 0
 
@@ -800,7 +802,7 @@ class Field {
                 return if (!rules.captureByBorder) {
                     false
                 } else {
-                    closurePositions.add(this)
+                    closureOrInvalidatePositions.add(this)
                     true
                 }
             } else if (activePlayer == Player.None) {
@@ -813,7 +815,7 @@ class Field {
                 if (state.isActive(oppositePlayer)) {
                     oppositePlayerDiff--
                 } else {
-                    closurePositions.add(this)
+                    closureOrInvalidatePositions.add(this)
                     return true
                 }
             } else { // Opposite player placed
@@ -856,7 +858,7 @@ class Field {
                 player,
                 currentPlayerDiff,
                 oppositePlayerDiff,
-                ArrayList(closurePositions),
+                ArrayList(closureOrInvalidatePositions),
                 isReal = true,
             )
             suicidalMove = false
@@ -962,27 +964,27 @@ class Field {
     /**
      * Invalidates states of an empty base that becomes broken.
      */
-    private fun invalidateEmptyTerritory(position: Position): List<Position> {
+    private fun invalidateEmptyTerritory(position: Position) {
         walkStackPositions.clear()
         walkStackPositions.add(position)
-        val emptyTerritoryPositions = hashSetOf<Position>()
+        closureOrInvalidatePositions.clear()
 
         while (walkStackPositions.isNotEmpty()) {
             walkStackPositions.removeLast().forEachAdjacent(realWidth) {
                 val state = it.getState()
                 if (state.getEmptyTerritoryPlayer() == Player.None) return@forEachAdjacent true
-                if (emptyTerritoryPositions.add(it)) {
-                    it.setState(DotState.Empty)
-                } else {
-                    return@forEachAdjacent true
-                }
+                if (state.isVisited()) return@forEachAdjacent true
+
+                closureOrInvalidatePositions.add(it)
+                it.setState(DotState.Empty)
+                it.setVisited()
 
                 walkStackPositions.add(it)
                 true
             }
         }
 
-        return emptyTerritoryPositions.toList()
+        closureOrInvalidatePositions.clearVisited()
     }
 
     fun Position.getState(): DotState {
