@@ -87,6 +87,7 @@ class Field {
     private val startPositionsList = ArrayList<Position>(4)
     private val closuresList = ArrayList<ClosureData>(4)
     private val closurePositions: ArrayList<Position> = ArrayList()
+    private val walkStackPositions: ArrayList<Position> = ArrayList()
 
     var positionHash: Long
         private set
@@ -749,7 +750,7 @@ class Field {
     }
 
     private fun getTerritoryPositions(player: Player, firstPosition: Position, positionCheck: (Position) -> Boolean): List<Position> {
-        val walkStack = mutableListOf<Position>()
+        walkStackPositions.clear()
         val territoryPositions = mutableListOf<Position>()
 
         fun Position.checkAndAdd() {
@@ -762,13 +763,13 @@ class Field {
             territoryPositions.add(this)
             setVisited()
 
-            walkStack.add(this)
+            walkStackPositions.add(this)
         }
 
         firstPosition.checkAndAdd()
 
-        while (walkStack.isNotEmpty()) {
-            walkStack.removeLast().forEachAdjacent(realWidth) {
+        while (walkStackPositions.isNotEmpty()) {
+            walkStackPositions.removeLast().forEachAdjacent(realWidth) {
                 it.checkAndAdd()
                 true
             }
@@ -790,9 +791,9 @@ class Field {
             return null // Ignore already processed bases
         }
 
-        val walkStack = mutableListOf<Position>()
+        walkStackPositions.clear()
         val territoryPositions = mutableListOf<Position>()
-        val closurePositions = mutableListOf<Position>()
+        closurePositions.clear()
         var currentPlayerDiff = 0
         var oppositePlayerDiff = 0
 
@@ -828,7 +829,7 @@ class Field {
 
             setVisited()
             territoryPositions.add(this)
-            walkStack.add(this)
+            walkStackPositions.add(this)
 
             return true
         }
@@ -838,8 +839,8 @@ class Field {
             return null
         }
 
-        while (walkStack.isNotEmpty()) {
-            if (!walkStack.removeLast().forEachAdjacent(realWidth) {
+        while (walkStackPositions.isNotEmpty()) {
+            if (!walkStackPositions.removeLast().forEachAdjacent(realWidth) {
                 it.checkAndAdd()
             }) {
                 territoryPositions.clearVisited()
@@ -860,7 +861,7 @@ class Field {
                 player,
                 currentPlayerDiff,
                 oppositePlayerDiff,
-                ArrayList<Position>(closurePositions.size).apply { addAll(closurePositions) },
+                ArrayList(closurePositions),
                 territoryPositions,
                 isReal = true,
             )
@@ -971,7 +972,8 @@ class Field {
      * Invalidates states of an empty base that becomes broken.
      */
     private fun invalidateEmptyTerritory(position: Position): List<PositionState> {
-        val walkStack = mutableListOf<Position>().also { it.add(position) }
+        walkStackPositions.clear()
+        walkStackPositions.add(position)
         val emptyTerritoryPositions = hashMapOf<Position, DotState>()
 
         fun Position.checkAndAdd() {
@@ -985,11 +987,11 @@ class Field {
                 return
             }
 
-            walkStack.add(this)
+            walkStackPositions.add(this)
         }
 
-        while (walkStack.isNotEmpty()) {
-            walkStack.removeLast().forEachAdjacent(realWidth) {
+        while (walkStackPositions.isNotEmpty()) {
+            walkStackPositions.removeLast().forEachAdjacent(realWidth) {
                 it.checkAndAdd()
                 true
             }
