@@ -2,7 +2,6 @@ package org.dots.game.core
 
 import org.dots.game.core.PositionXY.Companion.COORDINATE_BITS_COUNT
 import render
-import kotlin.jvm.JvmInline
 
 class Field {
     companion object {
@@ -169,9 +168,8 @@ class Field {
                         base.playerDiff,
                         base.oppositePlayerDiff,
                         closurePositions = base.closurePositions.map { it.transform() },
-                        previousPositionStates = base.previousPositionStates.map { (position, state) ->
-                            PositionState(position.transform(), state)
-                        },
+                        rollbackPositions = base.rollbackPositions.map { it.transform() },
+                        rollbackDotStates = base.rollbackDotStates.toList(),
                         isReal = base.isReal
                     )
                 },
@@ -287,12 +285,15 @@ class Field {
         if (moveResult.bases != null) {
             for (base in moveResult.bases.reversed()) {
                 val basePlayer = base.player
-                for ((position, previousState) in base.previousPositionStates) {
-                    position.setState(previousState)
+                for (index in 0..<base.rollbackPositions.size) {
+                    val rollbackPosition = base.rollbackPositions[index]
+                    val rollbackDotState = base.rollbackDotStates[index]
+                    rollbackPosition.setState(rollbackDotState)
                     if (base.isReal) {
-                        updateHashForTerritory(position, previousState.getActivePlayer(), basePlayer)
+                        updateHashForTerritory(rollbackPosition, rollbackDotState.getActivePlayer(), basePlayer)
                     }
                 }
+
                 updateScoreCount(base.player, base.playerDiff, base.oppositePlayerDiff, rollback = true)
             }
         }
@@ -411,8 +412,8 @@ class Field {
         }
 
         for (resultBase in resultBases) {
-            for ((_, previousState) in resultBase.previousPositionStates) {
-                if (!previousState.isActive()) {
+            for (rollbackState in resultBase.rollbackDotStates) {
+                if (!rollbackState.isActive()) {
                     if (resultBase.isReal) {
                         numberOfLegalMoves--
                     } else {
@@ -909,16 +910,17 @@ class Field {
         closurePositions: List<Position>,
         isReal: Boolean,
     ): Base {
-        val previousPositionStates = ArrayList<PositionState>(territoryPositions.size)
+        val rollbackPositions = ArrayList<Position>(territoryPositions.size)
+        val rollbackDotStates = ArrayList<DotState>(territoryPositions.size)
 
         updateScoreCount(player, currentPlayerDiff, oppositePlayerDiff, rollback = false)
 
         val playerEmptyTerritory = DotState.createEmptyTerritory(player)
 
         for (territoryPosition in territoryPositions) {
-            val territoryPositionState = territoryPosition.getState()
+            val territoryDotState = territoryPosition.getState()
 
-            val territoryActivePlayer = territoryPositionState.getActivePlayer()
+            val territoryActivePlayer = territoryDotState.getActivePlayer()
             // Don't change the state and its zobrist hash if the position is in active state
             // because the positions inside the base are filled with the current player dots
             if (territoryActivePlayer != player) {
@@ -926,10 +928,11 @@ class Field {
                     playerEmptyTerritory
                 } else {
                     updateHashForTerritory(territoryPosition, territoryActivePlayer, player)
-                    territoryPositionState.setTerritoryAndActivePlayer(player)
+                    territoryDotState.setTerritoryAndActivePlayer(player)
                 }
 
-                previousPositionStates.add(PositionState(territoryPosition, territoryPositionState))
+                rollbackPositions.add(territoryPosition)
+                rollbackDotStates.add(territoryDotState)
                 territoryPosition.setState(newState)
             }
         }
@@ -939,7 +942,8 @@ class Field {
             currentPlayerDiff,
             oppositePlayerDiff,
             closurePositions,
-            previousPositionStates,
+            rollbackPositions,
+            rollbackDotStates,
             isReal,
         )
     }
@@ -1052,7 +1056,8 @@ class Base(
     val playerDiff: Int,
     val oppositePlayerDiff: Int,
     val closurePositions: List<Position>,
-    val previousPositionStates: List<PositionState>,
+    val rollbackPositions: List<Position>,
+    val rollbackDotStates: List<DotState>,
     val isReal: Boolean,
 )
 
@@ -1060,32 +1065,3 @@ data class PositionPlayer(
     val position: Position,
     val player: Player,
 )
-
-@JvmInline
-value class PositionState(val value: Int) {
-    companion object {
-        const val POSITION_BITS_COUNT = COORDINATE_BITS_COUNT * 2
-        const val STATE_BITS_COUNT = 8
-        const val STATE_MASK = (1 shl STATE_BITS_COUNT) - 1
-
-        init {
-            require(POSITION_BITS_COUNT + STATE_BITS_COUNT <= Int.SIZE_BITS)
-        }
-    }
-
-    constructor(position: Position, state: DotState) : this((position.value.toInt() shl STATE_BITS_COUNT) or (state.value.toInt() and STATE_MASK))
-
-    val position: Position
-        get() = Position((value shr STATE_BITS_COUNT).toShort())
-
-    val state: DotState
-        get() = DotState((value and STATE_MASK).toByte())
-
-    operator fun component1(): Position = position
-
-    operator fun component2(): DotState = state
-
-    override fun toString(): String {
-        return "${position};${state}"
-    }
-}

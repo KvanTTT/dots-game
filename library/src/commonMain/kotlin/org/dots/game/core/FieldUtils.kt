@@ -78,7 +78,7 @@ fun Base.getSortedClosurePositions(field: Field, considerTerritoryPositions: Boo
     if (baseMode != BaseMode.AllOpponentDots && !considerTerritoryPositions) {
         return ExtendedClosureInfo(closurePositions, emptyList())
     } else {
-        val closureSet = (if (considerTerritoryPositions) previousPositionStates.map { it.position } else closurePositions).toHashSet()
+        val closureSet = (if (considerTerritoryPositions) rollbackPositions else closurePositions).toHashSet()
         var outerClosure: List<Position> = emptyList()
         val innerClosures = mutableListOf<List<Position>>()
 

@@ -32,7 +32,7 @@ fun Field.getOneMoveCapturingAndBasePositions(): OneMoveCapturingAndBasePosition
                             }
 
                             for (base in moveResult.bases) {
-                                for ((position, _) in base.previousPositionStates) {
+                                for (position in base.rollbackPositions) {
                                     oneMoveBasePositions[position] = (oneMoveBasePositions[position] ?: Player.None) + base.player
                                 }
                             }

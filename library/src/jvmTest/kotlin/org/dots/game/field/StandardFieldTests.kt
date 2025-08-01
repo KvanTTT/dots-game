@@ -42,7 +42,7 @@ class StandardFieldTests : FieldTests() {
                 ),
                 base.closurePositions
             )
-            assertEquals(Position(2, 2, it.realWidth), base.previousPositionStates.single().position)
+            assertEquals(Position(2, 2, it.realWidth), base.rollbackPositions.single())
         }
     }
 
@@ -489,7 +489,7 @@ class StandardFieldTests : FieldTests() {
         """) {
             val moveResult = it.makeMove(3, 3, Player.Second)!!
             val base = moveResult.bases!!.single()
-            assertEquals(1, base.previousPositionStates.size)
+            assertEquals(1, base.rollbackPositions.size)
         }
     }
 
