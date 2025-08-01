@@ -128,7 +128,7 @@ class Field {
         }
 
         val newFieldStride = getStride(newWidth)
-        fun Position.transform() = transform(transformType, realWidth, realHeight, newFieldStride)
+        fun Position.transform(): Position = transform(transformType, realWidth, realHeight, newFieldStride)
 
         val newField = Field(Rules(
             width = newWidth,
@@ -158,22 +158,20 @@ class Field {
         for (moveResult in moveResults) {
             val position = moveResult.position
 
-            fun List<PositionState>.transformPositionStates(): List<PositionState> {
-                return map { (position, state) -> PositionState(position.transform(), state) }
-            }
-
             newField.moveResults.add(MoveResult(
                 position.transform(),
                 moveResult.player,
                 moveResult.previousState,
-                extraPreviousPositionStates = moveResult.extraPreviousPositionStates?.transformPositionStates(),
+                emptyBaseInvalidatePositions = moveResult.emptyBaseInvalidatePositions?.map { it.transform() },
                 bases = moveResult.bases?.map { base ->
                     Base(
                         base.player,
                         base.playerDiff,
                         base.oppositePlayerDiff,
                         closurePositions = base.closurePositions.map { it.transform() },
-                        previousPositionStates = base.previousPositionStates.transformPositionStates(),
+                        previousPositionStates = base.previousPositionStates.map { (position, state) ->
+                            PositionState(position.transform(), state)
+                        },
                         isReal = base.isReal
                     )
                 },
@@ -223,7 +221,7 @@ class Field {
         val currentPlayer = player ?: getCurrentPlayer()
 
         var resultBases: List<Base>? = null
-        var extraPreviousStates: List<PositionState>? = null
+        var emptyBaseInvalidatePositions: List<Position>? = null
 
         gameResult = when (externalFinishReason) {
             ExternalFinishReason.Grounding -> {
@@ -234,10 +232,10 @@ class Field {
                     "${rules.captureByBorder::class.simpleName} is not yet supported"
                 }
 
-                val (localResultBases, localExtraPreviousStates) =
+                val (localResultBases, localEmptyBaseInvalidatePositions) =
                     captureNotGroundedGroups(currentPlayer)
                 resultBases = localResultBases.takeIf { it.isNotEmpty() }
-                extraPreviousStates = localExtraPreviousStates.takeIf { it.isNotEmpty() }
+                emptyBaseInvalidatePositions = localEmptyBaseInvalidatePositions.takeIf { it.isNotEmpty() }
 
                 finishGame(EndGameKind.Grounding)
             }
@@ -252,7 +250,7 @@ class Field {
             Position.GAME_OVER,
             currentPlayer,
             Position.GAME_OVER.getState(),
-            extraPreviousStates,
+            emptyBaseInvalidatePositions,
             resultBases,
             numberOfLegalMoves,
         ).also {
@@ -302,9 +300,10 @@ class Field {
         moveResult.position.setState(moveResult.previousState)
         updateHash(moveResult.position, moveResult.player)
 
-        if (moveResult.extraPreviousPositionStates != null) {
-            for ((position, previousState) in moveResult.extraPreviousPositionStates) {
-                position.setState(previousState)
+        if (moveResult.emptyBaseInvalidatePositions != null) {
+            val emptyTerritoryState = DotState.createEmptyTerritory(moveResult.player.opposite())
+            for (position in moveResult.emptyBaseInvalidatePositions) {
+                position.setState(emptyTerritoryState)
             }
         }
 
@@ -352,7 +351,7 @@ class Field {
 
         val currentPlayer = player ?: getCurrentPlayer()
         val resultBases: List<Base>
-        val extraPreviousStates: List<PositionState>
+        val emptyBaseInvalidatePositions: List<Position>
         val previousNumberOfLegalMoves: Int = numberOfLegalMoves
 
         numberOfLegalMoves--
@@ -397,10 +396,10 @@ class Field {
                     }
                 } ?: bases
             }
-            extraPreviousStates = emptyList() // Not used in `AllOpponentDots` mode
+            emptyBaseInvalidatePositions = emptyList() // Not used in `AllOpponentDots` mode
         } else {
             resultBases = bases
-            extraPreviousStates = if (rules.baseMode != BaseMode.AllOpponentDots &&
+            emptyBaseInvalidatePositions = if (rules.baseMode != BaseMode.AllOpponentDots &&
                 originalState.isWithinEmptyTerritory(currentPlayer.opposite())
             ) {
                 // Invalidate empty territory of the opposite player in case of capturing that is more prioritized
@@ -431,7 +430,7 @@ class Field {
             position,
             currentPlayer,
             originalState,
-            extraPreviousStates.takeIf { it.isNotEmpty() },
+            emptyBaseInvalidatePositions.takeIf { it.isNotEmpty() },
             resultBases.takeIf { it.isNotEmpty() },
             previousNumberOfLegalMoves,
         ).also { moveResults.add(it) }
@@ -455,10 +454,10 @@ class Field {
         }
     }
 
-    private fun captureNotGroundedGroups(player: Player): Pair<List<Base>, List<PositionState>> {
+    private fun captureNotGroundedGroups(player: Player): Pair<List<Base>, List<Position>> {
         val processedPositions = mutableListOf<Position>()
         val oppositePlayer = player.opposite()
-        val extraPreviousStates = mutableListOf<PositionState>()
+        val emptyBaseInvalidatePositions = mutableListOf<Position>()
 
         val bases = mutableListOf<Base>()
 
@@ -483,7 +482,7 @@ class Field {
                     for (position in territoryPositions) {
                         position.forEachAdjacent(realWidth) {
                             if (it.getState().isWithinEmptyTerritory(player)) {
-                                extraPreviousStates.addAll(invalidateEmptyTerritory(position))
+                                emptyBaseInvalidatePositions.addAll(invalidateEmptyTerritory(position))
                                 false
                             } else {
                                 true
@@ -499,7 +498,7 @@ class Field {
 
         processedPositions.clearVisited()
 
-        return bases to extraPreviousStates
+        return bases to emptyBaseInvalidatePositions
     }
 
     private fun captureWhenEmptyTerritoryBecomesRealBase(initialPosition: Position, oppositePlayer: Player): Base {
@@ -959,33 +958,27 @@ class Field {
     /**
      * Invalidates states of an empty base that becomes broken.
      */
-    private fun invalidateEmptyTerritory(position: Position): List<PositionState> {
+    private fun invalidateEmptyTerritory(position: Position): List<Position> {
         walkStackPositions.clear()
         walkStackPositions.add(position)
-        val emptyTerritoryPositions = hashMapOf<Position, DotState>()
-
-        fun Position.checkAndAdd() {
-            val state = getState()
-            if (state.getEmptyTerritoryPlayer() == Player.None) return
-            val existingTerritoryPosition = emptyTerritoryPositions[this]
-            if (existingTerritoryPosition == null) {
-                emptyTerritoryPositions[this] = state
-                setState(DotState.Empty)
-            } else {
-                return
-            }
-
-            walkStackPositions.add(this)
-        }
+        val emptyTerritoryPositions = hashSetOf<Position>()
 
         while (walkStackPositions.isNotEmpty()) {
             walkStackPositions.removeLast().forEachAdjacent(realWidth) {
-                it.checkAndAdd()
+                val state = it.getState()
+                if (state.getEmptyTerritoryPlayer() == Player.None) return@forEachAdjacent true
+                if (emptyTerritoryPositions.add(it)) {
+                    it.setState(DotState.Empty)
+                } else {
+                    return@forEachAdjacent true
+                }
+
+                walkStackPositions.add(it)
                 true
             }
         }
 
-        return emptyTerritoryPositions.map { PositionState(it.key, it.value) }
+        return emptyTerritoryPositions.toList()
     }
 
     fun Position.getState(): DotState {
@@ -1037,7 +1030,7 @@ data class MoveResult(
     val position: Position,
     val player: Player,
     val previousState: DotState,
-    val extraPreviousPositionStates: List<PositionState>?,
+    val emptyBaseInvalidatePositions: List<Position>?,
     val bases: List<Base>?,
     val previousNumberOfLegalMoves: Int,
 ) {
