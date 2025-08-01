@@ -1,5 +1,7 @@
 package org.dots.game.core
 
+import DumpParameters
+import render
 import kotlin.reflect.KProperty
 
 fun Field.getStrongConnectionLinePositions(position: Position): List<Position> {
@@ -166,22 +168,23 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
     check(0 == player2Score, ::player2Score)
     check(gameResult == null, ::gameResult)
     check(width * height - initialMovesCount == numberOfLegalMoves, ::numberOfLegalMoves)
-    var actualInitialMovesCount = 0
+
+    val emptyField = Field.create(rules)
+
     for (x in 0 until realWidth) {
         for (y in 0 until realHeight) {
-            val wallOrEmptyState = if (x == 0 || y == 0 || rules.captureByBorder && x == realWidth - 1 || y == realHeight - 1)
-                DotState.Wall
-            else
-                DotState.Empty
-            if (wallOrEmptyState != Position(x, y, realWidth).getState()) {
-                actualInitialMovesCount++
+            val position = Position(x, y, realWidth)
+            val actualState = position.getState()
+            val expectedState = with(emptyField) { position.getState() }
+
+            if (expectedState != actualState) {
+                failFunc("❗Failed dots state at ($x, $y) [${position.value}]}. Expected: $expectedState; Actual: $actualState\n" +
+                        render(DumpParameters(debugInfo = true))
+                )
             }
         }
     }
 
-    check(initialMovesCount == actualInitialMovesCount, ::initialMovesCount)
-
-    val emptyField = Field.create(rules)
     check(positionHash == emptyField.positionHash, ::positionHash)
 }
 

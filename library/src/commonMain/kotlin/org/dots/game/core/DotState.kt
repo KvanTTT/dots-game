@@ -103,27 +103,32 @@ value class DotState internal constructor(val value: Byte) {
             if (activePlayer != Player.None) {
                 append("Active: ")
                 append(activePlayer)
-                append("; ")
             }
 
             val placedPlayer = getPlacedPlayer()
             if (placedPlayer != Player.None) {
+                if (isNotEmpty()) append(", ")
                 append("Placed: ")
                 append(placedPlayer)
-                append("; ")
             }
 
             val emptyTerritoryPlayer = getEmptyTerritoryPlayer()
             if (emptyTerritoryPlayer != Player.None) {
+                if (isNotEmpty()) append(", ")
                 append("WithinEmptyTerritory: ")
                 append(emptyTerritoryPlayer)
-                append("; ")
+            }
+
+            if (isTerritory()) {
+                if (isNotEmpty()) append(", ")
+                append("Territory")
             }
 
             if (isVisited()) {
-                append("Visited; ")
+                if (isNotEmpty()) append(", ")
+                append("Visited")
             }
-        }
+        }.takeIf { it.isNotEmpty() } ?: "Empty"
     }
 }
 
