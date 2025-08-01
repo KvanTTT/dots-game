@@ -71,12 +71,12 @@ fun Field.getPositionsOfConnection(position: Position, diagonalConnections: Bool
 
 /**
  * Returns outer/inner closures that have sorted positions (square distance between adjacent positions <= 2).
- * It's useful for surrounding drawing.
+ * It's useful for surrounding rendering.
  */
 fun Base.getSortedClosurePositions(field: Field, considerTerritoryPositions: Boolean = false): ExtendedClosureInfo {
     val baseMode = field.rules.baseMode
     if (baseMode != BaseMode.AllOpponentDots && !considerTerritoryPositions) {
-        return ExtendedClosureInfo(closurePositions, emptyList())
+        return ExtendedClosureInfo(closurePositions.toList(), emptyList())
     } else {
         val closureSet = (if (considerTerritoryPositions) rollbackPositions else closurePositions).toHashSet()
         var outerClosure: List<Position> = emptyList()

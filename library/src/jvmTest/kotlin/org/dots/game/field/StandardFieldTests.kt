@@ -40,9 +40,9 @@ class StandardFieldTests : FieldTests() {
                     Position(2, 1, it.realWidth),
                     Position(1, 2, it.realWidth),
                 ),
-                base.closurePositions
+                base.closurePositions.toList()
             )
-            assertEquals(Position(2, 2, it.realWidth), base.rollbackPositions.single())
+            assertEquals(Position(2, 2, it.realWidth), base.rollbackPositions.toList().single())
         }
     }
 

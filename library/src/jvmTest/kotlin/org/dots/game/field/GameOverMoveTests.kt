@@ -26,7 +26,7 @@ class GameOverMoveTests : FieldTests() {
             assertEquals(2, sortedPositions.outerClosure.size)
             assertTrue(sortedPositions.innerClosures.isEmpty())
 
-            assertTrue(base.closurePositions.isEmpty())
+            assertEquals(base.closurePositions.size, 0)
             assertEquals(0, it.player1Score)
             assertEquals(2, it.player2Score)
             assertEquals(GameResult.ScoreWin(2.0, EndGameKind.Grounding, Player.Second), it.gameResult)

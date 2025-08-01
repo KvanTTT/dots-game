@@ -17,7 +17,8 @@ fun Field.getOneMoveCapturingAndBasePositions(): OneMoveCapturingAndBasePosition
                     val state = position.getState()
                     val emptyTerritoryPlayer = state.getEmptyTerritoryPlayer()
                     if (emptyTerritoryPlayer != Player.None) {
-                        oneMoveBasePositions[position] = (oneMoveBasePositions[position] ?: Player.None) + emptyTerritoryPlayer
+                        oneMoveBasePositions[position] =
+                            (oneMoveBasePositions[position] ?: Player.None) + emptyTerritoryPlayer
                         // Optimization: the dot placed into own empty territory never captures anything
                         if (emptyTerritoryPlayer == player) return
                     }
@@ -28,12 +29,14 @@ fun Field.getOneMoveCapturingAndBasePositions(): OneMoveCapturingAndBasePosition
 
                         if (moveResult.bases != null) {
                             if (moveResult.bases.any { it.isReal && it.player == player }) {
-                                oneMoveCapturingPositions[position] = (oneMoveCapturingPositions[position] ?: Player.None) + player
+                                oneMoveCapturingPositions[position] =
+                                    (oneMoveCapturingPositions[position] ?: Player.None) + player
                             }
 
                             for (base in moveResult.bases) {
-                                for (position in base.rollbackPositions) {
-                                    oneMoveBasePositions[position] = (oneMoveBasePositions[position] ?: Player.None) + base.player
+                                base.rollbackPositions.iterate { position ->
+                                    oneMoveBasePositions[position] =
+                                        (oneMoveBasePositions[position] ?: Player.None) + base.player
                                 }
                             }
                         }

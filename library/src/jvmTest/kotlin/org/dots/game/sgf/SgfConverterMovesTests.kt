@@ -229,7 +229,7 @@ class SgfConverterMovesTests {
                 Position(2, 1, fieldStride),
                 Position(1, 2, fieldStride),
             ),
-            node.moveResult!!.bases!!.single().closurePositions
+            node.moveResult!!.bases!!.single().closurePositions.toList()
         )
     }
 
