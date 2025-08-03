@@ -177,7 +177,6 @@ class Field {
                         isReal = base.isReal
                     )
                 },
-                previousNumberOfLegalMoves = moveResult.previousNumberOfLegalMoves
             ))
         }
         newField.numberOfLegalMoves = numberOfLegalMoves
@@ -254,10 +253,8 @@ class Field {
             Position.GAME_OVER.getState(),
             emptyBaseInvalidatePositions,
             resultBases,
-            numberOfLegalMoves,
         ).also {
             updateHash(Position.GAME_OVER, currentPlayer)
-            numberOfLegalMoves = 0
         })
 
         return gameResult
@@ -310,7 +307,15 @@ class Field {
             }
         }
 
-        numberOfLegalMoves = moveResult.previousNumberOfLegalMoves
+        val isRealMove = when (val gameResult = gameResult) {
+            is GameResult.Draw -> gameResult.endGameKind == EndGameKind.NoLegalMoves
+            is GameResult.ScoreWin -> gameResult.endGameKind == EndGameKind.NoLegalMoves
+            is GameResult -> false
+            else -> true
+        }
+        if (isRealMove) {
+            numberOfLegalMoves++
+        }
         gameResult = null
 
         return moveResult
@@ -355,7 +360,6 @@ class Field {
         val currentPlayer = player ?: getCurrentPlayer()
         val resultBases: List<Base>
         val emptyBaseInvalidatePositions: PositionsList
-        val previousNumberOfLegalMoves: Int = numberOfLegalMoves
 
         numberOfLegalMoves--
 
@@ -378,6 +382,7 @@ class Field {
                     } else {
                         position.setState(originalState)
                         updateHash(hashValue)
+                        numberOfLegalMoves++
                         return null
                     }
                 } else {
@@ -393,6 +398,7 @@ class Field {
                         // Rollback state in case of a suicidal move
                         position.setState(originalState)
                         updateHash(hashValue)
+                        numberOfLegalMoves++
                         return null
                     } else {
                         base?.let { listOf(it) } ?: bases
@@ -414,18 +420,6 @@ class Field {
             }
         }
 
-        for (resultBase in resultBases) {
-            resultBase.rollbackDotStates.iterate { rollbackState ->
-                if (!rollbackState.isActive()) {
-                    if (resultBase.isReal) {
-                        numberOfLegalMoves--
-                    } else {
-                        // TODO: implement for suicidal case
-                    }
-                }
-            }
-        }
-
         if (numberOfLegalMoves == 0) {
             gameResult = finishGame(EndGameKind.NoLegalMoves)
         }
@@ -436,7 +430,6 @@ class Field {
             originalState,
             emptyBaseInvalidatePositions,
             resultBases,
-            previousNumberOfLegalMoves,
         ).also { moveResults.add(it) }
     }
 
@@ -1024,6 +1017,11 @@ class Field {
         }
 
         if (currentPlayer == Player.None) {
+            if (!rollback) {
+                numberOfLegalMoves--
+            } else {
+                numberOfLegalMoves++
+            }
             updateHash(position, basePlayer)
         } else {
             val baseOppositePlayer = basePlayer.opposite()
@@ -1053,7 +1051,6 @@ class MoveResult(
     val previousState: DotState,
     val emptyBaseInvalidatePositions: PositionsList,
     val bases: List<Base>?,
-    val previousNumberOfLegalMoves: Int,
 ) {
     val positionPlayer: PositionPlayer
         get() = PositionPlayer(position, player)

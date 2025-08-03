@@ -147,7 +147,7 @@ class FieldUtilsTests : FieldTests() {
         assertEquals(field.height, newField.height)
         assertEquals(field.realWidth, newField.realWidth)
         assertEquals(field.realHeight, newField.realHeight)
-        assertEquals(0, field.numberOfLegalMoves)
+        assertEquals(10, field.numberOfLegalMoves)
         assertEquals(field.numberOfLegalMoves, newField.numberOfLegalMoves)
         assertEquals(4, field.initialMovesCount)
         assertEquals(field.initialMovesCount, newField.initialMovesCount)
