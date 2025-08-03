@@ -1,11 +1,15 @@
 package org.dots.game.field
 
 import RandomGameAnalyser
+import org.dots.game.core.Field
 import org.dots.game.core.InitialPositionType
+import org.dots.game.core.Player
 import org.dots.game.core.Rules
 import org.dots.game.core.generateDefaultInitialPositions
+import org.junit.jupiter.api.Assertions.assertTrue
 import java.util.Locale
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.fail
 
 class StressTests {
@@ -17,6 +21,27 @@ class StressTests {
     @Test
     fun standardFieldWithCrossOpening() {
         testStandardField(InitialPositionType.Cross)
+    }
+
+    @Test
+    fun maxTerritory() {
+        val field = Field.create(Rules(initialMoves = emptyList()))
+        for (y in 1..field.height) {
+            for (x in 1..field.width) {
+                val player = if (y == 1 || y == field.height || x == 1 || x == field.width) {
+                    Player.First
+                } else {
+                    Player.Second
+                }
+                val moveResult = field.makeMove(x, y, player)!!
+                if (x == field.width - 1 && y == field.height) {
+                    val bigBase = moveResult.bases!!.single()
+                    assertEquals((field.width - 2) * (field.height - 2), bigBase.rollbackPositions.size)
+                    assertEquals((field.width - 2) * 2 + (field.height - 2) * 2, bigBase.closurePositions.size)
+                }
+            }
+        }
+        assertTrue(field.isGameOver())
     }
 
     fun testStandardField(initialPositionType: InitialPositionType) {
