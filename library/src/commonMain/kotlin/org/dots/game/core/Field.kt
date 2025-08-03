@@ -171,8 +171,6 @@ class Field {
                 bases = moveResult.bases?.map { base ->
                     Base(
                         base.player,
-                        base.playerDiff,
-                        base.oppositePlayerDiff,
                         closurePositions = base.closurePositions.map { it.transform() },
                         rollbackPositions = base.rollbackPositions.map { it.transform() },
                         rollbackDotStates = base.rollbackDotStates.copy(),
@@ -296,11 +294,9 @@ class Field {
                     val rollbackDotState = base.rollbackDotStates.get(index)
                     rollbackPosition.setState(rollbackDotState)
                     if (base.isReal) {
-                        updateHashForTerritory(rollbackPosition, rollbackDotState.getActivePlayer(), basePlayer)
+                        updateScoreAndHashForTerritory(rollbackPosition, rollbackDotState, basePlayer, rollback = true)
                     }
                 }
-
-                updateScoreCount(base.player, base.playerDiff, base.oppositePlayerDiff, rollback = true)
             }
         }
 
@@ -812,8 +808,6 @@ class Field {
         walkStackPositionsBuffer.clear()
         territoryPositionsBuffer.clear()
         closureOrInvalidatePositionsBuffer.clear()
-        var currentPlayerDiff = 0
-        var oppositePlayerDiff = 0
 
         fun Position.checkAndAdd(): Boolean {
             val state = getState()
@@ -833,15 +827,9 @@ class Field {
             if (state.isVisited()) return true
 
             if (state.isPlaced(player)) {
-                if (state.isActive(oppositePlayer)) {
-                    oppositePlayerDiff--
-                } else {
+                if (!state.isActive(oppositePlayer)) {
                     closureOrInvalidatePositionsBuffer.add(this)
                     return true
-                }
-            } else { // Opposite player placed
-                if (!state.isActive(player)) {
-                    currentPlayerDiff++
                 }
             }
 
@@ -877,8 +865,6 @@ class Field {
         } else {
             base = createBaseAndUpdateStates(
                 player,
-                currentPlayerDiff,
-                oppositePlayerDiff,
                 closureOrInvalidatePositionsBuffer.copy(),
                 isReal = true,
             )
@@ -891,54 +877,35 @@ class Field {
     private data class BaseWithRollbackInfo(val base: Base?, val suicidalMove: Boolean)
 
     private fun calculateBase(closurePositions: PositionsList, player: Player): Base {
-        var currentPlayerDiff = 0
-        var oppositePlayerDiff = 0
-
-        val oppositePlayer = player.opposite()
-
-        fun DotState.updateScoreDiff() {
-            if (isPlaced(oppositePlayer)) {
-                // The `getTerritoryPositions` never returns positions inside already owned territory,
-                // so there is no need to check for the territory flag.
-                currentPlayerDiff++
-            } else if (isPlaced(player) && isActive(oppositePlayer)) {
-                // No diff for the territory of the current player
-                oppositePlayerDiff--
-            }
-        }
-
-        territoryPositionsBuffer.iterate { territoryPosition ->
-            territoryPosition.getState().updateScoreDiff()
-        }
-
         val isReal = when (rules.baseMode) {
-            BaseMode.AtLeastOneOpponentDot -> currentPlayerDiff > 0
+            BaseMode.AtLeastOneOpponentDot -> {
+                var atLeastOneCapturedDot = false
+                val oppositePlayer = player.opposite()
+                territoryPositionsBuffer.iterate { territoryPosition ->
+                    if (territoryPosition.getState().isPlaced(oppositePlayer)) {
+                        // The `getTerritoryPositions` never returns positions inside already owned territory,
+                        // so there is no need to check for the territory flag.
+                        atLeastOneCapturedDot = true
+                        return@iterate
+                    }
+                }
+                atLeastOneCapturedDot
+            }
             BaseMode.AnySurrounding -> true
             BaseMode.AllOpponentDots -> error("The mode ${BaseMode.AllOpponentDots.name} is handled by ${::tryGetBaseForAllOpponentDotsMode.name}")
         }
 
-        return createBaseAndUpdateStates(
-            player,
-            currentPlayerDiff,
-            oppositePlayerDiff,
-            closurePositions,
-            isReal,
-        )
+        return createBaseAndUpdateStates(player, closurePositions, isReal)
     }
 
     private fun createBaseAndUpdateStates(
-        player: Player,
-        currentPlayerDiff: Int,
-        oppositePlayerDiff: Int,
+        basePlayer: Player,
         closurePositions: PositionsList,
         isReal: Boolean,
     ): Base {
         val rollbackPositions = PositionsList(territoryPositionsBuffer.size, realWidth)
         val rollbackDotStates = DotStatesList(territoryPositionsBuffer.size)
-
-        updateScoreCount(player, currentPlayerDiff, oppositePlayerDiff, rollback = false)
-
-        val playerEmptyTerritory = DotState.createEmptyTerritory(player)
+        val playerEmptyTerritory = DotState.createEmptyTerritory(basePlayer)
 
         territoryPositionsBuffer.iterate { territoryPosition ->
             val territoryDotState = territoryPosition.getState()
@@ -946,12 +913,12 @@ class Field {
             val territoryActivePlayer = territoryDotState.getActivePlayer()
             // Don't change the state and its zobrist hash if the position is in active state
             // because the positions inside the base are filled with the current player dots
-            if (territoryActivePlayer != player) {
-                val newState = if (!isReal) {
-                    playerEmptyTerritory
+            if (territoryActivePlayer != basePlayer) {
+                val newState = if (isReal) {
+                    updateScoreAndHashForTerritory(territoryPosition, territoryDotState, basePlayer, rollback = false)
+                    territoryDotState.setTerritoryAndActivePlayer(basePlayer)
                 } else {
-                    updateHashForTerritory(territoryPosition, territoryActivePlayer, player)
-                    territoryDotState.setTerritoryAndActivePlayer(player)
+                    playerEmptyTerritory
                 }
 
                 rollbackPositions.add(territoryPosition)
@@ -961,25 +928,12 @@ class Field {
         }
 
         return Base(
-            player,
-            currentPlayerDiff,
-            oppositePlayerDiff,
+            basePlayer,
             closurePositions,
             rollbackPositions,
             rollbackDotStates,
             isReal,
         )
-    }
-
-    private fun updateScoreCount(player: Player, currentPlayerDiff: Int, oppositePlayerDiff: Int, rollback: Boolean) {
-        val multiplier = if (rollback) -1 else 1
-        if (player == Player.First) {
-            player1Score += currentPlayerDiff * multiplier
-            player2Score += oppositePlayerDiff * multiplier
-        } else {
-            player1Score += oppositePlayerDiff * multiplier
-            player2Score += currentPlayerDiff * multiplier
-        }
     }
 
     /**
@@ -1032,7 +986,43 @@ class Field {
         return getActivePlayer().let { it == player || captureByBorder && it == Player.WallOrBoth }
     }
 
-    private fun updateHashForTerritory(position: Position, currentPlayer: Player, basePlayer: Player) {
+    private fun updateScoreAndHashForTerritory(position: Position, state: DotState, basePlayer: Player, rollback: Boolean) {
+        val currentPlayer = state.getActivePlayer()
+        val baseOppositePlayer = basePlayer.opposite()
+
+        if (state.isPlaced(baseOppositePlayer)) {
+            // The `getTerritoryPositions` never returns positions inside already owned territory,
+            // so there is no need to check for the territory flag.
+            if (basePlayer == Player.First) {
+                if (!rollback) {
+                    player1Score++
+                } else {
+                    player1Score--
+                }
+            } else {
+                if (!rollback) {
+                    player2Score++
+                } else {
+                    player2Score--
+                }
+            }
+        } else if (state.isPlaced(basePlayer) && state.isActive(baseOppositePlayer)) {
+            // No diff for the territory of the current player
+            if (basePlayer == Player.First) {
+                if (!rollback) {
+                    player2Score--
+                } else {
+                    player2Score++
+                }
+            } else {
+                if (!rollback) {
+                    player1Score--
+                } else {
+                    player1Score++
+                }
+            }
+        }
+
         if (currentPlayer == Player.None) {
             updateHash(position, basePlayer)
         } else {
@@ -1071,8 +1061,6 @@ class MoveResult(
 
 class Base(
     val player: Player,
-    val playerDiff: Int,
-    val oppositePlayerDiff: Int,
     val closurePositions: PositionsList,
     val rollbackPositions: PositionsList,
     val rollbackDotStates: DotStatesList,

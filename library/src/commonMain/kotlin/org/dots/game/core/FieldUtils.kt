@@ -163,13 +163,13 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
 
     unmakeAllMoves()
 
-    check(moveSequence.size == initialMovesCount, ::moveSequence)
-    check(0 == player1Score, ::player1Score)
-    check(0 == player2Score, ::player2Score)
-    check(gameResult == null, ::gameResult)
-    check(width * height - initialMovesCount == numberOfLegalMoves, ::numberOfLegalMoves)
-
     val emptyField = Field.create(rules)
+
+    check(emptyField.initialMovesCount == initialMovesCount, ::moveSequence)
+    check(emptyField.player1Score == player1Score, ::player1Score)
+    check(emptyField.player2Score == player2Score, ::player2Score)
+    check(emptyField.gameResult == gameResult, ::gameResult)
+    check(emptyField.numberOfLegalMoves == numberOfLegalMoves, ::numberOfLegalMoves)
 
     for (x in 0 until realWidth) {
         for (y in 0 until realHeight) {

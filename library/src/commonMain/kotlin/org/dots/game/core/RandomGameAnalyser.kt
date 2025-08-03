@@ -35,8 +35,6 @@ object RandomGameAnalyser {
         var drawCount = 0
         var movesCount = 0
         var basesCount = 0
-        var capturedDotsCount = 0
-        var freedDotsCount = 0
         var emptyBasesCount = 0
 
         var totalTimeNs = 0L
@@ -72,8 +70,6 @@ object RandomGameAnalyser {
                         if (moveResult.bases != null) {
                             for (base in moveResult.bases) {
                                 if (base.isReal) {
-                                    capturedDotsCount += base.playerDiff
-                                    freedDotsCount -= base.oppositePlayerDiff
                                     basesCount++
                                 } else {
                                     emptyBasesCount++
@@ -118,8 +114,6 @@ object RandomGameAnalyser {
         outputStream("Average moves count per second: ${(movesCount.toDouble() / totalTimeNs * nanosInSec).toLong()}")
         outputStream("Moves count: $movesCount")
         outputStream("Bases count: $basesCount")
-        outputStream("Captured dots count: $capturedDotsCount")
-        outputStream("Freed dots count: $freedDotsCount")
         outputStream("Empty bases count: $emptyBasesCount")
     }
 }

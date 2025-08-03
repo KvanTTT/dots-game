@@ -178,7 +178,7 @@ class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
         ) {
             val moveResult = it.makeMove(2, 2, Player.Second)!!
             val base = moveResult.bases!!.single()
-            assertEquals(16, base.playerDiff)
+            assertEquals(16, it.player2Score)
             val (_, innerClosures) = base.getSortedClosurePositions(it)
             val innerClosure = innerClosures.single()
             assertEquals(4, innerClosure.size)
@@ -200,7 +200,7 @@ class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
         ) {
             val moveResult = it.makeMove(2, 2, Player.Second)!!
             val base = moveResult.bases!!.single()
-            assertEquals(22, base.playerDiff)
+            assertEquals(22, it.player2Score)
             val (_, innerClosures) = base.getSortedClosurePositions(it)
             assertTrue(innerClosures.single().size.let { size -> size == 7 || size == 8 })
         }
@@ -221,7 +221,7 @@ class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
         ) {
             val moveResult = it.makeMove(2, 2, Player.Second)!!
             val base = moveResult.bases!!.single()
-            assertEquals(31, base.playerDiff)
+            assertEquals(31, it.player2Score)
             val (_, innerClosures) = base.getSortedClosurePositions(it)
             assertEquals(2, innerClosures.size)
         }
