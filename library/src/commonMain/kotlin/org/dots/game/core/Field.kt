@@ -506,7 +506,7 @@ class Field {
             position = position.xm1y()
 
             // Try to peek an active opposite player dot
-            if (!position.getState().checkActiveAndWall(oppositePlayer)) continue
+            if (!position.getState().getActivePlayer().checkActiveAndWall(oppositePlayer)) continue
 
             val oppositePlayerBased = tryCapture(position, oppositePlayer, emptyBaseCapturing = true)
             // The found base always should be real and include the `initialPosition`
@@ -630,34 +630,29 @@ class Field {
     private fun getUnconnectedPositions(position: Position, player: Player) {
         startPositionsBuffer.clear()
 
-        val xMinusOneY = position.xm1y()
-        val xYMinusOne = position.xym1(realWidth)
-        val xPlusOneY = position.xp1y()
-        val xYPlusOne = position.xyp1(realWidth)
-        val xMinusOneYState = xMinusOneY.getState()
-        val xYMinusOneState = xYMinusOne.getState()
-        val xPlusOneYState = xPlusOneY.getState()
-        val xYPlusOneState = xYPlusOne.getState()
+        val xm1y = position.xm1y()
+        val xym1 = position.xym1(realWidth)
+        val xp1y = position.xp1y()
+        val xyp1 = position.xyp1(realWidth)
+        val xm1Player = xm1y.getState().getActivePlayer()
+        val xym1Player = xym1.getState().getActivePlayer()
+        val xp1yPlayer = xp1y.getState().getActivePlayer()
+        val xyp1Player = xyp1.getState().getActivePlayer()
 
-        fun checkAndAdd(
-            checkState: DotState,
-            addPosition1: Position,
-            addPosition2: Position,
-            addPosition2State: DotState
-        ) {
-            if (!checkState.checkActiveAndWall(player)) {
-                if (addPosition1.getState().checkActiveAndWall(player)) {
-                    startPositionsBuffer.add(addPosition1)
-                } else if (addPosition2State.checkActiveAndWall(player)) {
-                    startPositionsBuffer.add(addPosition2)
-                }
+        checkAndAdd(xp1yPlayer, player, position.xp1yp1(realWidth), xyp1)
+        checkAndAdd(xyp1Player, player,position.xm1yp1(realWidth), xm1y)
+        checkAndAdd(xm1Player, player,position.xm1ym1(realWidth), xym1)
+        checkAndAdd(xym1Player, player,position.xp1ym1(realWidth), xp1y)
+    }
+
+    private fun checkAndAdd(checkPlayer: Player, currentPlayer: Player, addPosition1: Position, addPosition2: Position) {
+        if (!checkPlayer.checkActiveAndWall(currentPlayer)) {
+            if (addPosition1.getState().getActivePlayer().checkActiveAndWall(currentPlayer)) {
+                startPositionsBuffer.add(addPosition1)
+            } else if (addPosition2.getState().getActivePlayer().checkActiveAndWall(currentPlayer)) {
+                startPositionsBuffer.add(addPosition2)
             }
         }
-
-        checkAndAdd(xPlusOneYState, position.xp1yp1(realWidth), xYPlusOne, xYPlusOneState)
-        checkAndAdd(xYPlusOneState, position.xm1yp1(realWidth), xMinusOneY, xMinusOneYState)
-        checkAndAdd(xMinusOneYState, position.xm1ym1(realWidth), xYMinusOne, xYMinusOneState)
-        checkAndAdd(xYMinusOneState, position.xp1ym1(realWidth), xPlusOneY, xPlusOneYState)
     }
 
     private fun getOppositeAdjacentPositions(position: Position, player: Player) {
@@ -975,8 +970,8 @@ class Field {
         dots[value.toInt()] = state.value
     }
 
-    private fun DotState.checkActiveAndWall(player: Player): Boolean {
-        return getActivePlayer().let { it == player || captureByBorder && it == Player.WallOrBoth }
+    private fun Player.checkActiveAndWall(player: Player): Boolean {
+        return this == player || captureByBorder && this == Player.WallOrBoth
     }
 
     private fun updateScoreAndHashForTerritory(position: Position, state: DotState, basePlayer: Player, rollback: Boolean) {
@@ -1024,7 +1019,6 @@ class Field {
             }
             updateHash(position, basePlayer)
         } else {
-            val baseOppositePlayer = basePlayer.opposite()
             if (currentPlayer == baseOppositePlayer) {
                 val positionsHash = ZobristHash.positionsHash[position.value.toInt()]
                 // Simulate unmaking the opponent move and making the player's move
