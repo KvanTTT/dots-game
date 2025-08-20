@@ -198,8 +198,12 @@ class Field {
 
     fun getCurrentPlayer(): Player = moveResults.lastOrNull()?.player?.opposite() ?: Player.First
 
-    fun getScoreDiff(player: Player? = null): Int {
-        return if ((player ?: getCurrentPlayer()) == Player.First) { player1Score - player2Score } else { player2Score - player1Score }
+    fun getScoreDiff(player: Player? = null): Double {
+        return if ((player ?: getCurrentPlayer()) == Player.First) {
+            player1Score - player2Score - rules.komi
+        } else {
+            player2Score - player1Score + rules.komi
+        }
     }
 
     fun makeMove(positionXY: PositionXY, player: Player? = null): MoveResult? {
@@ -435,11 +439,11 @@ class Field {
 
     private fun finishGame(endGameKind: EndGameKind): GameResult {
         val scoreForFirstPlayer = getScoreDiff(Player.First)
-        return if (scoreForFirstPlayer == 0) {
+        return if (scoreForFirstPlayer == 0.0) {
             GameResult.Draw(endGameKind)
         } else {
             val winner: Player
-            val score: Int
+            val score: Double
             if (scoreForFirstPlayer > 0) {
                 winner = Player.First
                 score = scoreForFirstPlayer
@@ -447,7 +451,7 @@ class Field {
                 winner = Player.Second
                 score = -scoreForFirstPlayer
             }
-            GameResult.ScoreWin(score.toDouble(), endGameKind, winner)
+            GameResult.ScoreWin(score, endGameKind, winner)
         }
     }
 

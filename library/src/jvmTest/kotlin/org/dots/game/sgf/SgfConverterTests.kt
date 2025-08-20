@@ -417,6 +417,21 @@ class SgfConverterTests {
             assertEquals(expectedGameResult, actualGameResult)
         }
     }
+
+    @Test
+    fun komi() {
+        parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]KM[0.5]RE[W+0.5])").single().gameInfo.result
+        parseConvertAndCheck(
+            "(;GM[40]FF[4]SZ[39:32]KM[0]RE[W+0.5])",
+            listOfNotNull(
+                LineColumnDiagnostic(
+                    "Property RE (Result) has value `0.5` that doesn't match score from game field `0`.",
+                    LineColumn(1, 38),
+                    DiagnosticSeverity.Warning
+                ),
+            )
+        ).single().gameInfo.result
+    }
 }
 
 internal fun parseConvertAndCheck(input: String, expectedDiagnostics: List<LineColumnDiagnostic> = emptyList(), warnOnMultipleGames: Boolean = false): List<Game> {

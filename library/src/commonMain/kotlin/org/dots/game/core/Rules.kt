@@ -14,6 +14,7 @@ class Rules(
     val baseMode: BaseMode = BaseMode.AtLeastOneOpponentDot,
     val suicideAllowed: Boolean = true,
     val initialMoves: List<MoveInfo> = Cross.generateDefaultInitialPositions(width, height)!!,
+    val komi: Double = 0.0,
 ) {
     companion object {
         val Standard = Rules()

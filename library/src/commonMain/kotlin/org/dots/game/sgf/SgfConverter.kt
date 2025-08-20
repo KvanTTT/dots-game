@@ -63,6 +63,7 @@ import org.dots.game.sgf.SgfMetaInfo.TIME_WIN_GAME_RESULT
 import org.dots.game.sgf.SgfMetaInfo.UNKNOWN_WIN_GAME_RESULT
 import org.dots.game.sgf.SgfMetaInfo.propertyInfoToKey
 import org.dots.game.sgf.SgfMetaInfo.propertyInfos
+import org.dots.game.toNeatNumber
 
 class SgfConverter(
     val sgf: SgfRoot,
@@ -218,11 +219,11 @@ class SgfConverter(
             } else {
                 // Don't check for GROUND because typical SGF (notago) doesn't contain info about score in case of grounding
                 if (definedGameResult is GameResult.ScoreWin && definedFinishReason != ExternalFinishReason.Grounding) {
-                    val definedGameScore = definedGameResult.score.toInt()
+                    val definedGameScore = definedGameResult.score
                     val scoreFromField = game.gameTree.field.getScoreDiff(definedWinner)
                     if (definedGameScore != scoreFromField) {
                         gameResultProperty.info.reportPropertyDiagnostic(
-                            "has value `${definedGameScore}` that doesn't match score from game field `${scoreFromField}`.",
+                            "has value `${definedGameScore.toNeatNumber()}` that doesn't match score from game field `${scoreFromField.toNeatNumber()}`.",
                             TextSpan(currentGameTree.textSpan.end, 0),
                             DiagnosticSeverity.Warning
                         )
@@ -311,7 +312,7 @@ class SgfConverter(
             round = gameInfoProperties.getPropertyValue(ROUND_KEY),
         )
 
-        val rules = Rules(width, height, initialMoves = initialMoves)
+        val rules = Rules(width, height, initialMoves = initialMoves, komi = gameInfo.komi ?: 0.0)
         val field = Field.create(rules) { moveInfo, withinBounds, currentMoveNumber ->
             moveInfo.reportPositionThatViolatesRules(withinBounds, width, height, currentMoveNumber)
         }

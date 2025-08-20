@@ -116,3 +116,11 @@ fun Int.getLineColumn(lineOffsets: List<Int>): LineColumn {
         }
     }
 }
+
+/**
+ * Useful for printing score-related things
+ * If there is no Komi, it's quite strange to see fractional numbers even 0.0
+ */
+fun Double.toNeatNumber(): Number {
+    return if (this % 1 == 0.0) toInt() else this
+}
