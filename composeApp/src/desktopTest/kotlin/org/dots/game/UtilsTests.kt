@@ -29,6 +29,7 @@ class UtilsTests {
         checkInputType(InputType.SgfContent, "(;GM[40]FF[4]CA[UTF-8]SZ[0:0]SO[path/to/file.sgf])") // File regex should match the entire input but not a part
 
         checkInputType(InputType.SgfFile("F:\\Dots\\test.sgf", "test.sgf"), "F:\\Dots\\test.sgf")
+        checkInputType(InputType.SgfFile("F:\\Dots\\test.sgfs", "test.sgfs"), "F:\\Dots\\test.sgfs")
         checkInputType(InputType.SgfFile("F:\\Dots\\test.sgf", "test.sgf"), "\"F:\\Dots\\test.sgf\"")
         checkInputType(InputType.SgfFile("/home/user/docs/test.sgf", "test.sgf"), "/home/user/docs/test.sgf")
         checkInputType(InputType.SgfFile("test.sgf", "test.sgf"), "test.sgf")

@@ -28,18 +28,18 @@ object SgfAnalyser {
             val sgfFiles = if (fileOrDirectoryFile.isDirectory) {
                 isDirectory = true
                 fileOrDirectoryFile.walkTopDown()
-                    .filter { it.isFile && it.extension == "sgf" }
+                    .filter { it.isFile && it.extension.let { ext -> ext == "sgf" || ext == "sgfs" } }
                     .drop(numberOfFilesToDrop)
                     .take(numberOfFilesToProcess)
                     .toList()
                     .takeIf { it.isNotEmpty() } ?: run {
-                    println("The directory ${fileOrDirectoryFile.absolutePath} does not contain sgf files")
+                    println("The directory ${fileOrDirectoryFile.absolutePath} does not contain sgf or sgfs files")
                     return
                 }
             } else {
                 isDirectory = false
-                fileOrDirectoryFile.takeIf { it.extension == "sgf" }?.let { listOf(it) } ?: run {
-                    println("The file ${fileOrDirectoryFile.absolutePath} does not have sgf extension")
+                fileOrDirectoryFile.takeIf { it.extension.let { ext -> ext == "sgf" || ext == "sgfs" } }?.let { listOf(it) } ?: run {
+                    println("The file ${fileOrDirectoryFile.absolutePath} does not have sgf or sgfs extension")
                     return
                 }
             }
@@ -65,7 +65,7 @@ object SgfAnalyser {
             }
 
             val filesNumber = sgfFiles.size
-            println("Number of sgf files to analyse: $filesNumber")
+            println("Number of sgf or sgfs files to analyse: $filesNumber")
             println()
 
             var totalParserNanos = 0L

@@ -47,7 +47,7 @@ suspend fun openOrLoad(pathOrContent: String, rules: Rules?, diagnosticReporter:
 
             is InputType.SgfFile -> {
                 sgf = if (inputType.isIncorrect) {
-                    diagnosticReporter(Diagnostic("Incorrect file `${inputType.name}`. The only .sgf files are supported", textSpan = null))
+                    diagnosticReporter(Diagnostic("Incorrect file `${inputType.name}`. The only .sgf and .sgfs files are supported", textSpan = null))
                     null
                 } else {
                     readFileText(inputType.refinedPath)
@@ -146,7 +146,7 @@ internal fun getInputType(input: String): InputType {
     }
 
     val refinedPath = input.removeSurrounding("\"")
-    if (refinedPath.endsWith(".sgf")) {
+    if (refinedPath.endsWith(".sgf") || refinedPath.endsWith(".sgfs")) {
         return InputType.SgfFile(refinedPath, extractFileName(refinedPath))
     }
 
