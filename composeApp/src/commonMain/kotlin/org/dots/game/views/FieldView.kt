@@ -371,13 +371,13 @@ private fun ThreatsAndSurroundings(currentMove: MoveResult?, field: Field, uiSet
             val (position, player) = it
             val (xPx, yPx) = position.toPxOffset(field,this)
             drawLine(
-                uiSettings.toColor(player).copy(0.7f),
+                uiSettings.toColor(if (player == Player.WallOrBoth) Player.First else player).copy(0.7f),
                 Offset(xPx - capturingMarkerSize, yPx),
                 Offset(xPx + capturingMarkerSize, yPx),
                 strokeWidth = 3.dp.toPx(),
             )
             drawLine(
-                uiSettings.toColor(if (player == Player.WallOrBoth) player.opposite() else player).copy(0.7f),
+                uiSettings.toColor(if (player == Player.WallOrBoth) Player.Second else player).copy(0.7f),
                 Offset(xPx, yPx - capturingMarkerSize),
                 Offset(xPx, yPx + capturingMarkerSize),
                 strokeWidth = 3.dp.toPx(),
@@ -390,13 +390,13 @@ private fun ThreatsAndSurroundings(currentMove: MoveResult?, field: Field, uiSet
                 val (position, player) = it
                 val (xPx, yPx) = position.toPxOffset(field,this)
                 drawLine(
-                    uiSettings.toColor(player).copy(0.7f),
+                    uiSettings.toColor(if (player == Player.WallOrBoth) Player.First else player).copy(0.7f),
                     Offset(xPx - baseMarkerSize, yPx - baseMarkerSize),
                     Offset(xPx + baseMarkerSize, yPx + baseMarkerSize),
                     strokeWidth = 2.dp.toPx(),
                 )
                 drawLine(
-                    uiSettings.toColor(if (player == Player.WallOrBoth) player.opposite() else player).copy(0.7f),
+                    uiSettings.toColor(if (player == Player.WallOrBoth) Player.Second else player).copy(0.7f),
                     Offset(xPx + baseMarkerSize, yPx - baseMarkerSize),
                     Offset(xPx - baseMarkerSize, yPx + baseMarkerSize),
                     strokeWidth = 2.dp.toPx(),
