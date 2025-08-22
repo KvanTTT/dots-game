@@ -388,19 +388,19 @@ class SgfConverterTests {
     @Test
     fun gameResultIsValid() {
         val valuesToGameResults = listOf(
-            Triple("0", GameResult.Draw(endGameKind = null), null),
-            Triple("Draw", GameResult.Draw(endGameKind = null), null),
+            Triple("0", GameResult.Draw(endGameKind = null, player = null), null),
+            Triple("Draw", GameResult.Draw(endGameKind = null, player = null), null),
             Triple("B+R", GameResult.ResignWin(Player.First), null),
             Triple("B+T" , GameResult.TimeWin(Player.First), null),
             Triple("B+?" , GameResult.UnknownWin(Player.First), null),
-            Triple("B+10" , GameResult.ScoreWin(10.0, endGameKind = null, Player.First),
+            Triple("B+10" , GameResult.ScoreWin(10.0, endGameKind = null, Player.First, player = null),
                 LineColumnDiagnostic(
                     "Property RE (Result) has value `10` that doesn't match score from game field `0`.",
                     LineColumn(1, 32),
                     DiagnosticSeverity.Warning
                 )
             ),
-            Triple("W+5" , GameResult.ScoreWin(5.0, endGameKind = null, Player.Second),
+            Triple("W+5" , GameResult.ScoreWin(5.0, endGameKind = null, Player.Second, player = null),
                 LineColumnDiagnostic(
                     "Property RE (Result) has value `5` that doesn't match score from game field `0`.",
                     LineColumn(1, 31),

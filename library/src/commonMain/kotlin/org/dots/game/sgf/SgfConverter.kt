@@ -176,9 +176,9 @@ class SgfConverter(
         val gameResultProperty by lazy(LazyThreadSafetyMode.NONE) { getValue(RESULT_KEY) }
 
         if (definedGameResult is GameResult.Draw) {
-            // Check if the game is not automatically over because of no legal moves
+            // Check if the game is not automatically over because of no legal moves or a grounding move
             if (useEndingMove && field.gameResult == null) {
-                val gameResult = field.finishGame(ExternalFinishReason.Draw, player = null)!!
+                val gameResult = field.finishGame(ExternalFinishReason.Draw, definedGameResult.player)!!
                 gameTree.add(field.lastMove, gameResult)
                 addedMovesCount = 1
             }
@@ -192,14 +192,17 @@ class SgfConverter(
                 )
             }
         } else if (definedGameResult is GameResult.WinGameResult) {
-            val (definedFinishReason, looser) = definedGameResult.toExternalFinishReason()
-            val definedWinner = looser?.opposite()
+            val definedFinishReason = definedGameResult.toExternalFinishReason()
+            val definedWinner = definedGameResult.winner
 
             // TODO: report warning when `externalFinishReason` is null (no legal moves),
             //  but actual field result is also null (legal moves still exist)
+            // Check if the game is not automatically over because of no legal moves of a grounding move
             if (useEndingMove && field.gameResult == null && definedFinishReason != null) {
-                // Check if the game is not automatically over because of no legal moves
-                val gameResult = field.finishGame(definedFinishReason, looser)!!
+                // In case of grounding rely on the last player's move; otherwise it's a move of looser
+                val activePlayer = definedGameResult.player
+                    ?: (if (definedFinishReason == ExternalFinishReason.Grounding) null else definedWinner.opposite())
+                val gameResult = field.finishGame(definedFinishReason, activePlayer)!!
                 gameTree.add(field.lastMove, gameResult)
                 addedMovesCount = 1
             }
@@ -341,35 +344,48 @@ class SgfConverter(
             if (moveInfos == null) return
 
             for (moveInfo in moveInfos) {
-                var moveResult: MoveResult?
-                val withinBounds: Boolean
-                val position = field.getPositionIfWithinBounds(moveInfo.positionXY)
-                if (position != null) {
-                    val startNanos = measureNanos?.invoke()
-                    moveResult = field.makeMoveUnsafe(position, moveInfo.player)
-                    if (measureNanos != null) {
-                        fieldNanos += measureNanos() - startNanos!!
-                    }
-                    withinBounds = true
+                var moveResult: MoveResult? = null
+                var gameResult: GameResult? = null
+
+                if (field.gameResult != null) {
+                    val (propertyInfo, textSpan) = moveInfo.extraInfo as PropertyInfoAndTextSpan
+                    propertyInfo.reportPropertyDiagnostic("is defined (`${textSpan.getText()}`), however the game is already over with the result: ${field.gameResult}",
+                        textSpan,
+                        DiagnosticSeverity.Error
+                    )
+                }
+
+                if (moveInfo.positionXY == null) {
+                    gameResult = field.finishGame(ExternalFinishReason.Grounding, moveInfo.player)
                 } else {
-                    moveResult = null
-                    withinBounds = false
+                    val withinBounds: Boolean
+                    val position = field.getPositionIfWithinBounds(moveInfo.positionXY)
+                    if (position != null) {
+                        val startNanos = measureNanos?.invoke()
+                        moveResult = field.makeMoveUnsafe(position, moveInfo.player)
+                        if (measureNanos != null) {
+                            fieldNanos += measureNanos() - startNanos!!
+                        }
+                        withinBounds = true
+                    } else {
+                        moveResult = null
+                        withinBounds = false
+                    }
+                    if (moveResult == null && field.gameResult == null) {
+                        moveInfo.reportPositionThatViolatesRules(
+                            withinBounds = withinBounds,
+                            field.width,
+                            field.height,
+                            field.currentMoveNumber
+                        )
+                    }
                 }
                 val timeLeft = if (moveInfo.player == Player.First) player1TimeLeft else player2TimeLeft
-                gameTree.add(moveResult, gameResult = null, timeLeft, comment, labels,
+                gameTree.add(moveResult, gameResult = gameResult, timeLeft, comment, labels,
                     circles?.map { Position(it.x, it.y, field.realWidth) },
                     squares?.map { Position(it.x, it.y, field.realWidth) }
                 )
                 movesCount++
-
-                if (moveResult == null) {
-                    moveInfo.reportPositionThatViolatesRules(
-                        withinBounds = withinBounds,
-                        field.width,
-                        field.height,
-                        field.currentMoveNumber
-                    )
-                }
             }
         }
 
@@ -689,7 +705,7 @@ class SgfConverter(
 
     private inline fun <reified T> PropertyValueToken.convertPosition(propertyInfo: SgfPropertyInfo): T? {
         val coordinates = if (value.isEmpty()) {
-            // Empty value is treated as pass
+            // Empty value is treated as grounding
             null
         } else {
             convertCoordinates(propertyInfo, 0)
@@ -724,20 +740,29 @@ class SgfConverter(
             )
         }
 
-        return if (coordinates == null) {
-            null
+        val position: PositionXY?
+        val isPositionCorrect: Boolean
+        if (coordinates == null) {
+            position = null
+            isPositionCorrect = T::class != PositionXY::class
         } else {
-            val position = coordinates.toPositionXY()
-            if (position != null) {
-                val textSpan = TextSpan(textSpan.start, 2)
-                when {
-                    isMoveInfo -> MoveInfo(position, propertyInfo.getPlayer(), PropertyInfoAndTextSpan(propertyInfo, textSpan)) as T
-                    T::class == PositionXY::class -> position as T
-                    else -> error("Unexpected type ${T::class.simpleName}")
-                }
-            } else {
-                null
+            position = coordinates.toPositionXY()
+            isPositionCorrect = position != null
+        }
+
+        return if (isPositionCorrect) {
+            val textSpan = TextSpan(textSpan.start, value.length)
+            when {
+                isMoveInfo -> MoveInfo(
+                    position,
+                    propertyInfo.getPlayer(),
+                    PropertyInfoAndTextSpan(propertyInfo, textSpan)
+                ) as T
+                T::class == PositionXY::class -> position as T
+                else -> error("Unexpected type ${T::class.simpleName}")
             }
+        } else {
+            null
         }
     }
 
@@ -782,8 +807,10 @@ class SgfConverter(
     }
 
     private fun PropertyValueToken.convertGameResult(propertyInfo: SgfPropertyInfo): GameResult? {
+        // TODO: Calculate score and player based on field (currently the last move in inaccessible here)?
+
         if (value == "0" || value == "Draw") {
-            return GameResult.Draw(endGameKind = null)
+            return GameResult.Draw(endGameKind = null, player = null)
         }
 
         val player = value.elementAtOrNull(0).let {
@@ -830,13 +857,11 @@ class SgfConverter(
                 else -> {
                     val resultString = value.substring(2)
                     if (resultString.singleOrNull() == GROUNDING_WIN_GAME_RESULT) {
-                        // Calculate scores based on field?
-                        GameResult.ScoreWin(0.0, EndGameKind.Grounding, player)
+                        GameResult.ScoreWin(0.0, EndGameKind.Grounding, player, player = null)
                     } else {
                         val number = resultString.toDoubleOrNull()
                         if (number != null) {
-                            // Calculate endGameKind based on field?
-                            GameResult.ScoreWin(number, endGameKind = null, player)
+                            GameResult.ScoreWin(number, endGameKind = null, player, player = null)
                         } else {
                             propertyInfo.reportPropertyDiagnostic(
                                 "has invalid result value `$resultString`. Correct value $GAME_RESULT_DESCRIPTION_SUFFIX",

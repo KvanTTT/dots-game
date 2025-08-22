@@ -29,13 +29,13 @@ class GameOverMoveTests : FieldTests() {
             assertEquals(base.closurePositions.size, 0)
             assertEquals(0, it.player1Score)
             assertEquals(2, it.player2Score)
-            assertEquals(GameResult.ScoreWin(2.0, EndGameKind.Grounding, Player.Second), it.gameResult)
+            assertEquals(GameResult.ScoreWin(2.0, EndGameKind.Grounding, Player.Second, Player.First), it.gameResult)
             it.unmakeMove()
 
             it.finishGame(ExternalFinishReason.Grounding, Player.Second)!!
             assertEquals(1, it.player1Score)
             assertEquals(0, it.player2Score)
-            assertEquals(GameResult.ScoreWin(1.0, EndGameKind.Grounding, Player.First), it.gameResult)
+            assertEquals(GameResult.ScoreWin(1.0, EndGameKind.Grounding, Player.First, Player.Second), it.gameResult)
             it.unmakeMove()
         }
     }
@@ -49,13 +49,13 @@ class GameOverMoveTests : FieldTests() {
             assertNull(it.lastMove!!.bases)
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
-            assertEquals(GameResult.Draw(EndGameKind.Grounding), it.gameResult)
+            assertEquals(GameResult.Draw(EndGameKind.Grounding, Player.First), it.gameResult)
             it.unmakeMove()
 
             it.finishGame(ExternalFinishReason.Grounding, Player.Second)
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
-            assertEquals(GameResult.Draw(EndGameKind.Grounding), it.gameResult)
+            assertEquals(GameResult.Draw(EndGameKind.Grounding, Player.Second), it.gameResult)
             it.unmakeMove()
         }
     }

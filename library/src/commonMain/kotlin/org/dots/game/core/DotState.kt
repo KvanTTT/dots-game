@@ -45,16 +45,8 @@ value class DotState internal constructor(val value: Byte) {
         return Player(value and ACTIVE_MASK)
     }
 
-    fun isActive(): Boolean {
-        return value and ACTIVE_MASK != ZERO
-    }
-
     fun isActive(player: Player): Boolean {
         return value and ACTIVE_MASK == player.value
-    }
-
-    fun isActiveAndTerritory(player: Player): Boolean {
-        return value and ACTIVE_AND_TERRITORY_MASK == player.value or TERRITORY_FLAG
     }
 
     fun isActiveAndNotTerritory(player: Player): Boolean {

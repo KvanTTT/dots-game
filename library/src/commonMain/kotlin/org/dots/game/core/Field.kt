@@ -16,15 +16,21 @@ class Field {
         fun create(rules: Rules, onIncorrectInitialMove: (moveInfo: MoveInfo, incorrectMove: Boolean, moveNumber: Int) -> Unit = { _, _, _ -> }): Field {
             return Field(rules).apply {
                 for (moveInfo in rules.initialMoves) {
-                    val position = getPositionIfWithinBounds(moveInfo.positionXY)
+                    if (moveInfo.positionXY == null) {
+                        if (finishGame(ExternalFinishReason.Grounding, moveInfo.player) == null) {
+                            onIncorrectInitialMove(moveInfo, true, currentMoveNumber);
+                        }
+                    } else {
+                        val position = getPositionIfWithinBounds(moveInfo.positionXY)
 
-                    if (position == null) {
-                        onIncorrectInitialMove(moveInfo, false, currentMoveNumber)
-                        continue
-                    }
+                        if (position == null) {
+                            onIncorrectInitialMove(moveInfo, false, currentMoveNumber)
+                            continue
+                        }
 
-                    if (makeMoveUnsafe(position, moveInfo.player) == null) {
-                        onIncorrectInitialMove(moveInfo, true, currentMoveNumber)
+                        if (makeMoveUnsafe(position, moveInfo.player) == null) {
+                            onIncorrectInitialMove(moveInfo, true, currentMoveNumber)
+                        }
                     }
                 }
 
@@ -142,7 +148,7 @@ class Field {
             baseMode = rules.baseMode,
             suicideAllowed = rules.suicideAllowed,
             initialMoves = rules.initialMoves.map {
-                MoveInfo(it.positionXY.transform(transformType, width, height), it.player, it.extraInfo)
+                MoveInfo(it.positionXY?.transform(transformType, width, height), it.player, it.extraInfo)
             },
         ))
         newField.initialMovesCount = initialMovesCount
@@ -155,7 +161,7 @@ class Field {
                 newPosition.setState(oldState)
                 val activePlayer = oldState.getActivePlayer()
                 if (activePlayer != Player.None) {
-                    updateHash(newPosition, activePlayer)
+                    updatePositionHash(newPosition, activePlayer)
                 }
             }
         }
@@ -237,14 +243,13 @@ class Field {
                     "${rules.captureByBorder::class.simpleName} is not yet supported"
                 }
 
-                val (localResultBases, localEmptyBaseInvalidatePositions) =
-                    captureNotGroundedGroups(currentPlayer)
+                val (localResultBases, localEmptyBaseInvalidatePositions) = ground(currentPlayer)
                 resultBases = localResultBases.takeIf { it.isNotEmpty() }
                 emptyBaseInvalidatePositions = localEmptyBaseInvalidatePositions
 
-                finishGame(EndGameKind.Grounding)
+                finishGame(EndGameKind.Grounding, currentPlayer)
             }
-            ExternalFinishReason.Draw -> GameResult.Draw(endGameKind = null)
+            ExternalFinishReason.Draw -> GameResult.Draw(endGameKind = null, currentPlayer)
             ExternalFinishReason.Resign -> GameResult.ResignWin(currentPlayer.opposite())
             ExternalFinishReason.Time -> GameResult.TimeWin(currentPlayer.opposite())
             ExternalFinishReason.Interrupt -> GameResult.InterruptWin(currentPlayer.opposite())
@@ -257,9 +262,7 @@ class Field {
             Position.GAME_OVER.getState(),
             emptyBaseInvalidatePositions,
             resultBases,
-        ).also {
-            updateHash(Position.GAME_OVER, currentPlayer)
-        })
+        ))
 
         return gameResult
     }
@@ -301,9 +304,6 @@ class Field {
             }
         }
 
-        moveResult.position.setState(moveResult.previousState)
-        updateHash(moveResult.position, moveResult.player)
-
         if (moveResult.emptyBaseInvalidatePositions.size > 0) {
             val emptyTerritoryState = DotState.createEmptyTerritory(moveResult.player.opposite())
             moveResult.emptyBaseInvalidatePositions.iterate { position ->
@@ -318,6 +318,8 @@ class Field {
             else -> true
         }
         if (isRealMove) {
+            moveResult.position.setState(moveResult.previousState)
+            updatePositionHash(moveResult.position, moveResult.player)
             numberOfLegalMoves++
         }
         gameResult = null
@@ -369,7 +371,7 @@ class Field {
 
         position.setState(DotState.createPlaced(currentPlayer))
         val hashValue = ZobristHash.getPositionsValue(position, currentPlayer)
-        updateHash(hashValue)
+        updatePositionHash(hashValue)
 
         val bases = tryCapture(position, currentPlayer, emptyBaseCapturing = false)
 
@@ -385,7 +387,7 @@ class Field {
                         listOf(oppositeBase)
                     } else {
                         position.setState(originalState)
-                        updateHash(hashValue)
+                        updatePositionHash(hashValue)
                         numberOfLegalMoves++
                         return null
                     }
@@ -401,7 +403,7 @@ class Field {
                     if (suicidalMove) {
                         // Rollback state in case of a suicidal move
                         position.setState(originalState)
-                        updateHash(hashValue)
+                        updatePositionHash(hashValue)
                         numberOfLegalMoves++
                         return null
                     } else {
@@ -425,7 +427,7 @@ class Field {
         }
 
         if (numberOfLegalMoves == 0) {
-            gameResult = finishGame(EndGameKind.NoLegalMoves)
+            gameResult = finishGame(EndGameKind.NoLegalMoves, currentPlayer)
         }
 
         return MoveResult(
@@ -437,10 +439,10 @@ class Field {
         ).also { moveResults.add(it) }
     }
 
-    private fun finishGame(endGameKind: EndGameKind): GameResult {
+    private fun finishGame(endGameKind: EndGameKind, player: Player): GameResult {
         val scoreForFirstPlayer = getScoreDiff(Player.First)
         return if (scoreForFirstPlayer == 0.0) {
-            GameResult.Draw(endGameKind)
+            GameResult.Draw(endGameKind, player)
         } else {
             val winner: Player
             val score: Double
@@ -451,11 +453,11 @@ class Field {
                 winner = Player.Second
                 score = -scoreForFirstPlayer
             }
-            GameResult.ScoreWin(score, endGameKind, winner)
+            GameResult.ScoreWin(score, endGameKind, winner, player)
         }
     }
 
-    private fun captureNotGroundedGroups(player: Player): Pair<List<Base>, PositionsList> {
+    private fun ground(player: Player): Pair<List<Base>, PositionsList> {
         val processedPositions = PositionsList(size, realWidth)
         val oppositePlayer = player.opposite()
         val emptyBaseInvalidatePositions = PositionsList(size, realWidth)
@@ -466,18 +468,7 @@ class Field {
             val position = move.position
 
             if (position.getState().let { !it.isVisited() && it.isActive(player) }) {
-                var grounded = false
-                getTerritoryPositions(oppositePlayer, position) {
-                    val state = it.getState()
-                    if (state.getActivePlayer() == Player.WallOrBoth) {
-                        grounded = true
-                        false
-                    } else {
-                        state.isActive(player)
-                    }
-                }
-
-                processedPositions.addAll(territoryPositionsBuffer)
+                val grounded = getTerritoryPositions(player, position, grounding = true)
 
                 if (!grounded) {
                     territoryPositionsBuffer.iterate { position ->
@@ -492,6 +483,11 @@ class Field {
                         }
                     }
                     bases.add(calculateBase(closurePositions = PositionsList.EMPTY, oppositePlayer))
+                }
+
+                territoryPositionsBuffer.iterate {
+                    it.setVisited()
+                    processedPositions.add(it)
                 }
             }
         }
@@ -673,9 +669,11 @@ class Field {
     private fun buildBase(player: Player, closurePositions: PositionsList): Base {
         closurePositions.iterate { it.setVisited() }
         val territoryFirstPosition = getNextPosition(closurePositions.get(1),closurePositions.get(0), realWidth)
-        getTerritoryPositions(player, territoryFirstPosition) { true }
+        val isGrounded = getTerritoryPositions(player, territoryFirstPosition, grounding = false)
+        if (!rules.captureByBorder) {
+            require(!isGrounded)
+        }
         closurePositions.clearVisited()
-        territoryPositionsBuffer.clearVisited()
         return calculateBase(closurePositions, player)
     }
 
@@ -757,21 +755,35 @@ class Field {
         return if (square > 0) ClosureData(square, closureOrInvalidatePositionsBuffer.copy(), containsBorder) else null
     }
 
-    private fun getTerritoryPositions(player: Player, firstPosition: Position, positionCheck: (Position) -> Boolean) {
+    private fun getTerritoryPositions(player: Player, firstPosition: Position, grounding: Boolean): Boolean {
         walkStackPositionsBuffer.clear()
         territoryPositionsBuffer.clear()
 
+        var grounded = false
+
         fun checkAndAdd(position: Position) {
             val state = position.getState()
-            if (state.isActiveAndTerritory(player)) return // Ignore already captured territory
+            if (!state.isVisited()) {
+                val activePlayer = state.getActivePlayer();
 
-            if (state.isVisited()) return
-            if (!positionCheck(position)) return
+                if (activePlayer == Player.WallOrBoth) {
+                    require(grounding)
+                    grounded = true
+                } else {
+                    val isPositionLegal = if (grounding) {
+                        activePlayer == player
+                    } else {
+                        activePlayer != player || !state.isTerritory()
+                    }
 
-            territoryPositionsBuffer.add(position)
-            position.setVisited()
+                    if (isPositionLegal) {
+                        territoryPositionsBuffer.add(position)
+                        position.setVisited()
 
-            walkStackPositionsBuffer.add(position)
+                        walkStackPositionsBuffer.add(position)
+                    }
+                }
+            }
         }
 
         checkAndAdd(firstPosition)
@@ -782,6 +794,10 @@ class Field {
                 true
             }
         }
+
+        territoryPositionsBuffer.clearVisited()
+
+        return grounded
     }
 
     private fun tryGetBaseForAllOpponentDotsMode(
@@ -1021,22 +1037,22 @@ class Field {
             } else {
                 numberOfLegalMoves++
             }
-            updateHash(position, basePlayer)
+            updatePositionHash(position, basePlayer)
         } else {
             if (currentPlayer == baseOppositePlayer) {
                 val positionsHash = ZobristHash.positionsHash[position.value.toInt()]
                 // Simulate unmaking the opponent move and making the player's move
-                updateHash(positionsHash[baseOppositePlayer.value.toInt()])
-                updateHash(positionsHash[basePlayer.value.toInt()])
+                updatePositionHash(positionsHash[baseOppositePlayer.value.toInt()])
+                updatePositionHash(positionsHash[basePlayer.value.toInt()])
             }
         }
     }
 
-    private fun updateHash(position: Position, player: Player) {
-        updateHash(ZobristHash.getPositionsValue(position, player))
+    private fun updatePositionHash(position: Position, player: Player) {
+        updatePositionHash(ZobristHash.getPositionsValue(position, player))
     }
 
-    private fun updateHash(value: Hash) {
+    private fun updatePositionHash(value: Hash) {
         positionHash = positionHash xor value
     }
 

@@ -3,6 +3,8 @@ package org.dots.game.sgf
 import org.dots.game.DiagnosticSeverity
 import org.dots.game.LineColumn
 import org.dots.game.LineColumnDiagnostic
+import org.dots.game.core.EndGameKind
+import org.dots.game.core.GameResult
 import org.dots.game.core.Label
 import org.dots.game.core.Player
 import org.dots.game.core.Position
@@ -18,10 +20,13 @@ class SgfConverterMovesTests {
             "(;GM[40]FF[4]SZ[62:62]AB[az][mm]AW[AZ][])"
         ).single()
         val rules = game.rules
-        assertEquals(3, rules.initialMoves.size)
+        assertEquals(4, rules.initialMoves.size)
         checkMoveDisregardExtraInfo(1, 26, Player.First, rules.initialMoves[0])
         checkMoveDisregardExtraInfo(13, 13, Player.First, rules.initialMoves[1])
         checkMoveDisregardExtraInfo(27, 52, Player.Second, rules.initialMoves[2])
+        val groundingMove = rules.initialMoves[3]
+        assertEquals(null, groundingMove.positionXY)
+        assertEquals(Player.Second, groundingMove.player)
     }
 
     @Test
@@ -234,22 +239,68 @@ class SgfConverterMovesTests {
     }
 
     @Test
-    fun grounding() {
-        fun createInput(firstPlayerWinsByProperty: Boolean, firstPlayerWinsByField: Boolean): String {
-            return "(;GM[40]FF[4]SZ[39:32]RE[${if (firstPlayerWinsByProperty) "B+G" else "Draw"}];W[${if (firstPlayerWinsByField) "bb" else "aa"}])"
+    fun notaGoGrounding() {
+        fun checkGrounding(player: Player) {
+            val pla: Char
+            val opp: Char
+            if (player == Player.First) {
+                pla = 'B'
+                opp = 'W'
+            } else {
+                pla = 'W'
+                opp = 'B'
+            }
+
+            // Player wins by property with its move
+            parseConvertAndCheck("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[$pla+G];$pla[ba];$pla[cb];$pla[bc];$pla[ab];$opp[bb])")
+
+            // Player wins by property with opp move
+            parseConvertAndCheck("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[$pla+G];$opp[bb];$pla[aa])")
+
+            // NotaGo erasures info about grounding in case of Draw
+
+            // Draw by property with player's move
+            parseConvertAndCheck("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[Draw];$pla[aa];$opp[ba])")
+
+            // Draw by property with opp player's move
+            parseConvertAndCheck("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[Draw];$pla[aa])")
         }
 
-        parseConvertAndCheck(createInput(firstPlayerWinsByProperty = true, firstPlayerWinsByField = true))
-        // Draw may occur with any score
-        parseConvertAndCheck(createInput(firstPlayerWinsByProperty = false, firstPlayerWinsByField = true))
-        parseConvertAndCheck(createInput(firstPlayerWinsByProperty = true, firstPlayerWinsByField = false), listOf(
-            LineColumnDiagnostic(
-                "Property RE (Result) has `First` player as winner but the result of the game from field: Draw/Unknown.",
-                LineColumn(1, 37),
-                DiagnosticSeverity.Warning,
+        checkGrounding(Player.First)
+        checkGrounding(Player.Second)
+    }
+
+    @Test
+    fun groundingWithExplicitMove() {
+        val game =
+            parseConvertAndCheck("(;FF[4]GM[40]CA[UTF-8]AP[katago]SZ[10:8]RE[B+1]AB[ed][fe]AW[ee][fd];B[ef];W[de];B[df];W[hd];B[ce];W[hf];B[cd];W[ff];B[dc];W[cf];B[hb];W[ic];B[db];W[gg];B[da];W[bg];B[])").single()
+
+        game.gameTree.rewindForward()
+        val gameResult = game.gameTree.field.gameResult as GameResult.ScoreWin
+        assertEquals(Player.First, gameResult.winner)
+        assertEquals(1.0, gameResult.score)
+        assertEquals(EndGameKind.Grounding, gameResult.endGameKind)
+    }
+
+    @Test
+    fun groundingWithMovesAfterIt() {
+        parseConvertAndCheck("(;FF[4]GM[40]CA[UTF-8]SZ[10];B[bb];W[];B[])",
+            listOf(
+                LineColumnDiagnostic("Property B (Player1 move) is defined (``), however the game is already over with the result: Draw (Grounding)",
+                    LineColumn(1, 42),
+                    DiagnosticSeverity.Error
+                )
             )
-        ))
-        parseConvertAndCheck(createInput(firstPlayerWinsByProperty = false, firstPlayerWinsByField = false))
+        )
+        parseConvertAndCheck("(;FF[4]GM[40]CA[UTF-8]SZ[10];B[bb];W[cc];B[];W[cc])",
+            listOf(
+                LineColumnDiagnostic(
+                    "Property W (Player2 move) is defined (`cc`), however the game is already over with the result: ScoreWin(winner: Second, 1.0, Grounding, player: First)",
+                    LineColumn(1, 48),
+                    DiagnosticSeverity.Error
+                )
+            )
+        )
     }
 
     @Test

@@ -213,12 +213,14 @@ class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player
     private fun GameTreeNode.makeMoveIfNeeded() {
         requireNotNull(
             if (gameResult == null) {
-                moveResult?.let {
-                    field.makeMoveUnsafe(it.position, it.player)
-                }
+                moveResult?.let { field.makeMoveUnsafe(it.position, it.player) }
             } else {
-                val (externalGameResult, looser) = gameResult.toExternalFinishReason()
-                field.finishGame(externalGameResult!!, looser)
+                val externalGameResult = gameResult.toExternalFinishReason()
+                if (externalGameResult != null) {
+                    field.finishGame(externalGameResult, gameResult.player)
+                } else {
+                    field.gameResult
+                }
             }
         )
     }

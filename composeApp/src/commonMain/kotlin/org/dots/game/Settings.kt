@@ -51,7 +51,14 @@ fun saveRules(rules: Rules) {
         putBoolean(Rules::suicideAllowed.rulesSettingName, rules.suicideAllowed)
         putString(
             Rules::initialMoves.rulesSettingName,
-            rules.initialMoves.joinToString(secondLevelSeparator) { "${it.positionXY.x}$firstLevelSeparator${it.positionXY.y}$firstLevelSeparator${it.player.value}" })
+            rules.initialMoves.joinToString(secondLevelSeparator) {
+                val positionXY = it.positionXY
+                if (positionXY != null) {
+                    "${positionXY.x}$firstLevelSeparator${positionXY.y}$firstLevelSeparator${it.player.value}"
+                } else {
+                    ""
+                }
+            })
     }
 }
 

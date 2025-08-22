@@ -32,7 +32,7 @@ class Rules(
                 var maxY = 0
                 for (initialMove in initialMoves) {
                     initialMove.positionXY.let {
-                        val (x, y) = it
+                        val (x, y) = it ?: break
                         if (x > maxX) maxX = x
                         if (y > maxY) maxY = y
                     }
@@ -42,7 +42,7 @@ class Rules(
 
                 for (initialMove in initialMoves) {
                     val (positionXY, player, _) = initialMove
-                    val (x, y) = positionXY
+                    val (x, y) = positionXY ?: break
                     movesArray[x - 1][y - 1] = player
                 }
 

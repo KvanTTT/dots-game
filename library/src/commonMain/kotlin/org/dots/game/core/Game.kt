@@ -69,34 +69,49 @@ enum class EndGameKind {
     NoLegalMoves,
 }
 
-sealed class GameResult {
-    class Draw(val endGameKind: EndGameKind?) : GameResult() {
+sealed class GameResult(val player: Player?) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        return other != null && this::class == other::class && player == (other as GameResult).player
+    }
+
+    override fun hashCode(): Int {
+        return 31 * this::class.hashCode() + player.hashCode()
+    }
+
+    class Draw(val endGameKind: EndGameKind?, player: Player?) : GameResult(player) {
         override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other == null || this::class != other::class) return false
+            if (!super.equals(other)) return false
             return endGameKind == (other as Draw).endGameKind
         }
 
         override fun hashCode(): Int {
-            var result = super.hashCode()
-            result = 31 * result + endGameKind.hashCode()
-            return result
+            return 31 * super.hashCode() + endGameKind.hashCode()
+        }
+
+        override fun toString(): String {
+            return this::class.simpleName + endGameKind?.let { " ($it)" }
         }
     }
 
-    sealed class WinGameResult(val winner: Player) : GameResult() {
+    sealed class WinGameResult(val winner: Player, player: Player?) : GameResult(player) {
         override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other == null || this::class != other::class) return false
+            if (!super.equals(other)) return false
             return winner == (other as WinGameResult).winner
         }
 
         override fun hashCode(): Int {
-            return winner.hashCode()
+            return 31 * super.hashCode() + winner.hashCode()
+        }
+
+        override fun toString(): String {
+            return this::class.simpleName + "(${::winner.name} : $winner" +
+                    player?.let { ", ${::player.name}: $player" } +
+                    ")"
         }
     }
 
-    class ScoreWin(val score: Double, val endGameKind: EndGameKind?, winner: Player) : WinGameResult(winner) {
+    class ScoreWin(val score: Double, val endGameKind: EndGameKind?, winner: Player, player: Player?) : WinGameResult(winner, player) {
         override fun equals(other: Any?): Boolean {
             if (!super.equals(other)) return false
             other as ScoreWin
@@ -109,35 +124,48 @@ sealed class GameResult {
             result = 31 * result + endGameKind.hashCode()
             return result
         }
+
+        override fun toString(): String {
+            return this::class.simpleName + "(${::winner.name}: $winner, $score" +
+                    endGameKind?.let { ", $endGameKind" } +
+                    player.takeIf { it != winner }?.let { ", ${::player.name}: $player" } +
+                    ")"
+        }
     }
 
-    class ResignWin(winner: Player) : WinGameResult(winner)
+    class ResignWin(winner: Player) : WinGameResult(winner, winner.opposite())
 
-    class TimeWin(winner: Player) : WinGameResult(winner)
+    class TimeWin(winner: Player) : WinGameResult(winner, winner.opposite())
 
-    class InterruptWin(winner: Player) : WinGameResult(winner)
+    class InterruptWin(winner: Player) : WinGameResult(winner, winner.opposite())
 
-    class UnknownWin(winner: Player) : WinGameResult(winner)
+    class UnknownWin(winner: Player) : WinGameResult(winner, winner.opposite())
 
-    fun toExternalFinishReason(): Pair<ExternalFinishReason?, Player?> {
+    fun toExternalFinishReason(): ExternalFinishReason? {
         return when (this) {
-            is Draw -> ExternalFinishReason.Draw to null
-            is ResignWin -> ExternalFinishReason.Resign to winner.opposite()
-            is TimeWin -> ExternalFinishReason.Time to winner.opposite()
-            is InterruptWin -> ExternalFinishReason.Interrupt to winner.opposite()
-            is UnknownWin -> ExternalFinishReason.Unknown to winner.opposite()
+            is Draw -> {
+                when (endGameKind) {
+                    EndGameKind.Grounding -> ExternalFinishReason.Grounding
+                    EndGameKind.NoLegalMoves -> null
+                    null -> ExternalFinishReason.Unknown
+                }
+            }
+            is ResignWin -> ExternalFinishReason.Resign
+            is TimeWin -> ExternalFinishReason.Time
+            is InterruptWin -> ExternalFinishReason.Interrupt
+            is UnknownWin -> ExternalFinishReason.Unknown
             is ScoreWin -> {
                 when (endGameKind) {
-                    EndGameKind.Grounding -> ExternalFinishReason.Grounding to winner.opposite()
-                    EndGameKind.NoLegalMoves -> null to winner.opposite()
-                    null -> ExternalFinishReason.Unknown to winner.opposite()
+                    EndGameKind.Grounding -> ExternalFinishReason.Grounding
+                    EndGameKind.NoLegalMoves -> null
+                    null -> ExternalFinishReason.Unknown
                 }
             }
         }
     }
 }
 
-data class MoveInfo(val positionXY: PositionXY, val player: Player, val extraInfo: Any? = null)
+data class MoveInfo(val positionXY: PositionXY?, val player: Player, val extraInfo: Any? = null)
 
 data class Label(val positionXY: PositionXY, val text: String)
 
