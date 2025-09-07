@@ -86,10 +86,12 @@ fun Base.getSortedClosurePositions(field: Field, considerTerritoryPositions: Boo
 
         var firstClosure = true
         while (closureSet.isNotEmpty()) {
-            val positionClosestToHorizontalBorder = closureSet.minBy { it.getY(field.realWidth) }
+            val minY = closureSet.minOf { it.getY(field.realWidth) }
+            val topLeftMostPosition = closureSet.filter { it.getY(field.realWidth) == minY }.minBy { it.getX(field.realWidth) }
+
             // The outer closure should be minimal, the inner closure should be maximal
             val newClosure = closureSet.extractClosure(
-                positionClosestToHorizontalBorder,
+                topLeftMostPosition,
                 // The next position should be inner for outer closure and outer for inner closure for AllOpponentDots
                 // However, in case of territory positions there is only a single outer closure that should be outer-walked
                 innerWalk = !considerTerritoryPositions && firstClosure,
