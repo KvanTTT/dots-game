@@ -150,6 +150,15 @@ fun App() {
                     Text(player1Score.toString(), color = uiSettings.playerFirstColor)
                     Text(" : ")
                     Text(player2Score.toString(), color = uiSettings.playerSecondColor)
+                    val player2Score = field.getScoreDiff(Player.Second)
+                    val winnerColor: Color = if (player2Score > 0.0f) {
+                        uiSettings.playerSecondColor
+                    } else if (player2Score < 0.0f) {
+                        uiSettings.playerFirstColor
+                    } else {
+                        Color.Black
+                    }
+                    Text("  ($player2Score)", color = winnerColor)
                 }
                 Row {
                     FieldView(lastMove, moveMode, fieldViewData, uiSettings) {
