@@ -23,6 +23,10 @@ value class PositionXY internal constructor(val position: Int) : Comparable<Posi
     operator fun component1(): Int = x
     operator fun component2(): Int = y
 
+    operator fun minus(other: PositionXY): Pair<Int, Int> {
+        return this.x - other.x to this.y - other.y
+    }
+
     override fun compareTo(other: PositionXY): Int {
         return position.compareTo(other.position)
     }

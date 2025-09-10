@@ -23,16 +23,16 @@ import org.dots.game.core.*
 import org.dots.game.views.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
-private val uiSettings = UiSettings.Standard
-
 @Composable
 @Preview
 fun App() {
     MaterialTheme {
+        var uiSettings by remember { mutableStateOf(loadUiSettings()) }
+
         var start by remember { mutableStateOf(true) }
         var newGameDialogRules by remember { mutableStateOf(loadRules()) }
         var field: Field by remember {  mutableStateOf(Field.create(newGameDialogRules)) }
-        var fieldViewData: FieldViewData by remember { mutableStateOf<FieldViewData>(FieldViewData(field)) }
+        var fieldViewData: FieldViewData by remember { mutableStateOf(FieldViewData(field)) }
         var gameTree: GameTree by remember { mutableStateOf(GameTree(field)) }
         var gameTreeViewData: GameTreeViewData by remember { mutableStateOf(GameTreeViewData(gameTree)) }
 
@@ -41,10 +41,11 @@ fun App() {
         var player1Score by remember { mutableStateOf(0) }
         var player2Score by remember { mutableStateOf(0) }
         var moveNumber by remember { mutableStateOf(0) }
-        val showNewGameDialog = remember { mutableStateOf(false) }
-        val openGameDialog = remember { mutableStateOf(false) }
+        var showNewGameDialog by remember { mutableStateOf(false) }
+        var openGameDialog by remember { mutableStateOf(false) }
         var dumpParameters by remember { mutableStateOf(loadDumpParameters())}
-        val saveGameDialog = remember { mutableStateOf(false) }
+        var showSaveGameDialog by remember { mutableStateOf(false) }
+        var showUiSettingsForm by remember { mutableStateOf(false) }
         var moveMode by remember { mutableStateOf(MoveMode.Next) }
 
         val focusRequester = remember { FocusRequester() }
@@ -82,15 +83,15 @@ fun App() {
             initializeFieldAndGameTree(newField, GameTree(newField), rewindForward = false)
         }
 
-        if (showNewGameDialog.value) {
+        if (showNewGameDialog) {
             NewGameDialog(
                 newGameDialogRules,
                 onDismiss = {
-                    showNewGameDialog.value = false
+                    showNewGameDialog = false
                     focusRequester.requestFocus()
                 },
                 onConfirmation = {
-                    showNewGameDialog.value = false
+                    showNewGameDialog = false
                     newGameDialogRules = it
                     saveRules(newGameDialogRules)
                     resetFieldAndGameTree(newGameDialogRules)
@@ -101,30 +102,40 @@ fun App() {
             start = false
         }
 
-        if (openGameDialog.value) {
+        if (openGameDialog) {
             OpenDialog(
                 newGameDialogRules,
                 onDismiss = {
-                    openGameDialog.value = false
+                    openGameDialog = false
                     focusRequester.requestFocus()
                 },
                 onConfirmation = { game ->
-                    openGameDialog.value = false
+                    openGameDialog = false
                     initializeFieldAndGameTree(game.gameTree.field, game.gameTree, rewindForward = true)
                 }
             )
         }
 
-        if (saveGameDialog.value) {
+        if (showSaveGameDialog) {
             SaveDialog(
                 field,
                 dumpParameters,
                 onDismiss = {
-                    saveGameDialog.value = false
+                    showSaveGameDialog = false
                     focusRequester.requestFocus()
                     dumpParameters = it
                     saveDumpParameters(it)
                 })
+        }
+
+        if (showUiSettingsForm) {
+            UiSettingsForm(uiSettings, onUiSettingsChange = {
+                uiSettings = it
+                saveUiSettings(it)
+            }, onDismiss = {
+                showUiSettingsForm = false
+                focusRequester.requestFocus()
+            })
         }
 
         Row(Modifier.pointerInput(Unit) {
@@ -171,23 +182,26 @@ fun App() {
                 }
             }
             Column(Modifier.padding(start = 5.dp)) {
-                val playerButtonModifier = Modifier.padding(end = 5.dp)
+                val controlButtonModifier = Modifier.padding(end = 5.dp)
                 val rowModifier = Modifier.padding(bottom = 5.dp)
                 val playerColorIconModifier = Modifier.size(16.dp).border(1.dp, Color.White, CircleShape).clip(CircleShape)
                 val selectedModeButtonColor = Color.Magenta
 
                 Row(rowModifier) {
-                    Button(onClick = { showNewGameDialog.value = true }, playerButtonModifier) {
+                    Button(onClick = { showNewGameDialog = true }, controlButtonModifier) {
                         Text("New")
                     }
-                    Button(onClick = { resetFieldAndGameTree(field.rules) }, playerButtonModifier) {
+                    Button(onClick = { resetFieldAndGameTree(field.rules) }, controlButtonModifier) {
                         Text("Reset")
                     }
-                    Button(onClick = { openGameDialog.value = true }, playerButtonModifier) {
+                    Button(onClick = { openGameDialog = true }, controlButtonModifier) {
                         Text("Load")
                     }
-                    Button(onClick = { saveGameDialog.value = true }, playerButtonModifier) {
+                    Button(onClick = { showSaveGameDialog = true }, controlButtonModifier) {
                         Text("Save")
+                    }
+                    Button(onClick = { showUiSettingsForm = true }, controlButtonModifier) {
+                        Text("Settings")
                     }
                 }
 
@@ -197,7 +211,7 @@ fun App() {
                             moveMode = MoveMode.Next
                             focusRequester.requestFocus()
                         },
-                        playerButtonModifier,
+                        controlButtonModifier,
                         colors = if (moveMode == MoveMode.Next) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
                     ) {
                         Box {
@@ -214,7 +228,7 @@ fun App() {
                             moveMode = MoveMode.First
                             focusRequester.requestFocus()
                         },
-                        playerButtonModifier,
+                        controlButtonModifier,
                         colors = if (moveMode == MoveMode.First) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
                     ) {
                         Box(
@@ -226,7 +240,7 @@ fun App() {
                             moveMode = MoveMode.Second
                             focusRequester.requestFocus()
                         },
-                        playerButtonModifier,
+                        controlButtonModifier,
                         colors = if (moveMode == MoveMode.Second) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
                     ) {
                         Box(
@@ -247,7 +261,7 @@ fun App() {
                                     focusRequester.requestFocus()
                                 }
                             },
-                            playerButtonModifier,
+                            controlButtonModifier,
                         ) {
                             Text(if (isGrounding) "⏚" else "\uD83C\uDFF3\uFE0F") // Resign flag emoji in case of resigning
                         }
@@ -263,7 +277,7 @@ fun App() {
                         Button(onClick = {
                             val newGameTree = gameTree.transform(transformType)
                             initializeFieldAndGameTree(newGameTree.field, newGameTree, rewindForward = false)
-                        }, playerButtonModifier) {
+                        }, controlButtonModifier) {
                             Text(text)
                         }
                     }

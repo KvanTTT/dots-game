@@ -65,26 +65,34 @@ private val lastMoveRadius = cellSize * lastMoveRadiusRatio
 
 private val connectionThickness = 2.dp
 private val outOfBoundDrawRatio = dotRadiusRatio
-private val baseDrawMode: PolygonDrawMode = PolygonDrawMode.OutlineAndFill
-private val connectionDrawMode: ConnectionDrawMode = ConnectionDrawMode.Polygon(baseDrawMode)
-private val drawConnections: Boolean = true
 private val minDistanceId = 2
 private val maxDistanceId = 2
-private val helperMovesMode: HelperMovesMode = HelperMovesMode.CapturingAndBase
-
-enum class HelperMovesMode {
-    None,
-    Capturing,
-    CapturingAndBase,
-}
 
 private val capturingMoveMarkerSize = cellSize * 0.35f
 private val capturingBaseMoveMarkerSize = cellSize * 0.2f
 
-sealed class ConnectionDrawMode {
-    object None : ConnectionDrawMode()
-    object Lines : ConnectionDrawMode()
-    class Polygon(val polygonDrawMode: PolygonDrawMode) : ConnectionDrawMode()
+enum class ConnectionDrawMode {
+    None,
+    Lines,
+    PolygonOutline,
+    PolygonFill,
+    PolygonOutlineAndFill;
+
+    val polygonDrawMode: PolygonDrawMode?
+        get() {
+            return when (this) {
+                PolygonOutline -> PolygonDrawMode.Outline
+                PolygonFill -> PolygonDrawMode.Fill
+                PolygonOutlineAndFill -> PolygonDrawMode.OutlineAndFill
+                else -> null
+            }
+        }
+}
+
+sealed class ConnectionDrawModeKind {
+    object None : ConnectionDrawModeKind()
+    object Lines : ConnectionDrawModeKind()
+    class Polygon(val polygonDrawMode: PolygonDrawMode) : ConnectionDrawModeKind()
 }
 
 enum class PolygonDrawMode {
@@ -139,10 +147,13 @@ fun FieldView(currentMove: MoveResult?, moveMode: MoveMode, fieldViewData: Field
         Grid(field)
         Moves(currentMove, field, uiSettings)
         if (!field.isGameOver()) {
-            if (drawConnections) {
+            if (uiSettings.showDiagonalConnections) {
                 AllConnections(currentMove, field, uiSettings)
             }
-            ThreatsAndSurroundings(currentMove, field, uiSettings)
+
+            if (uiSettings.showThreats || uiSettings.showSurroundings) {
+                ThreatsAndSurroundings(currentMove, field, uiSettings)
+            }
         }
         Pointer(pointerFieldPosition, moveMode, field, uiSettings)
     }
@@ -229,18 +240,22 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
             val moveResultPosition = moveResult.position.takeUnless { it.isGameOverMove } ?: continue
             val color = uiSettings.toColor(moveResult.player)
 
+            val connectionDrawMode = uiSettings.connectionDrawMode
             if (connectionDrawMode == ConnectionDrawMode.Lines) {
                 drawStrongConnectionLines(fieldWithIncrementalUpdate, moveResultPosition, color)
-            } else if (connectionDrawMode is ConnectionDrawMode.Polygon) {
-                val connections = fieldWithIncrementalUpdate.getPositionsOfConnection(moveResultPosition)
-                drawPolygon(
-                    connections,
-                    emptyList(),
-                    moveResult.player,
-                    connectionDrawMode.polygonDrawMode,
-                    field.realWidth,
-                    uiSettings,
-                )
+            } else {
+                val connectionPolygonDrawMode = connectionDrawMode.polygonDrawMode
+                if (connectionPolygonDrawMode != null) {
+                    val connections = fieldWithIncrementalUpdate.getPositionsOfConnection(moveResultPosition)
+                    drawPolygon(
+                        connections,
+                        emptyList(),
+                        moveResult.player,
+                        connectionPolygonDrawMode,
+                        field.realWidth,
+                        uiSettings,
+                    )
+                }
             }
 
             drawCircle(
@@ -258,7 +273,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
                         outerClosure,
                         innerClosures,
                         base.player,
-                        baseDrawMode,
+                        uiSettings.baseDrawMode,
                         field.realWidth,
                         uiSettings,
                     )
@@ -300,7 +315,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
                             outerClosure,
                             innerClosures,
                             base.player,
-                            baseDrawMode,
+                            uiSettings.baseDrawMode,
                             field.realWidth,
                             uiSettings,
                             isGrounding = true
@@ -330,14 +345,36 @@ private fun AllConnections(currentMove: MoveResult?, field: Field, uiSettings: U
                         for (j in i + 1 until distantPositions.size) {
                             val endPosition = distantPositions[j]
 
-                            if (endPosition.getState().let {
-                                !it.isTerritory() &&
-                                it.getActivePlayer() == player
-                            } &&
-                                startPosition.squareDistanceTo(endPosition, realWidth) == squaredDistance
-                            ) {
-                                add(startPosition to endPosition)
+                            if (endPosition.getState().let { it.isTerritory() || it.getActivePlayer() != player }) {
+                                continue
                             }
+
+                            if (startPosition.squareDistanceTo(endPosition, realWidth) != squaredDistance) {
+                                continue
+                            }
+
+                            // Filter out overlapping lines
+                            if (squaredDistance == 2 && uiSettings.connectionDrawMode.polygonDrawMode != null) {
+                                val startPosXY = startPosition.toXY(field.realWidth)
+                                val endPosXY = endPosition.toXY(field.realWidth)
+                                val (diffX, diffY) = endPosXY - startPosXY
+                                val adjPos1 = when (diffX) {
+                                    1 -> startPosition.xp1y()
+                                    -1 -> startPosition.xm1y()
+                                    else -> error("Shouldn't be here")
+                                }
+                                val adjPos2 =  when (diffY) {
+                                    1 ->  startPosition.xyp1(field.realWidth)
+                                    -1 -> startPosition.xym1(field.realWidth)
+                                    else -> error("Shouldn't be here")
+                                }
+
+                                if (adjPos1.getState().getActivePlayer() == player || adjPos2.getState().getActivePlayer() == player) {
+                                    continue
+                                }
+                            }
+
+                            add(startPosition to endPosition)
                         }
                     }
                 }
@@ -361,30 +398,30 @@ private fun AllConnections(currentMove: MoveResult?, field: Field, uiSettings: U
 
 @Composable
 private fun ThreatsAndSurroundings(currentMove: MoveResult?, field: Field, uiSettings: UiSettings) {
-    if (helperMovesMode == HelperMovesMode.None) return
-
     Canvas(Modifier.fillMaxSize().graphicsLayer()) {
         val (oneMoveCapturingPositions, oneMoveBasePositions) = field.getOneMoveCapturingAndBasePositions()
 
-        val capturingMarkerSize = capturingMoveMarkerSize.toPx()
-        oneMoveCapturingPositions.forEach  {
-            val (position, player) = it
-            val (xPx, yPx) = position.toPxOffset(field,this)
-            drawLine(
-                uiSettings.toColor(if (player == Player.WallOrBoth) Player.First else player).copy(0.7f),
-                Offset(xPx - capturingMarkerSize, yPx),
-                Offset(xPx + capturingMarkerSize, yPx),
-                strokeWidth = 3.dp.toPx(),
-            )
-            drawLine(
-                uiSettings.toColor(if (player == Player.WallOrBoth) Player.Second else player).copy(0.7f),
-                Offset(xPx, yPx - capturingMarkerSize),
-                Offset(xPx, yPx + capturingMarkerSize),
-                strokeWidth = 3.dp.toPx(),
-            )
+        if (uiSettings.showThreats) {
+            val capturingMarkerSize = capturingMoveMarkerSize.toPx()
+            oneMoveCapturingPositions.forEach {
+                val (position, player) = it
+                val (xPx, yPx) = position.toPxOffset(field, this)
+                drawLine(
+                    uiSettings.toColor(if (player == Player.WallOrBoth) Player.First else player).copy(0.7f),
+                    Offset(xPx - capturingMarkerSize, yPx),
+                    Offset(xPx + capturingMarkerSize, yPx),
+                    strokeWidth = 3.dp.toPx(),
+                )
+                drawLine(
+                    uiSettings.toColor(if (player == Player.WallOrBoth) Player.Second else player).copy(0.7f),
+                    Offset(xPx, yPx - capturingMarkerSize),
+                    Offset(xPx, yPx + capturingMarkerSize),
+                    strokeWidth = 3.dp.toPx(),
+                )
+            }
         }
 
-        if (helperMovesMode == HelperMovesMode.CapturingAndBase) {
+        if (uiSettings.showSurroundings) {
             val baseMarkerSize = capturingBaseMoveMarkerSize.toPx()
             oneMoveBasePositions.forEach {
                 val (position, player) = it

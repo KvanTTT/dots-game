@@ -83,6 +83,9 @@ kotlin {
         desktopTest.dependencies {
             implementation(compose.desktop.currentOs)
         }
+        all {
+            languageSettings.enableLanguageFeature("ContextParameters")
+        }
     }
 }
 
