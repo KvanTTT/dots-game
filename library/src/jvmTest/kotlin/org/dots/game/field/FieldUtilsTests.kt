@@ -138,8 +138,8 @@ class FieldUtilsTests : FieldTests() {
         val rules = Rules(width, height, initialMoves = Cross.generateDefaultInitialPositions(width, height)!!)
         val field = Field.create(rules)
 
-        field.makeMove(2, 1, Player.First)
-        field.makeMove(1, 2, Player.First)
+        field.makeMove(2, 1, Player.Second)
+        field.makeMove(1, 2, Player.Second)
         field.finishGame(ExternalFinishReason.Resign, Player.Second)
 
         val newField = field.clone()
@@ -153,9 +153,9 @@ class FieldUtilsTests : FieldTests() {
         assertEquals(field.initialMovesCount, newField.initialMovesCount)
         assertEquals(7, field.moveSequence.size)
         assertEquals(field.moveSequence.size, newField.moveSequence.size)
-        assertEquals(1, field.player1Score)
+        assertEquals(0, field.player1Score)
         assertEquals(field.player1Score, newField.player1Score)
-        assertEquals(0, field.player2Score)
+        assertEquals(1, field.player2Score)
         assertEquals(field.player2Score, newField.player2Score)
         assertEquals(field.gameResult, GameResult.ResignWin(Player.First))
         assertEquals(field.gameResult, newField.gameResult)

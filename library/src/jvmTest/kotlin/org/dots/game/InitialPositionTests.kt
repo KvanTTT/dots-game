@@ -55,27 +55,27 @@ class InitialPositionTests {
 
         with(InitialPositionType.DoubleCross.generateDefaultInitialPositions(4, 2)!!) {
             take(4).checkCross(1, 1)
-            drop(4).checkCross(3, 1, startPlayer = Player.First)
+            drop(4).checkCross(3, 1, startPlayer = Player.Second)
         }
 
         with(InitialPositionType.DoubleCross.generateDefaultInitialPositions(5, 2)!!) {
             take(4).checkCross(2, 1)
-            drop(4).checkCross(4, 1, startPlayer = Player.First)
+            drop(4).checkCross(4, 1, startPlayer = Player.Second)
         }
 
         with(InitialPositionType.DoubleCross.generateDefaultInitialPositions(19, 19)!!) {
             take(4).checkCross(9, 9)
-            drop(4).checkCross(11, 9, startPlayer = Player.First)
+            drop(4).checkCross(11, 9, startPlayer = Player.Second)
         }
 
         with(InitialPositionType.DoubleCross.generateDefaultInitialPositions(39, 32)!!) {
             take(4).checkCross(19, 16)
-            drop(4).checkCross(21, 16, startPlayer = Player.First)
+            drop(4).checkCross(21, 16, startPlayer = Player.Second)
         }
 
         with(InitialPositionType.DoubleCross.generateDefaultInitialPositions(36, 36)!!) {
             take(4).checkCross(17, 18)
-            drop(4).checkCross(19, 18, startPlayer = Player.First)
+            drop(4).checkCross(19, 18, startPlayer = Player.Second)
         }
     }
 
@@ -214,7 +214,7 @@ class InitialPositionTests {
         assertEquals(expectedInitialPositionType, Rules(initialMoves = actualMoveInfos.toList()).initialPositionType)
     }
 
-    private fun List<MoveInfo>.checkCross(x: Int, y: Int, startPlayer: Player = Player.Second) {
+    private fun List<MoveInfo>.checkCross(x: Int, y: Int, startPlayer: Player = Player.First) {
         assertEquals(4, this.size)
         val oppositePlayer = startPlayer.opposite()
         assertEquals(MoveInfo(PositionXY(x, y), startPlayer), this[0])

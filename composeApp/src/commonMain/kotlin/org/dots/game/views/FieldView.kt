@@ -202,7 +202,7 @@ private fun Grid(field: Field) {
             for (y in Field.OFFSET until field.height + Field.OFFSET) {
                 val yPx = y.coordinateToPx(this)
 
-                val coordinateText = y.toString()
+                val coordinateText = (field.height + Field.OFFSET - y).toString()
                 val textLayoutResult = textMeasurer.measure(coordinateText)
 
                 drawText(

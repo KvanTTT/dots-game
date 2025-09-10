@@ -16,10 +16,10 @@ class TransformOperations : FieldTests() {
     fun testTransformation() {
         val originFieldData =
 """
-. . . + *
-. . . . +
-. . . . .
+. . . * +
 . . . . *
+. . . . .
+. . . . +
 """
         val originField = FieldParser.parseAndConvert(originFieldData, initializeRules = { width, height ->
             Rules(width, height, captureByBorder, baseMode, suicideAllowed, initialMoves = InitialPositionType.Cross.generateDefaultInitialPositions(width, height)!!)
@@ -28,10 +28,10 @@ class TransformOperations : FieldTests() {
         checkOperation(
             originField,
             """
-.  .  .  +4 *5
-.  .  +0 *1 +6
-.  .  *3 +2 .
-.  .  .  .  *7
+.  .  .  *4 +5
+.  .  *0 +1 *6
+.  .  +3 *2 .
+.  .  .  .  +7
 """.trim(),
             transformType = null
         )
@@ -41,9 +41,9 @@ class TransformOperations : FieldTests() {
             """
 .  .  .  .
 .  .  .  .
-.  *3 +0 .
-.  +2 *1 +4
-*7 .  +6 *5
+.  +3 *0 .
+.  *2 +1 *4
++7 .  *6 +5
 """.trim(),
             TransformType.RotateCw90
         )
@@ -51,10 +51,10 @@ class TransformOperations : FieldTests() {
         checkOperation(
             originField,
             """
-*7 .  .  .  .
-.  +2 *3 .  .
-+6 *1 +0 .  .
-*5 +4 .  .  .
++7 .  .  .  .
+.  *2 +3 .  .
+*6 +1 *0 .  .
++5 *4 .  .  .
 """.trim(),
             TransformType.Rotate180
         )
@@ -62,9 +62,9 @@ class TransformOperations : FieldTests() {
         checkOperation(
             originField,
             """
-*5 +6 .  *7
-+4 *1 +2 .
-.  +0 *3 .
++5 *6 .  +7
+*4 +1 *2 .
+.  *0 +3 .
 .  .  .  .
 .  .  .  .
 """.trim(),
@@ -74,10 +74,10 @@ class TransformOperations : FieldTests() {
         checkOperation(
             originField,
             """
-*5 +4 .  .  .
-+6 *1 +0 .  .
-.  +2 *3 .  .
-*7 .  .  .  .
++5 *4 .  .  .
+*6 +1 *0 .  .
+.  *2 +3 .  .
++7 .  .  .  .
 """.trim(),
             TransformType.FlipHorizontal
         )
@@ -85,10 +85,10 @@ class TransformOperations : FieldTests() {
         checkOperation(
             originField,
             """
-.  .  .  .  *7
-.  .  *3 +2 .
-.  .  +0 *1 +6
-.  .  .  +4 *5
+.  .  .  .  +7
+.  .  +3 *2 .
+.  .  *0 +1 *6
+.  .  .  *4 +5
 """.trimIndent(),
             TransformType.FlipVertical
         )
@@ -100,7 +100,7 @@ class TransformOperations : FieldTests() {
         assertEquals(originField.initialMovesCount, transformedField.initialMovesCount)
         assertEquals(originField.player1Score, transformedField.player1Score)
         assertEquals(originField.player2Score, transformedField.player2Score)
-        assertEquals(1, transformedField.player2Score)
+        assertEquals(1, transformedField.player1Score)
         assertEquals(originField.gameResult, transformedField.gameResult)
         assertEquals(originField.numberOfLegalMoves, transformedField.numberOfLegalMoves)
     }

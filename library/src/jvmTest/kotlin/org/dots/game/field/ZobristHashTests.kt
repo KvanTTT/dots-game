@@ -156,8 +156,8 @@ class ZobristHashTests {
         val fieldWithManuallyPlacedCross = FieldParser.parseAndConvertWithNoInitialMoves(
 """
 . . . .
-. + * .
 . * + .
+. + * .
 . . . .
 """,
         )
