@@ -2,7 +2,7 @@ package org.dots.game.sgf
 
 abstract class SgfParsedNode(val textSpan: TextSpan)
 
-sealed class SgfToken(textSpan: TextSpan, val value: String) : SgfParsedNode(textSpan) {
+sealed class SgfToken(textSpan: TextSpan, val value: String, val leadingWs: WhitespaceToken?) : SgfParsedNode(textSpan) {
     open val isError: Boolean
         get() = textSpan.size == 0
 }
@@ -54,20 +54,22 @@ class SgfPropertyValueNode(
     textSpan: TextSpan,
 ) : SgfParsedNode(textSpan)
 
-class LParenToken(textSpan: TextSpan) : SgfToken(textSpan, "(")
+class LParenToken(textSpan: TextSpan, leadingWs: WhitespaceToken? = null) : SgfToken(textSpan, "(", leadingWs)
 
-class RParenToken(textSpan: TextSpan) : SgfToken(textSpan, ")")
+class RParenToken(textSpan: TextSpan, leadingWs: WhitespaceToken? = null) : SgfToken(textSpan, ")", leadingWs)
 
-class SemicolonToken(textSpan: TextSpan) : SgfToken(textSpan, ";")
+class SemicolonToken(textSpan: TextSpan, leadingWs: WhitespaceToken? = null) : SgfToken(textSpan, ";", leadingWs)
 
-class IdentifierToken(value: String, textSpan: TextSpan) : SgfToken(textSpan, value)
+class IdentifierToken(value: String, textSpan: TextSpan, leadingWs: WhitespaceToken? = null) : SgfToken(textSpan, value, leadingWs)
 
-class LSquareBracketToken(textSpan: TextSpan) : SgfToken(textSpan, "[")
+class LSquareBracketToken(textSpan: TextSpan, leadingWs: WhitespaceToken? = null) : SgfToken(textSpan, "[", leadingWs)
 
-class RSquareBracketToken(textSpan: TextSpan) : SgfToken(textSpan, "]")
+class RSquareBracketToken(textSpan: TextSpan) : SgfToken(textSpan, "]", null)
 
-class PropertyValueToken(value: String, textSpan: TextSpan) : SgfToken(textSpan, value)
+class PropertyValueToken(value: String, textSpan: TextSpan) : SgfToken(textSpan, value, null)
 
-class UnparsedTextToken(value: String, textSpan: TextSpan) : SgfToken(textSpan, value) {
+class UnparsedTextToken(value: String, textSpan: TextSpan, leadingWs: WhitespaceToken? = null) : SgfToken(textSpan, value, leadingWs) {
     override val isError: Boolean = true
 }
+
+class WhitespaceToken(value: String, textSpan: TextSpan): SgfToken(textSpan, value, null)

@@ -26,9 +26,10 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
     }
 
     private var currentIndex = 0
+    private var lastWhitespace: WhitespaceToken? = null
 
     private fun parse(): SgfRoot {
-        skipWhitespaces()
+        parseWhitespaces()
 
         val gameTrees = buildList {
             while (expect('(')) {
@@ -39,7 +40,8 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
         val unparsedTextToken = if (currentIndex < text.length) {
             UnparsedTextToken(
                 text.substring(currentIndex),
-                TextSpan(currentIndex, text.length - currentIndex)
+                TextSpan(currentIndex, text.length - currentIndex),
+                extractLeadingWhitespaces()
             ).also { it.reportIfError() }
         } else {
             null
@@ -54,9 +56,9 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
     }
 
     private fun parseGameTree(): SgfGameTree {
-        val lParen = LParenToken(matchChar('('))
+        val lParen = LParenToken(matchChar('('), extractLeadingWhitespaces())
 
-        skipWhitespaces()
+        parseWhitespaces()
 
         val nodes = buildList {
             while (expect(';')) {
@@ -70,17 +72,17 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
             }
         }
 
-        val rParen = RParenToken(tryMatchChar(')')).also { it.reportIfError() }
+        val rParen = RParenToken(tryMatchChar(')'), extractLeadingWhitespaces()).also { it.reportIfError() }
 
-        skipWhitespaces()
+        parseWhitespaces()
 
         return SgfGameTree(lParen, nodes, childrenGameTrees, rParen, textSpanFromNodes(lParen, rParen))
     }
 
     private fun parseNode(): SgfNode {
-        val semicolon = SemicolonToken(matchChar(';'))
+        val semicolon = SemicolonToken(matchChar(';'), extractLeadingWhitespaces())
 
-        skipWhitespaces()
+        parseWhitespaces()
 
         val properties = buildList {
             while (checkBounds() && text[currentIndex].checkIdentifierChar()) {
@@ -99,9 +101,9 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
             currentIndex++
         }
 
-        val identifier = IdentifierToken(text.substring(initialIndex, currentIndex), getCurrentTextSpan(initialIndex))
+        val identifier = IdentifierToken(text.substring(initialIndex, currentIndex), getCurrentTextSpan(initialIndex), extractLeadingWhitespaces())
 
-        skipWhitespaces()
+        parseWhitespaces()
 
         val values = buildList {
             while (expect('[')) {
@@ -113,13 +115,13 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
     }
 
     private fun parsePropertyValue(): SgfPropertyValueNode {
-        val lSquareBracket = LSquareBracketToken(matchChar('['))
+        val lSquareBracket = LSquareBracketToken(matchChar('['), extractLeadingWhitespaces())
 
         val propertyValueToken = parsePropertyValueToken()
 
         val rSquareBracket = RSquareBracketToken(tryMatchChar(']')).also { it.reportIfError() }
 
-        skipWhitespaces()
+        parseWhitespaces()
 
         return SgfPropertyValueNode(lSquareBracket, propertyValueToken, rSquareBracket, textSpanFromNodes(lSquareBracket, rSquareBracket))
     }
@@ -143,7 +145,7 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
         return PropertyValueToken(text.substring(initialIndex, currentIndex), getCurrentTextSpan(initialIndex))
     }
 
-    private fun Char.checkIdentifierChar(): Boolean = this >= 'A' && this <= 'Z'
+    private fun Char.checkIdentifierChar(): Boolean = this in 'A'..'Z'
 
     private fun matchChar(char: Char): TextSpan {
         require(text[currentIndex] == char)
@@ -177,10 +179,15 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
         }
     }
 
-    private fun skipWhitespaces() {
+    private fun parseWhitespaces() {
+        val initialIndex = currentIndex
         while (checkBounds() && text[currentIndex].isWhitespace()) {
             currentIndex++
         }
+        lastWhitespace = if (currentIndex > initialIndex)
+            WhitespaceToken(text.substring(initialIndex, currentIndex), getCurrentTextSpan(initialIndex))
+        else
+            null
     }
 
     private fun textSpanFromNodes(startNode: SgfParsedNode, endNode: SgfParsedNode): TextSpan {
@@ -188,4 +195,6 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
     }
 
     private fun getCurrentTextSpan(initialIndex: Int): TextSpan = TextSpan(initialIndex, currentIndex - initialIndex)
+
+    private fun extractLeadingWhitespaces(): WhitespaceToken? = lastWhitespace.also { lastWhitespace = null }
 }

@@ -6,6 +6,7 @@ import org.dots.game.buildLineOffsets
 import org.dots.game.toLineColumnDiagnostic
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class SgfParserTests {
     @Test
@@ -134,24 +135,34 @@ class SgfParserTests {
 
     @Test
     fun whitespaces() {
-        val sgf = parseAndCheck(" ( ;\nGC [info1 info2 ] ) ---",
-            LineColumnDiagnostic("Unrecognized text `---`", LineColumn(2, 21)),
+        val sgf = parseAndCheck(" ( ;\nGC [info1 info2 ] ) --- ",
+            LineColumnDiagnostic("Unrecognized text `--- `", LineColumn(2, 21)),
         )
-        assertEquals(TextSpan(25, 3), sgf.unparsedText!!.textSpan)
+        assertEquals(TextSpan(25, 4), sgf.unparsedText!!.textSpan)
+        assertEquals(TextSpan(24, 1), sgf.unparsedText.leadingWs!!.textSpan)
 
         val gameTree = sgf.gameTree.single()
         assertEquals(TextSpan(1, 23), gameTree.textSpan)
+        assertEquals(TextSpan(0, 1), gameTree.lParen.leadingWs!!.textSpan)
+        assertEquals(TextSpan(22, 1), gameTree.rParen.leadingWs!!.textSpan)
 
         val node = gameTree.nodes.single()
         assertEquals(TextSpan(3, 19), node.textSpan)
+        assertEquals(TextSpan(2, 1), node.semicolon.leadingWs!!.textSpan)
 
         val property = node.properties.single()
         assertEquals(TextSpan(5, 17), property.textSpan)
+        assertEquals(TextSpan(4, 1), property.identifier.leadingWs!!.textSpan)
+        assertEquals("\n", property.identifier.leadingWs.value)
 
         val propertyValue = property.value.single()
         assertEquals(TextSpan(8, 14), propertyValue.textSpan)
+        assertEquals(TextSpan(7, 1), propertyValue.lSquareBracket.leadingWs!!.textSpan)
+        assertNull(propertyValue.rSquareBracket.leadingWs)
 
-        checkTokens(PropertyValueToken("info1 info2 ", TextSpan(9, 12)), propertyValue.propertyValueToken)
+        val propertyValueToken = propertyValue.propertyValueToken
+        checkTokens(PropertyValueToken("info1 info2 ", TextSpan(9, 12)), propertyValueToken)
+        assertNull(propertyValueToken.leadingWs)
     }
 
     private fun parseAndCheck(input: String, vararg expectedDiagnostics: LineColumnDiagnostic): SgfRoot {
