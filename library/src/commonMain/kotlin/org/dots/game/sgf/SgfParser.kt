@@ -85,7 +85,7 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
         parseWhitespaces()
 
         val properties = buildList {
-            while (checkBounds() && text[currentIndex].checkIdentifierChar()) {
+            while (checkBounds() && text[currentIndex].checkIdentifierHeadChar()) {
                 add(parseProperty())
             }
         }
@@ -97,7 +97,7 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
         val initialIndex = currentIndex
         currentIndex++
 
-        while (checkBounds() && text[currentIndex].checkIdentifierChar()) {
+        while (checkBounds() && text[currentIndex].checkIdentifierTailChar()) {
             currentIndex++
         }
 
@@ -145,7 +145,9 @@ class SgfParser private constructor(val text: CharSequence, val diagnosticReport
         return PropertyValueToken(text.substring(initialIndex, currentIndex), getCurrentTextSpan(initialIndex))
     }
 
-    private fun Char.checkIdentifierChar(): Boolean = this in 'A'..'Z'
+    private fun Char.checkIdentifierTailChar(): Boolean = checkIdentifierHeadChar() || this in '0'..'9'
+
+    private fun Char.checkIdentifierHeadChar(): Boolean = this in 'A'..'Z'
 
     private fun matchChar(char: Char): TextSpan {
         require(text[currentIndex] == char)
