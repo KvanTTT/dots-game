@@ -2,16 +2,14 @@ package org.dots.game.sgf
 
 import org.dots.game.Diagnostic
 import org.dots.game.DiagnosticSeverity
-import org.dots.game.convertAppInfo
-import org.dots.game.convertSimpleText
-import org.dots.game.convertText
 import org.dots.game.core.EndGameKind
 import org.dots.game.core.Field
 import org.dots.game.core.Game
 import org.dots.game.core.ExternalFinishReason
-import org.dots.game.core.GameInfo
+import org.dots.game.core.GameProperty
 import org.dots.game.core.GameResult
 import org.dots.game.core.GameTree
+import org.dots.game.core.Games
 import org.dots.game.core.Label
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.MoveResult
@@ -21,49 +19,32 @@ import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_KEY
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_NAME
-import org.dots.game.sgf.SgfMetaInfo.ANNOTATOR_KEY
-import org.dots.game.sgf.SgfMetaInfo.APP_INFO_KEY
 import org.dots.game.sgf.SgfMetaInfo.CIRCLE_KEY
 import org.dots.game.sgf.SgfMetaInfo.COMMENT_KEY
-import org.dots.game.sgf.SgfMetaInfo.COPYRIGHT_KEY
-import org.dots.game.sgf.SgfMetaInfo.DATE_KEY
-import org.dots.game.sgf.SgfMetaInfo.EVENT_KEY
 import org.dots.game.sgf.SgfMetaInfo.FILE_FORMAT_KEY
-import org.dots.game.sgf.SgfMetaInfo.GAME_COMMENT_KEY
 import org.dots.game.sgf.SgfMetaInfo.GAME_MODE_KEY
-import org.dots.game.sgf.SgfMetaInfo.GAME_NAME_KEY
 import org.dots.game.sgf.SgfMetaInfo.GROUNDING_WIN_GAME_RESULT
-import org.dots.game.sgf.SgfMetaInfo.KOMI_KEY
 import org.dots.game.sgf.SgfMetaInfo.LABEL_KEY
-import org.dots.game.sgf.SgfMetaInfo.OPENING_KEY
-import org.dots.game.sgf.SgfMetaInfo.OVERTIME_KEY
-import org.dots.game.sgf.SgfMetaInfo.PLACE_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_ADD_DOTS_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_MARKER
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_MOVE_KEY
-import org.dots.game.sgf.SgfMetaInfo.PLAYER1_NAME_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_RATING_KEY
-import org.dots.game.sgf.SgfMetaInfo.PLAYER1_TEAM_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_TIME_LEFT_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_ADD_DOTS_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_MARKER
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_MOVE_KEY
-import org.dots.game.sgf.SgfMetaInfo.PLAYER2_NAME_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_RATING_KEY
-import org.dots.game.sgf.SgfMetaInfo.PLAYER2_TEAM_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_TIME_LEFT_KEY
 import org.dots.game.sgf.SgfMetaInfo.RESIGN_WIN_GAME_RESULT
 import org.dots.game.sgf.SgfMetaInfo.RESULT_KEY
-import org.dots.game.sgf.SgfMetaInfo.ROUND_KEY
 import org.dots.game.sgf.SgfMetaInfo.SIZE_KEY
-import org.dots.game.sgf.SgfMetaInfo.SOURCE_KEY
 import org.dots.game.sgf.SgfMetaInfo.SQUARE_KEY
-import org.dots.game.sgf.SgfMetaInfo.TIME_KEY
 import org.dots.game.sgf.SgfMetaInfo.TIME_WIN_GAME_RESULT
 import org.dots.game.sgf.SgfMetaInfo.UNKNOWN_WIN_GAME_RESULT
-import org.dots.game.sgf.SgfMetaInfo.propertyInfoToKey
+import org.dots.game.sgf.SgfMetaInfo.sgfPropertyInfoToKey
 import org.dots.game.sgf.SgfMetaInfo.propertyInfos
 import org.dots.game.toNeatNumber
+import kotlin.reflect.KProperty
 
 class SgfConverter(
     val sgf: SgfRoot,
@@ -84,7 +65,7 @@ class SgfConverter(
          *   * Unsupported mode (not Kropki)
          *   * Incorrect or unspecified size
          */
-        fun convert(sgf: SgfRoot, warnOnMultipleGames: Boolean = false, useEndingMove: Boolean = true, measureNanos: (() -> Long)? = null, diagnosticReporter: (Diagnostic) -> Unit): List<Game> {
+        fun convert(sgf: SgfRoot, warnOnMultipleGames: Boolean = false, useEndingMove: Boolean = true, measureNanos: (() -> Long)? = null, diagnosticReporter: (Diagnostic) -> Unit): Games {
             return SgfConverter(sgf, warnOnMultipleGames, useEndingMove, measureNanos, diagnosticReporter).convert()
         }
     }
@@ -96,14 +77,14 @@ class SgfConverter(
     var fieldNanos: Long = 0L
         private set
 
-    fun convert(): List<Game> {
+    fun convert(): Games {
         capturingIsCalculatedAutomaticallyIsReported = false
 
         if (sgf.gameTree.isEmpty()) {
             reportDiagnostic("Empty game trees.", sgf.textSpan, DiagnosticSeverity.Warning)
         }
 
-        return buildList {
+        return Games(sgf).apply {
             for ((index, sgfGameTree) in sgf.gameTree.withIndex()) {
                 convertGameTree(sgfGameTree, mainBranch = true, game = null, rootConverterProperties = null)?.let { add(it) }
 
@@ -135,7 +116,7 @@ class SgfConverter(
             if (isRootScope) {
                 require(initializedGame == null)
                 require(initializedRootConverterProperties == null)
-                initializedGame = convertGameInfo(sgfNode, convertedProperties, hasCriticalError)
+                initializedGame = convertGameInfo(sgfGameTree, sgfNode, convertedProperties, hasCriticalError)
                 initializedRootConverterProperties = convertedProperties
             }
             if (initializedGame?.gameTree != null) {
@@ -168,7 +149,7 @@ class SgfConverter(
     }
 
     private fun Map<String, SgfProperty<*>>.finishAndValidateGameResult(game: Game, currentGameTree: SgfGameTree): Int {
-        val definedGameResult = game.gameInfo.result
+        val definedGameResult = game.result
         val gameTree = game.gameTree
         val field = gameTree.field
         var addedMovesCount = 0
@@ -238,12 +219,17 @@ class SgfConverter(
         return addedMovesCount
     }
 
-    private fun convertGameInfo(node: SgfNode, gameInfoProperties: Map<String, SgfProperty<*>>, hasCriticalError: Boolean): Game? {
+    private fun convertGameInfo(
+        sgfGameTree: SgfGameTree,
+        sgfNode: SgfNode,
+        gameInfoProperties: Map<String, SgfProperty<*>>,
+        hasCriticalError: Boolean
+    ): Game? {
         var hasCriticalError = hasCriticalError
 
         // Report only properties that should be specified
-        gameInfoProperties.reportPropertyIfNotSpecified(GAME_MODE_KEY, node, DiagnosticSeverity.Error)
-        gameInfoProperties.reportPropertyIfNotSpecified(FILE_FORMAT_KEY, node, DiagnosticSeverity.Error)
+        gameInfoProperties.reportPropertyIfNotSpecified(GAME_MODE_KEY, sgfNode, DiagnosticSeverity.Error)
+        gameInfoProperties.reportPropertyIfNotSpecified(FILE_FORMAT_KEY, sgfNode, DiagnosticSeverity.Error)
 
         val sizeProperty = gameInfoProperties[SIZE_KEY]
         val width: Int?
@@ -261,7 +247,7 @@ class SgfConverter(
         } else {
             width = null
             height = null
-            gameInfoProperties.reportPropertyIfNotSpecified(SIZE_KEY, node, DiagnosticSeverity.Critical)
+            gameInfoProperties.reportPropertyIfNotSpecified(SIZE_KEY, sgfNode, DiagnosticSeverity.Critical)
             hasCriticalError = true
         }
 
@@ -275,9 +261,7 @@ class SgfConverter(
                     val (propertyInfo, textSpan) = player2InitialMoveInfo.extraInfo as PropertyInfoAndTextSpan
                     propertyInfo.reportPropertyDiagnostic(
                         "value `${textSpan.getText()}` overwrites one the previous position of first player ${
-                            propertyInfos.getValue(
-                                PLAYER1_ADD_DOTS_KEY
-                            ).getFullName()
+                            propertyInfos.getValue(PLAYER1_ADD_DOTS_KEY).getFullName()
                         }.",
                         textSpan,
                         DiagnosticSeverity.Warning,
@@ -290,39 +274,25 @@ class SgfConverter(
         val player1TimeLeft = gameInfoProperties.getPropertyValue<Double>(PLAYER1_TIME_LEFT_KEY)
         val player2TimeLeft = gameInfoProperties.getPropertyValue<Double>(PLAYER2_TIME_LEFT_KEY)
 
-        val gameInfo = GameInfo(
-            appInfo = gameInfoProperties.getPropertyValue(APP_INFO_KEY),
-            gameName = gameInfoProperties.getPropertyValue(GAME_NAME_KEY),
-            player1Name = gameInfoProperties.getPropertyValue(PLAYER1_NAME_KEY),
-            player1Rating = gameInfoProperties.getPropertyValue(PLAYER1_RATING_KEY),
-            player1Team = gameInfoProperties.getPropertyValue(PLAYER1_TEAM_KEY),
-            player2Name = gameInfoProperties.getPropertyValue(PLAYER2_NAME_KEY),
-            player2Rating = gameInfoProperties.getPropertyValue(PLAYER2_RATING_KEY),
-            player2Team = gameInfoProperties.getPropertyValue(PLAYER2_TEAM_KEY),
-            komi = gameInfoProperties.getPropertyValue(KOMI_KEY),
-            date = gameInfoProperties.getPropertyValue(DATE_KEY),
-            description = gameInfoProperties.getPropertyValue(GAME_COMMENT_KEY),
-            comment = gameInfoProperties.getPropertyValue(COMMENT_KEY),
-            place = gameInfoProperties.getPropertyValue(PLACE_KEY),
-            event = gameInfoProperties.getPropertyValue(EVENT_KEY),
-            opening = gameInfoProperties.getPropertyValue(OPENING_KEY),
-            annotator = gameInfoProperties.getPropertyValue(ANNOTATOR_KEY),
-            copyright = gameInfoProperties.getPropertyValue(COPYRIGHT_KEY),
-            source = gameInfoProperties.getPropertyValue(SOURCE_KEY),
-            time = gameInfoProperties.getPropertyValue(TIME_KEY),
-            overtime = gameInfoProperties.getPropertyValue(OVERTIME_KEY),
-            result = gameInfoProperties.getPropertyValue(RESULT_KEY),
-            round = gameInfoProperties.getPropertyValue(ROUND_KEY),
-        )
+        val gameProperties = mutableMapOf<KProperty<*>, GameProperty<*>>()
 
-        val rules = Rules(width, height, initialMoves = initialMoves, komi = gameInfo.komi ?: 0.0)
+        for (sgfProperty in gameInfoProperties.values) {
+            val gameProperty = gameProperties[sgfProperty.info.gameInfoProperty]
+            gameProperties[sgfProperty.info.gameInfoProperty] = if (gameProperty == null) {
+                GameProperty(sgfProperty.value, parsedNodes = listOf(sgfProperty.node))
+            } else {
+                GameProperty(gameProperty.value, parsedNodes = gameProperty.parsedNodes + sgfProperty.node)
+            }
+        }
+
+        val rules = Rules(width, height, initialMoves = initialMoves, komi = gameProperties[Game::komi]?.value as? Double ?: 0.0)
         val field = Field.create(rules) { moveInfo, withinBounds, currentMoveNumber ->
             moveInfo.reportPositionThatViolatesRules(withinBounds, width, height, currentMoveNumber)
         }
 
         val gameTree = GameTree(field, player1TimeLeft, player2TimeLeft).also { it.memoizePaths = false }
 
-        return Game(gameInfo, gameTree)
+        return Game(gameTree, gameProperties, sgfGameTree)
     }
 
     private fun convertMovesInfo(
@@ -470,17 +440,13 @@ class SgfConverter(
         }
     }
 
-    private fun <T> Map<String, SgfProperty<*>>.getPropertyValue(propertyKey: String): T? {
-        @Suppress("UNCHECKED_CAST")
-        return this[propertyKey]?.value as? T
-    }
-
     private fun SgfPropertyNode.convert(): Pair<SgfProperty<*>, Boolean> {
         var reportedCriticalError = false
 
         val propertyIdentifier = identifier.value
         val propertyInfo = propertyInfos[propertyIdentifier] ?: SgfPropertyInfo(
             propertyIdentifier,
+            Game::unknownProperties,
             SgfPropertyType.Text,
             multipleValues = true,
             scope = SgfPropertyScope.Both,
@@ -537,7 +503,7 @@ class SgfConverter(
                 }
 
                 SgfPropertyType.Double -> {
-                    val normalizedValue = if (propertyInfoToKey.getValue(propertyInfo).let { it  == PLAYER1_RATING_KEY || it == PLAYER2_RATING_KEY }) {
+                    val normalizedValue = if (sgfPropertyInfoToKey.getValue(propertyInfo).let { it  == PLAYER1_RATING_KEY || it == PLAYER2_RATING_KEY }) {
                         // TODO: consider `AppType` (normalization is only actual for Playdots)
                         propertyValue.split(',').last()
                     } else {
@@ -895,7 +861,7 @@ class SgfConverter(
         val propertyKey: String
         val propertyNameInfix: String
         if (isKnown) {
-            propertyKey = propertyInfoToKey.getValue(this)
+            propertyKey = sgfPropertyInfoToKey.getValue(this)
             propertyNameInfix = " ($name)"
         } else {
             propertyKey = name

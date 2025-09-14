@@ -1,67 +1,86 @@
 package org.dots.game.core
 
-class Game(val gameInfo: GameInfo, val gameTree: GameTree) {
+import org.dots.game.ParsedNode
+import kotlin.reflect.KProperty
+
+class Games(val parsedNode: ParsedNode? = null) : MutableList<Game> by mutableListOf()
+
+class Game(
+    val gameTree: GameTree,
+    val gameProperties: MutableMap<KProperty<*>, GameProperty<*>> = mutableMapOf(),
+    val parsedNode: ParsedNode? = null
+) {
+    init {
+        val sizeProperty = gameProperties[Game::size]
+        val rules = gameTree.field.rules
+        @Suppress("UNCHECKED_CAST")
+        if (sizeProperty != null) {
+            val (width, height) = sizeProperty.value as Pair<Int, Int>
+            require(width == rules.width)
+            require(height == rules.height)
+        } else {
+            gameProperties[Game::size] = GameProperty(rules.width to rules.height, true)
+        }
+    }
+
     val rules = gameTree.field.rules
 
-    operator fun component1(): GameInfo = gameInfo
-    operator fun component2(): Rules = rules
-    operator fun component3(): GameTree = gameTree
+    val sgfGameMode: Int? by PropertyDelegate()
+    val sgfFileFormat: Int? by PropertyDelegate()
+    val charset: String? by PropertyDelegate()
+    val size: Pair<Int, Int> by PropertyDelegate()
+    val extraRules: String? by PropertyDelegate()
+    val player1AddDots: List<MoveInfo> by PropertyDelegate()
+    val player2AddDots: List<MoveInfo> by PropertyDelegate()
+
+    var player1TimeLeft: Double? by PropertyDelegate()
+    var player2TimeLeft: Double? by PropertyDelegate()
+    var appInfo: AppInfo? by PropertyDelegate()
+    var gameName: String? by PropertyDelegate()
+    var player1Name: String? by PropertyDelegate()
+    var player1Rating: Double? by PropertyDelegate()
+    var player1Team: String? by PropertyDelegate()
+    var player2Name: String? by PropertyDelegate()
+    var player2Rating: Double? by PropertyDelegate()
+    var player2Team: String? by PropertyDelegate()
+    var komi: Double? by PropertyDelegate()
+    var date: String? by PropertyDelegate()
+    var description: String? by PropertyDelegate()
+    var comment: String? by PropertyDelegate()
+    var place: String? by PropertyDelegate()
+    var event: String? by PropertyDelegate()
+    var opening: String? by PropertyDelegate()
+    var annotator: String? by PropertyDelegate()
+    var copyright: String? by PropertyDelegate()
+    var source: String? by PropertyDelegate()
+    var time: Double? by PropertyDelegate()
+    var overtime: String? by PropertyDelegate()
+    var result: GameResult? by PropertyDelegate()
+    var round: String? by PropertyDelegate()
+
+    var unknownProperties: List<String> by PropertyDelegate()
 }
 
-class GameInfo(
-    val appInfo: AppInfo?,
-    val gameName: String?,
-    val player1Name: String?,
-    val player1Rating: Double?,
-    val player1Team: String?,
-    val player2Name: String?,
-    val player2Rating: Double?,
-    val player2Team: String?,
-    val komi: Double?,
-    val date: String?,
-    val description: String?,
-    val comment: String?,
-    val place: String?,
-    val event: String?,
-    val opening: String?,
-    val annotator: String?,
-    val copyright: String?,
-    val source: String?,
-    val time: Double?,
-    val overtime: String?,
-    val result: GameResult?,
-    val round: String?,
-) {
-    companion object {
-        val Empty = GameInfo(
-            appInfo = null,
-            gameName = null,
-            player1Name = null,
-            player1Rating = null,
-            player1Team = null,
-            player2Name = null,
-            player2Rating = null,
-            player2Team = null,
-            komi = null,
-            date = null,
-            description = null,
-            comment = null,
-            place = null,
-            event = null,
-            opening = null,
-            annotator = null,
-            copyright = null,
-            source = null,
-            time = null,
-            overtime = null,
-            result = null,
-            round = null
-        )
+data class GameProperty<T>(val value: T?, val changed: Boolean = false, val parsedNodes: List<ParsedNode> = emptyList())
+
+class PropertyDelegate {
+    operator fun <T> getValue(thisRef: Game, property: KProperty<*>): T {
+        @Suppress("UNCHECKED_CAST")
+        return thisRef.gameProperties[property]?.value as T
+    }
+
+    operator fun <T> setValue(thisRef: Game, property: KProperty<*>, value: T) {
+        thisRef.gameProperties[property] =
+            GameProperty(value, changed = true, thisRef.gameProperties[property]?.parsedNodes ?: emptyList())
     }
 }
 
 data class AppInfo(val name: String, val version: String?) {
     val appType = AppType.entries.find { it.value == name } ?: AppType.Unknown
+
+    override fun toString(): String {
+        return name + (if (version == null) "" else ":$version")
+    }
 }
 
 enum class EndGameKind {

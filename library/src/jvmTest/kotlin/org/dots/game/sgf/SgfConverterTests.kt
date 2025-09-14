@@ -6,27 +6,26 @@ import org.dots.game.LineColumnDiagnostic
 import org.dots.game.buildLineOffsets
 import org.dots.game.core.AppInfo
 import org.dots.game.core.AppType
-import org.dots.game.core.Game
 import org.dots.game.core.GameResult
 import org.dots.game.core.GameTreeNode
+import org.dots.game.core.Games
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionPlayer
 import org.dots.game.core.Position
 import org.dots.game.core.PositionXY
 import org.dots.game.toLineColumnDiagnostic
+import org.junit.jupiter.api.Assertions.assertTrue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class SgfConverterTests {
     @Test
     fun gameInfo() {
-        val (gameInfo, rules) = parseConvertAndCheck(
-            "(;GM[40]FF[4]CA[UTF-8]SZ[17:21]RU[russian]GN[Test Game]PB[Player1]BR[256]BT[Player1's Team]PW[Player2]WR[512]WT[Player2's Team]KM[0.5]DT[2025-01-19]GC[A game for SGF parser testing]C[Comment to node]PC[Amsterdam, Netherlands]EV[Test event]ON[Empty]AN[Ivan Kochurkin]CP[@]SO[https://zagram.org/eidokropki/index.html]TM[300]OT[0+25]AP[https\\://zagram.org/eidokropki/index.html:1]RO[1 (final)])",
-            ).single()
-        with (gameInfo) {
+        val games = parseConvertAndCheck(sgfTestDataWithFullInfo)
+        val game = games.single()
+        with (game) {
             assertEquals(17, rules.width)
             assertEquals(21, rules.height)
             assertEquals("Test Game", gameName)
@@ -61,14 +60,14 @@ class SgfConverterTests {
     @Test
     fun multipleGames() {
         val games = parseConvertAndCheck(multiGamesSgf)
-        val (gameInfo0, rules0) = games[0]
-        assertEquals(39, rules0.width)
-        assertEquals(32, rules0.height)
-        assertEquals("game 1", gameInfo0.gameName)
-        val (gameInfo1, rules1) = games[1]
-        assertEquals(20, rules1.width)
-        assertEquals(20, rules1.height)
-        assertEquals("game 2", gameInfo1.gameName)
+        val game0 = games[0]
+        assertEquals(39, game0.rules.width)
+        assertEquals(32, game0.rules.height)
+        assertEquals("game 1", game0.gameName)
+        val game1 = games[1]
+        assertEquals(20, game1.rules.width)
+        assertEquals(20, game1.rules.height)
+        assertEquals("game 2", game1.gameName)
     }
 
     @Test
@@ -318,7 +317,7 @@ class SgfConverterTests {
                     DiagnosticSeverity.Warning
                 ),
             )
-        ).single().gameInfo
+        ).single()
         assertNull(gameInfo.player1Rating)
     }
 
@@ -326,7 +325,7 @@ class SgfConverterTests {
     fun playdotsSgf() {
         val gameInfo = parseConvertAndCheck(
             "(;AP[Спортивные Точки (playdots.ru)]GM[40]FF[4]SZ[39:32]BR[Нет звания, 1200]WR[Второй разряд, 1300])"
-        ).single().gameInfo
+        ).single()
 
         assertEquals(AppType.Playdots, gameInfo.appInfo!!.appType)
         assertEquals(1200.0, gameInfo.player1Rating)
@@ -378,7 +377,7 @@ class SgfConverterTests {
             val actualGameResult = parseConvertAndCheck(
                 "(;GM[40]FF[4]SZ[39:32]RE[$value])",
                 listOf(diagnostic)
-            ).single().gameInfo.result
+            ).single().result
             if (expectedGameResult != null) {
                 assertEquals(expectedGameResult, actualGameResult)
             }
@@ -413,14 +412,14 @@ class SgfConverterTests {
             val actualGameResult = parseConvertAndCheck(
                 "(;GM[40]FF[4]SZ[39:32]RE[$value])",
                 listOfNotNull(diagnostic)
-            ).single().gameInfo.result
+            ).single().result
             assertEquals(expectedGameResult, actualGameResult)
         }
     }
 
     @Test
     fun komi() {
-        parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]KM[0.5]RE[W+0.5])").single().gameInfo.result
+        parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]KM[0.5]RE[W+0.5])").single().result
         parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[39:32]KM[0]RE[W+0.5])",
             listOfNotNull(
@@ -430,11 +429,11 @@ class SgfConverterTests {
                     DiagnosticSeverity.Warning
                 ),
             )
-        ).single().gameInfo.result
+        ).single().result
     }
 }
 
-internal fun parseConvertAndCheck(input: String, expectedDiagnostics: List<LineColumnDiagnostic> = emptyList(), warnOnMultipleGames: Boolean = false): List<Game> {
+internal fun parseConvertAndCheck(input: String, expectedDiagnostics: List<LineColumnDiagnostic> = emptyList(), warnOnMultipleGames: Boolean = false): Games {
     val lineOffsets by lazy(LazyThreadSafetyMode.NONE) { input.buildLineOffsets() }
     val actualDiagnostics = mutableListOf<LineColumnDiagnostic>()
     val games = Sgf.parseAndConvert(input, warnOnMultipleGames) {

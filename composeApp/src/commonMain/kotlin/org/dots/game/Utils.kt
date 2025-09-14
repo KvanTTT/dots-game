@@ -3,7 +3,6 @@ package org.dots.game
 import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Game
-import org.dots.game.core.GameInfo
 import org.dots.game.core.GameTree
 import org.dots.game.core.Rules
 import org.dots.game.core.SECOND_PLAYER_MARKER
@@ -38,7 +37,7 @@ suspend fun openOrLoad(pathOrContent: String, rules: Rules?, diagnosticReporter:
                         add(move)
                     }
                 }
-                return Triple(inputType, pathOrContent, Game(GameInfo.Empty, gameTree))
+                return Triple(inputType, pathOrContent, Game(gameTree))
             }
 
             InputType.SgfContent -> {
