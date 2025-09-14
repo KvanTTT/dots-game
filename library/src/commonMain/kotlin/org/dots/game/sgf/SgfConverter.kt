@@ -65,8 +65,8 @@ class SgfConverter(
          *   * Unsupported mode (not Kropki)
          *   * Incorrect or unspecified size
          */
-        fun convert(sgf: SgfRoot, warnOnMultipleGames: Boolean = false, useEndingMove: Boolean = true, measureNanos: (() -> Long)? = null, diagnosticReporter: (Diagnostic) -> Unit): Games {
-            return SgfConverter(sgf, warnOnMultipleGames, useEndingMove, measureNanos, diagnosticReporter).convert()
+        fun convert(sgf: SgfRoot, warnOnMultipleGames: Boolean = false, addFinishingMove: Boolean = true, measureNanos: (() -> Long)? = null, diagnosticReporter: (Diagnostic) -> Unit): Games {
+            return SgfConverter(sgf, warnOnMultipleGames, addFinishingMove, measureNanos, diagnosticReporter).convert()
         }
     }
 

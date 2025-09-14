@@ -20,7 +20,12 @@ class LoadResult(
 /**
  * [rules] can be used when parsing raw fields that don't have extra info about rules.
  */
-suspend fun openOrLoad(pathOrContent: String, rules: Rules?, diagnosticReporter: ((Diagnostic) -> Unit) = { }): LoadResult {
+suspend fun openOrLoad(
+    pathOrContent: String,
+    rules: Rules?,
+    addFinishingMove: Boolean,
+    diagnosticReporter: ((Diagnostic) -> Unit) = { println(it) }
+): LoadResult {
     try {
         val inputType = getInputType(pathOrContent)
         var sgfContent: String?
@@ -75,7 +80,9 @@ suspend fun openOrLoad(pathOrContent: String, rules: Rules?, diagnosticReporter:
             }
         }
 
-        return LoadResult(inputType, sgfContent, sgfContent?.let { Sgf.parseAndConvert(it, onlySingleGameSupported = false, diagnosticReporter) } ?: Games())
+        return LoadResult(inputType, sgfContent, sgfContent?.let {
+            Sgf.parseAndConvert(it, onlySingleGameSupported = false, addFinishingMove = addFinishingMove, diagnosticReporter)
+        } ?: Games())
     } catch (e: Exception) {
         diagnosticReporter(Diagnostic(e.message ?: e.toString(), textSpan = null, DiagnosticSeverity.Critical))
     }

@@ -67,6 +67,8 @@ class Game(
     var round: String? by PropertyDelegate()
 
     var unknownProperties: List<String> by PropertyDelegate()
+
+    var initialization: Boolean = true
 }
 
 data class GameProperty<T>(val value: T?, val changed: Boolean = false, val parsedNodes: List<ParsedNode> = emptyList())

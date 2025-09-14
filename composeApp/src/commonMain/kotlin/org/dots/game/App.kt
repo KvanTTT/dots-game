@@ -28,6 +28,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun App() {
     MaterialTheme {
         var uiSettings by remember { mutableStateOf(loadUiSettings()) }
+        var openGameSettings by remember { mutableStateOf(loadOpenGameSettings()) }
 
         var start by remember { mutableStateOf(true) }
         var newGameDialogRules by remember { mutableStateOf(loadRules()) }
@@ -69,11 +70,12 @@ fun App() {
             gameTreeViewData = GameTreeViewData(getGameTree())
         }
 
-        fun switchGame(gameNumber: Int, rewindForward: Boolean) {
+        fun switchGame(gameNumber: Int) {
             currentGame = games[gameNumber]
-            if (rewindForward) {
-                currentGame.gameTree.rewindForward()
+            if (openGameSettings.rewindToEnd && currentGame.initialization) {
+                currentGame.gameTree.rewindToEnd()
             }
+            currentGame.initialization = false
             currentGame.gameTree.memoizePaths = true
 
             updateFieldAndGameTree()
@@ -113,15 +115,18 @@ fun App() {
         if (openGameDialog) {
             OpenDialog(
                 newGameDialogRules,
+                openGameSettings,
                 onDismiss = {
                     openGameDialog = false
                     focusRequester.requestFocus()
                 },
-                onConfirmation = { newGames ->
+                onConfirmation = { newGames, newOpenGameSettings ->
                     openGameDialog = false
+                    openGameSettings = newOpenGameSettings
+                    saveOpenGameSettings(openGameSettings)
                     games = newGames
                     if (games.isNotEmpty()) {
-                        switchGame(0, rewindForward = true)
+                        switchGame(0)
                     }
                 }
             )
@@ -292,7 +297,7 @@ fun App() {
                             Button(onClick = {
                                 var currentGameIndex = games.indexOf(currentGame)
                                 currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
-                                switchGame(currentGameIndex, rewindForward = false)
+                                switchGame(currentGameIndex)
                             }, controlButtonModifier) {
                                 Text(if (next) ">>" else "<<")
                             }

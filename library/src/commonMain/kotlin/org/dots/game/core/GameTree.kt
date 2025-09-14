@@ -46,7 +46,7 @@ class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player
 
     fun rewindBack(): Boolean = switch(rootNode)
 
-    fun rewindForward(): Boolean {
+    fun rewindToEnd(): Boolean {
         var result = false
         while (next()) {
             result = true

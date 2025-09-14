@@ -275,7 +275,7 @@ class SgfConverterMovesTests {
         val game =
             parseConvertAndCheck("(;FF[4]GM[40]CA[UTF-8]AP[katago]SZ[10:8]RE[B+1]AB[ed][fe]AW[ee][fd];B[ef];W[de];B[df];W[hd];B[ce];W[hf];B[cd];W[ff];B[dc];W[cf];B[hb];W[ic];B[db];W[gg];B[da];W[bg];B[])").single()
 
-        game.gameTree.rewindForward()
+        game.gameTree.rewindToEnd()
         val gameResult = game.gameTree.field.gameResult as GameResult.ScoreWin
         assertEquals(Player.First, gameResult.winner)
         assertEquals(1.0, gameResult.score)
@@ -373,7 +373,7 @@ class SgfConverterMovesTests {
         gameTree.next()
         assertEquals(firstComment, gameTree.currentNode.comment)
 
-        gameTree.rewindForward()
+        gameTree.rewindToEnd()
         assertEquals(secondComment, gameTree.currentNode.comment)
     }
 

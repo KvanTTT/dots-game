@@ -5,6 +5,7 @@ import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
+import org.dots.game.views.OpenGameSettings
 
 private const val firstLevelSeparator = ","
 private const val secondLevelSeparator = ";"
@@ -113,5 +114,25 @@ fun saveUiSettings(uiSettings: UiSettings) {
         setSetting(UiSettings::showDiagonalConnections, uiSettings.showDiagonalConnections)
         setSetting(UiSettings::showThreats, uiSettings.showThreats)
         setSetting(UiSettings::showSurroundings, uiSettings.showSurroundings)
+    }
+}
+
+fun loadOpenGameSettings(): OpenGameSettings {
+    val settings = appSettings ?: return OpenGameSettings.Default
+    val openGameSettingsClass = OpenGameSettings::class // TODO: inline after KT-80853
+    context (settings, openGameSettingsClass) {
+        return OpenGameSettings(
+            rewindToEnd = getSetting(OpenGameSettings::rewindToEnd, OpenGameSettings.Default.rewindToEnd),
+            addFinishingMove = getSetting(OpenGameSettings::addFinishingMove, OpenGameSettings.Default.addFinishingMove),
+        )
+    }
+}
+
+fun saveOpenGameSettings(openGameSettings: OpenGameSettings) {
+    val settings = appSettings ?: return
+    val openGameSettingsClass = OpenGameSettings::class // TODO: inline after KT-80853
+    context (settings, openGameSettingsClass) {
+        setSetting(OpenGameSettings::rewindToEnd, openGameSettings.rewindToEnd)
+        setSetting(OpenGameSettings::addFinishingMove, openGameSettings.addFinishingMove)
     }
 }

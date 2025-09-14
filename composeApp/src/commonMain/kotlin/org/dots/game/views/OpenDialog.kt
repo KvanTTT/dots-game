@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Button
 import androidx.compose.material.Card
+import androidx.compose.material.Checkbox
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
@@ -30,7 +31,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
-import org.dots.game.core.Game
 import org.dots.game.openOrLoad
 import org.dots.game.Diagnostic
 import org.dots.game.InputType
@@ -42,8 +42,9 @@ import org.dots.game.toLineColumnDiagnostic
 @Composable
 fun OpenDialog(
     rules: Rules?,
+    openGameSettings: OpenGameSettings,
     onDismiss: () -> Unit,
-    onConfirmation: (games: Games) -> Unit,
+    onConfirmation: (games: Games, newOpenGameSettings: OpenGameSettings) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
     var pathOrContentTextFieldValue by remember { mutableStateOf(TextFieldValue("")) }
@@ -52,6 +53,7 @@ fun OpenDialog(
     var diagnostics by remember { mutableStateOf<List<Diagnostic>>(listOf()) }
     var inputType by remember { mutableStateOf<InputType>(InputType.Other) }
     var games by remember { mutableStateOf(Games()) }
+    var newOpenGameSettings by remember { mutableStateOf(openGameSettings)}
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(500.dp).wrapContentHeight()) {
@@ -68,7 +70,7 @@ fun OpenDialog(
 
                                 coroutineScope.launch {
                                     diagnostics = buildList {
-                                        val result = openOrLoad(text, rules) { diagnostic ->
+                                        val result = openOrLoad(text, rules, addFinishingMove = newOpenGameSettings.addFinishingMove) { diagnostic ->
                                             add(diagnostic)
                                         }
                                         inputType = result.inputType
@@ -85,6 +87,20 @@ fun OpenDialog(
                         maxLines = if (inputType is InputType.Content) 5 else 1,
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace),
                     )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(newOpenGameSettings.rewindToEnd, onCheckedChange = {
+                        newOpenGameSettings = newOpenGameSettings.copy(rewindToEnd = it)
+                    })
+                    Text("Rewind to End")
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(newOpenGameSettings.addFinishingMove, onCheckedChange = {
+                        newOpenGameSettings = newOpenGameSettings.copy(addFinishingMove = it)
+                    })
+                    Text("Add Finishing Move")
                 }
 
                 if (inputType is InputType.InputTypeWithName && diagnostics.isNotEmpty()) {
@@ -153,13 +169,22 @@ fun OpenDialog(
                 }
 
                 Button(
-                    onClick = { games.takeIf { it.isNotEmpty() }?.let { onConfirmation(it) } },
+                    onClick = { games.takeIf { it.isNotEmpty() }?.let { onConfirmation(it, newOpenGameSettings) } },
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 10.dp),
                     enabled = games.isNotEmpty()
                 ) {
-                    Text("Open game")
+                    Text("Open")
                 }
             }
         }
+    }
+}
+
+data class OpenGameSettings(
+    val rewindToEnd: Boolean,
+    val addFinishingMove: Boolean,
+) {
+    companion object {
+        val Default = OpenGameSettings(rewindToEnd = true, addFinishingMove = false)
     }
 }
