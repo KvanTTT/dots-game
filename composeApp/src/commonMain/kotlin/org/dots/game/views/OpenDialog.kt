@@ -35,6 +35,7 @@ import org.dots.game.openOrLoad
 import org.dots.game.Diagnostic
 import org.dots.game.InputType
 import org.dots.game.buildLineOffsets
+import org.dots.game.core.Games
 import org.dots.game.core.Rules
 import org.dots.game.toLineColumnDiagnostic
 
@@ -42,7 +43,7 @@ import org.dots.game.toLineColumnDiagnostic
 fun OpenDialog(
     rules: Rules?,
     onDismiss: () -> Unit,
-    onConfirmation: (game: Game) -> Unit,
+    onConfirmation: (games: Games) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
     var pathOrContentTextFieldValue by remember { mutableStateOf(TextFieldValue("")) }
@@ -50,7 +51,7 @@ fun OpenDialog(
     var previousInput: String? = null
     var diagnostics by remember { mutableStateOf<List<Diagnostic>>(listOf()) }
     var inputType by remember { mutableStateOf<InputType>(InputType.Other) }
-    var game by remember { mutableStateOf<Game?>(null) }
+    var games by remember { mutableStateOf(Games()) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(500.dp).wrapContentHeight()) {
@@ -70,11 +71,11 @@ fun OpenDialog(
                                         val result = openOrLoad(text, rules) { diagnostic ->
                                             add(diagnostic)
                                         }
-                                        inputType = result.first
+                                        inputType = result.inputType
                                         if (inputType !is InputType.Content) {
-                                            contentTextFieldValue = TextFieldValue(result.second ?: "")
+                                            contentTextFieldValue = TextFieldValue(result.content ?: "")
                                         }
-                                        game = result.third
+                                        games = result.games
                                     }
                                 }
                             }
@@ -152,9 +153,9 @@ fun OpenDialog(
                 }
 
                 Button(
-                    onClick = { game?.let { onConfirmation(it) } },
+                    onClick = { games.takeIf { it.isNotEmpty() }?.let { onConfirmation(it) } },
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 10.dp),
-                    enabled = game != null
+                    enabled = games.isNotEmpty()
                 ) {
                     Text("Open game")
                 }

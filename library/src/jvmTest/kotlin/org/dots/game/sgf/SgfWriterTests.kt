@@ -63,7 +63,7 @@ class SgfWriterTests {
 
     @Test
     fun noSgf() {
-        val games = Games().apply { add(Game(GameTree(Field.create(Rules.Standard)))) }
+        val games = Games(Game(GameTree(Field.create(Rules.Standard))))
         val sgf = SgfWriter.write(games)
         assertEquals("(;GM[40]FF[4]SZ[39:32])", sgf)
     }

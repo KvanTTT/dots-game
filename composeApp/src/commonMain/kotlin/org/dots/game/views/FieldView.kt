@@ -108,15 +108,21 @@ enum class PolygonDrawMode {
 
 private val linesThickness = 0.75.dp
 
+fun Field.getDpSize(): DpSize {
+    return DpSize(
+        cellSize * (width - 1) + fieldPadding * 2,
+        cellSize * (height - 1) + fieldPadding * 2
+    )
+}
+
 @Composable
-fun FieldView(currentMove: MoveResult?, moveMode: MoveMode, fieldViewData: FieldViewData, uiSettings: UiSettings, onMovePlaced: (MoveResult) -> Unit) {
-    val field = fieldViewData.field
+fun FieldView(currentMove: MoveResult?, moveMode: MoveMode, field: Field, uiSettings: UiSettings, onMovePlaced: (MoveResult) -> Unit) {
     val currentDensity = LocalDensity.current
     var pointerFieldPosition: Position? by remember { mutableStateOf(null) }
 
     Box(
         Modifier
-            .size(fieldViewData.fieldSize)
+            .size(field.getDpSize())
             .pointerInput(moveMode, field) {
                 awaitPointerEventScope {
                     while (true) {
@@ -157,13 +163,6 @@ fun FieldView(currentMove: MoveResult?, moveMode: MoveMode, fieldViewData: Field
         }
         Pointer(pointerFieldPosition, moveMode, field, uiSettings)
     }
-}
-
-class FieldViewData(val field: Field) {
-    val fieldSize = DpSize(
-        cellSize * (field.width - 1) + fieldPadding * 2,
-        cellSize * (field.height - 1) + fieldPadding * 2,
-    )
 }
 
 @Composable

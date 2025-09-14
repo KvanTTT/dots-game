@@ -4,19 +4,26 @@ import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Game
 import org.dots.game.core.GameTree
+import org.dots.game.core.Games
 import org.dots.game.core.Rules
 import org.dots.game.core.SECOND_PLAYER_MARKER
 import org.dots.game.dump.FieldParser
 import org.dots.game.sgf.Sgf
 import org.dots.game.sgf.SgfParser
 
+class LoadResult(
+    val inputType: InputType,
+    val content: String?,
+    val games: Games,
+)
+
 /**
  * [rules] can be used when parsing raw fields that don't have extra info about rules.
  */
-suspend fun openOrLoad(pathOrContent: String, rules: Rules?, diagnosticReporter: ((Diagnostic) -> Unit) = { }): Triple<InputType, String?, Game?> {
+suspend fun openOrLoad(pathOrContent: String, rules: Rules?, diagnosticReporter: ((Diagnostic) -> Unit) = { }): LoadResult {
     try {
         val inputType = getInputType(pathOrContent)
-        var sgf: String?
+        var sgfContent: String?
 
         when (inputType) {
             InputType.FieldContent -> {
@@ -37,15 +44,15 @@ suspend fun openOrLoad(pathOrContent: String, rules: Rules?, diagnosticReporter:
                         add(move)
                     }
                 }
-                return Triple(inputType, pathOrContent, Game(gameTree))
+                return LoadResult(inputType, content = pathOrContent, Games(Game(gameTree)))
             }
 
             InputType.SgfContent -> {
-                sgf = pathOrContent
+                sgfContent = pathOrContent
             }
 
             is InputType.SgfFile -> {
-                sgf = if (inputType.isIncorrect) {
+                sgfContent = if (inputType.isIncorrect) {
                     diagnosticReporter(Diagnostic("Incorrect file `${inputType.name}`. The only .sgf and .sgfs files are supported", textSpan = null))
                     null
                 } else {
@@ -54,7 +61,7 @@ suspend fun openOrLoad(pathOrContent: String, rules: Rules?, diagnosticReporter:
             }
 
             is InputType.SgfUrl -> {
-                sgf = if (inputType.isIncorrect) {
+                sgfContent = if (inputType.isIncorrect) {
                     diagnosticReporter(Diagnostic("Incorrect url. The only `$zagramLinkPrefix` is supported", textSpan = null))
                     null
                 } else {
@@ -64,15 +71,15 @@ suspend fun openOrLoad(pathOrContent: String, rules: Rules?, diagnosticReporter:
 
             is InputType.Other -> {
                 diagnosticReporter(Diagnostic("Unrecognized input type. Insert a path to .sgf file or a link to zagram.org game", textSpan = null))
-                sgf = null
+                sgfContent = null
             }
         }
 
-        return Triple(inputType, sgf, sgf?.let { Sgf.parseAndConvert(it, onlySingleGameSupported = true, diagnosticReporter).firstOrNull() })
+        return LoadResult(inputType, sgfContent, sgfContent?.let { Sgf.parseAndConvert(it, onlySingleGameSupported = false, diagnosticReporter) } ?: Games())
     } catch (e: Exception) {
         diagnosticReporter(Diagnostic(e.message ?: e.toString(), textSpan = null, DiagnosticSeverity.Critical))
     }
-    return Triple(InputType.Other, null, null)
+    return LoadResult(InputType.Other, null, Games())
 }
 
 sealed class InputType {

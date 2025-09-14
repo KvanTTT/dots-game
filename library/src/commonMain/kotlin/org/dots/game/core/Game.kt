@@ -3,7 +3,15 @@ package org.dots.game.core
 import org.dots.game.ParsedNode
 import kotlin.reflect.KProperty
 
-class Games(val parsedNode: ParsedNode? = null) : MutableList<Game> by mutableListOf()
+class Games(games: List<Game>, val parsedNode: ParsedNode? = null) : MutableList<Game> by mutableListOf() {
+    init {
+        addAll(games)
+    }
+
+    constructor(game: Game, parsedNode: ParsedNode? = null) : this(listOf(game), parsedNode)
+
+    constructor(parsedNode: ParsedNode? = null) : this(emptyList(), parsedNode)
+}
 
 class Game(
     val gameTree: GameTree,

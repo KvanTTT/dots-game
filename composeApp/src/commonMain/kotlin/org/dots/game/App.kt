@@ -31,10 +31,13 @@ fun App() {
 
         var start by remember { mutableStateOf(true) }
         var newGameDialogRules by remember { mutableStateOf(loadRules()) }
-        var field: Field by remember {  mutableStateOf(Field.create(newGameDialogRules)) }
-        var fieldViewData: FieldViewData by remember { mutableStateOf(FieldViewData(field)) }
-        var gameTree: GameTree by remember { mutableStateOf(GameTree(field)) }
-        var gameTreeViewData: GameTreeViewData by remember { mutableStateOf(GameTreeViewData(gameTree)) }
+        var games by remember { mutableStateOf(Games(Game(GameTree(Field.create(newGameDialogRules))))) }
+        var currentGame by remember { mutableStateOf(games.first()) }
+
+        fun getField(): Field = currentGame.gameTree.field
+        fun getGameTree(): GameTree = currentGame.gameTree
+
+        var gameTreeViewData: GameTreeViewData by remember { mutableStateOf(GameTreeViewData(currentGame.gameTree)) }
 
         var lastMove: MoveResult? by remember { mutableStateOf(null) }
         var currentGameTreeNode by remember { mutableStateOf<GameTreeNode?>(null) }
@@ -51,10 +54,10 @@ fun App() {
         val focusRequester = remember { FocusRequester() }
 
         fun updateCurrentNode() {
-            player1Score = field.player1Score
-            player2Score = field.player2Score
+            player1Score = getField().player1Score
+            player2Score = getField().player2Score
 
-            val currentNode = gameTree.currentNode
+            val currentNode = getGameTree().currentNode
             currentGameTreeNode = currentNode
             lastMove = currentNode.moveResult
             moveNumber = currentNode.number
@@ -63,24 +66,29 @@ fun App() {
         fun updateFieldAndGameTree() {
             updateCurrentNode()
 
-            gameTreeViewData = GameTreeViewData(gameTree)
+            gameTreeViewData = GameTreeViewData(getGameTree())
         }
 
-        fun initializeFieldAndGameTree(newField: Field, newGameTree: GameTree, rewindForward: Boolean) {
-            field = newField
-            fieldViewData = FieldViewData(field)
-            gameTree = newGameTree
+        fun switchGame(gameNumber: Int, rewindForward: Boolean) {
+            currentGame = games[gameNumber]
             if (rewindForward) {
-                gameTree.rewindForward()
+                currentGame.gameTree.rewindForward()
             }
-            gameTree.memoizePaths = true
+            currentGame.gameTree.memoizePaths = true
+
+            updateFieldAndGameTree()
+        }
+
+        fun resetGame(newGame: Game) {
+            games[games.indexOf(currentGame)] = newGame
+            currentGame = newGame
+            currentGame.gameTree.memoizePaths = true
 
             updateFieldAndGameTree()
         }
 
         fun resetFieldAndGameTree(rules: Rules) {
-            val newField = Field.create(rules)
-            initializeFieldAndGameTree(newField, GameTree(newField), rewindForward = false)
+            resetGame(Game(GameTree(Field.create(rules))))
         }
 
         if (showNewGameDialog) {
@@ -109,16 +117,19 @@ fun App() {
                     openGameDialog = false
                     focusRequester.requestFocus()
                 },
-                onConfirmation = { game ->
+                onConfirmation = { newGames ->
                     openGameDialog = false
-                    initializeFieldAndGameTree(game.gameTree.field, game.gameTree, rewindForward = true)
+                    games = newGames
+                    if (games.isNotEmpty()) {
+                        switchGame(0, rewindForward = true)
+                    }
                 }
             )
         }
 
         if (showSaveGameDialog) {
             SaveDialog(
-                field,
+                getField(),
                 dumpParameters,
                 onDismiss = {
                     showSaveGameDialog = false
@@ -144,11 +155,11 @@ fun App() {
                     val event = awaitPointerEvent(PointerEventPass.Main)
                     if (event.type == PointerEventType.Press) {
                         if (event.buttons.isBackPressed) {
-                            if (gameTree.back()) {
+                            if (getGameTree().back()) {
                                 updateCurrentNode()
                             }
                         } else if (event.buttons.isForwardPressed) {
-                            if (gameTree.next()) {
+                            if (getGameTree().next()) {
                                 updateCurrentNode()
                             }
                         }
@@ -156,12 +167,13 @@ fun App() {
                 }
             }
         }) {
+            val fieldDpSize = getField().getDpSize()
             Column(Modifier.padding(5.dp)) {
-                Row(Modifier.width(fieldViewData.fieldSize.width), horizontalArrangement = Arrangement.Center) {
+                Row(Modifier.width(fieldDpSize.width), horizontalArrangement = Arrangement.Center) {
                     Text(player1Score.toString(), color = uiSettings.playerFirstColor)
                     Text(" : ")
                     Text(player2Score.toString(), color = uiSettings.playerSecondColor)
-                    val player2Score = field.getScoreDiff(Player.Second)
+                    val player2Score = getField().getScoreDiff(Player.Second)
                     val winnerColor: Color = if (player2Score > 0.0f) {
                         uiSettings.playerSecondColor
                     } else if (player2Score < 0.0f) {
@@ -172,13 +184,17 @@ fun App() {
                     Text("  ($player2Score)", color = winnerColor)
                 }
                 Row {
-                    FieldView(lastMove, moveMode, fieldViewData, uiSettings) {
-                        gameTree.add(it)
+                    FieldView(lastMove, moveMode, getField(), uiSettings) {
+                        getGameTree().add(it)
                         updateFieldAndGameTree()
                     }
                 }
-                Row(Modifier.width(fieldViewData.fieldSize.width), horizontalArrangement = Arrangement.Center) {
-                    Text(moveNumber.toString())
+                Row(Modifier.width(fieldDpSize.width), horizontalArrangement = Arrangement.Center) {
+                    val gameNumberText = if (games.size > 1)
+                        "Game: ${games.indexOf(currentGame)}; "
+                    else
+                        ""
+                    Text( gameNumberText + "Move: " + moveNumber.toString())
                 }
             }
             Column(Modifier.padding(start = 5.dp)) {
@@ -191,7 +207,7 @@ fun App() {
                     Button(onClick = { showNewGameDialog = true }, controlButtonModifier) {
                         Text("New")
                     }
-                    Button(onClick = { resetFieldAndGameTree(field.rules) }, controlButtonModifier) {
+                    Button(onClick = { resetFieldAndGameTree(getField().rules) }, controlButtonModifier) {
                         Text("Reset")
                     }
                     Button(onClick = { openGameDialog = true }, controlButtonModifier) {
@@ -251,12 +267,12 @@ fun App() {
                     fun EndMoveButton(isGrounding: Boolean) {
                         Button(
                             onClick = {
-                                val gameResult = field.finishGame(
+                                val gameResult = getField().finishGame(
                                     if (isGrounding) ExternalFinishReason.Grounding else ExternalFinishReason.Resign,
                                     moveMode.getMovePlayer()
                                 )
                                 if (gameResult != null) {
-                                    gameTree.add(move = field.lastMove, gameResult = gameResult)
+                                    getGameTree().add(move = getField().lastMove, gameResult = gameResult)
                                     updateFieldAndGameTree()
                                     focusRequester.requestFocus()
                                 }
@@ -269,14 +285,28 @@ fun App() {
 
                     EndMoveButton(isGrounding = true)
                     EndMoveButton(isGrounding = false)
+
+                    if (games.size > 1) {
+                        @Composable
+                        fun SwitchGame(next: Boolean) {
+                            Button(onClick = {
+                                var currentGameIndex = games.indexOf(currentGame)
+                                currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
+                                switchGame(currentGameIndex, rewindForward = false)
+                            }, controlButtonModifier) {
+                                Text(if (next) ">>" else "<<")
+                            }
+                        }
+                        SwitchGame(next = false)
+                        SwitchGame(next = true)
+                    }
                 }
 
                 Row(rowModifier) {
                     @Composable
                     fun TransformButton(transformType: TransformType, text: String) {
                         Button(onClick = {
-                            val newGameTree = gameTree.transform(transformType)
-                            initializeFieldAndGameTree(newGameTree.field, newGameTree, rewindForward = false)
+                            resetGame(Game(currentGame.gameTree.transform(transformType)))
                         }, controlButtonModifier) {
                             Text(text)
                         }
@@ -288,7 +318,7 @@ fun App() {
                     TransformButton(TransformType.FlipVertical, "⇕")
                 }
 
-                GameTreeView(currentGameTreeNode, gameTree, gameTreeViewData, uiSettings, focusRequester) {
+                GameTreeView(currentGameTreeNode, currentGame.gameTree, gameTreeViewData, uiSettings, focusRequester) {
                     updateCurrentNode()
                 }
             }
