@@ -136,3 +136,5 @@ fun saveOpenGameSettings(openGameSettings: OpenGameSettings) {
         setSetting(OpenGameSettings::addFinishingMove, openGameSettings.addFinishingMove)
     }
 }
+
+const val PATH_OR_CONTENT_KEY = "pathOrContent"

@@ -31,8 +31,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
-import org.dots.game.openOrLoad
 import org.dots.game.Diagnostic
+import org.dots.game.GameLoader
 import org.dots.game.InputType
 import org.dots.game.buildLineOffsets
 import org.dots.game.core.Games
@@ -42,12 +42,13 @@ import org.dots.game.toLineColumnDiagnostic
 @Composable
 fun OpenDialog(
     rules: Rules?,
+    pathOrContent: String?,
     openGameSettings: OpenGameSettings,
     onDismiss: () -> Unit,
-    onConfirmation: (games: Games, newOpenGameSettings: OpenGameSettings) -> Unit,
+    onConfirmation: (games: Games, newPathOrContent: String, newOpenGameSettings: OpenGameSettings) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var pathOrContentTextFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+    var pathOrContentTextFieldValue by remember { mutableStateOf(TextFieldValue(pathOrContent ?: "")) }
     var contentTextFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     var previousInput: String? = null
     var diagnostics by remember { mutableStateOf<List<Diagnostic>>(listOf()) }
@@ -70,7 +71,7 @@ fun OpenDialog(
 
                                 coroutineScope.launch {
                                     diagnostics = buildList {
-                                        val result = openOrLoad(text, rules, addFinishingMove = newOpenGameSettings.addFinishingMove) { diagnostic ->
+                                        val result = GameLoader.openOrLoad(text, rules, addFinishingMove = newOpenGameSettings.addFinishingMove) { diagnostic ->
                                             add(diagnostic)
                                         }
                                         inputType = result.inputType
@@ -169,7 +170,7 @@ fun OpenDialog(
                 }
 
                 Button(
-                    onClick = { games.takeIf { it.isNotEmpty() }?.let { onConfirmation(it, newOpenGameSettings) } },
+                    onClick = { games.takeIf { it.isNotEmpty() }?.let { onConfirmation(it, previousInput!!, newOpenGameSettings) } },
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 10.dp),
                     enabled = games.isNotEmpty()
                 ) {

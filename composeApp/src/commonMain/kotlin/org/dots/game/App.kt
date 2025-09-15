@@ -19,6 +19,7 @@ import androidx.compose.ui.input.pointer.isBackPressed
 import androidx.compose.ui.input.pointer.isForwardPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.dots.game.core.*
 import org.dots.game.views.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -29,9 +30,12 @@ fun App() {
     MaterialTheme {
         var uiSettings by remember { mutableStateOf(loadUiSettings()) }
         var openGameSettings by remember { mutableStateOf(loadOpenGameSettings()) }
+        var newGameDialogRules by remember { mutableStateOf(loadRules()) }
+
+        val coroutineScope = rememberCoroutineScope()
+        var pathOrContent = appSettings?.getStringOrNull(PATH_OR_CONTENT_KEY)
 
         var start by remember { mutableStateOf(true) }
-        var newGameDialogRules by remember { mutableStateOf(loadRules()) }
         var games by remember { mutableStateOf(Games(Game(GameTree(Field.create(newGameDialogRules))))) }
         var currentGame by remember { mutableStateOf(games.first()) }
 
@@ -91,6 +95,8 @@ fun App() {
 
         fun resetFieldAndGameTree(rules: Rules) {
             resetGame(Game(GameTree(Field.create(rules))))
+            pathOrContent = null
+            appSettings?.putString(PATH_OR_CONTENT_KEY, "")
         }
 
         if (showNewGameDialog) {
@@ -108,24 +114,36 @@ fun App() {
                 }
             )
         } else if (start) {
-            resetFieldAndGameTree(newGameDialogRules)
+            if (pathOrContent != null) {
+                coroutineScope.launch {
+                    val loadResult =
+                        GameLoader.openOrLoad(pathOrContent!!, rules = null, addFinishingMove = openGameSettings.addFinishingMove)
+                    if (loadResult.games.isNotEmpty()) {
+                        games = loadResult.games
+                        switchGame(0)
+                    }
+                }
+            }
             start = false
         }
 
         if (openGameDialog) {
             OpenDialog(
                 newGameDialogRules,
+                pathOrContent,
                 openGameSettings,
                 onDismiss = {
                     openGameDialog = false
                     focusRequester.requestFocus()
                 },
-                onConfirmation = { newGames, newOpenGameSettings ->
+                onConfirmation = { newGames, newPathOrContent, newOpenGameSettings ->
                     openGameDialog = false
                     openGameSettings = newOpenGameSettings
+                    pathOrContent = newPathOrContent
+                    appSettings?.putString(PATH_OR_CONTENT_KEY, newPathOrContent)
                     saveOpenGameSettings(openGameSettings)
-                    games = newGames
                     if (games.isNotEmpty()) {
+                        games = newGames
                         switchGame(0)
                     }
                 }
@@ -268,6 +286,7 @@ fun App() {
                             modifier = playerColorIconModifier.background(uiSettings.playerSecondColor)
                         )
                     }
+
                     @Composable
                     fun EndMoveButton(isGrounding: Boolean) {
                         Button(

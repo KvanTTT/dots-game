@@ -150,7 +150,7 @@ object SgfAnalyser {
             val converterNanos = converterAndFieldElapsedNanos - fieldNanos
 
             if (diagnosticsCount > 0 && games.isNotEmpty()) {
-                diagnosticsLogger("$file contains errors or warnings and has the following rules: ${games.first().gameInfo.comment}")
+                diagnosticsLogger("$file contains errors or warnings and has the following rules: ${games.first().comment}")
             }
 
             return ProcessingResult(parserElapsedNanos, converterNanos, fieldNanos, movesCount)
