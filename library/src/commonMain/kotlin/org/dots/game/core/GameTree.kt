@@ -1,7 +1,7 @@
 package org.dots.game.core
 
-class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player2TimeLeft: Double? = null) {
-    val rootNode: GameTreeNode = GameTreeNode(null, null, null, 0, mutableMapOf())
+class GameTree(val field: Field, val player1TimeLeft: Double? = null, val player2TimeLeft: Double? = null, val comment: String? = null) {
+    val rootNode: GameTreeNode = GameTreeNode(null, null, null, 0, mutableMapOf(), comment = comment)
     private val allNodes: MutableSet<GameTreeNode> = mutableSetOf(rootNode)
     private val memoizedNextChild: MutableMap<GameTreeNode, GameTreeNode> = mutableMapOf()
     var currentNode: GameTreeNode = rootNode

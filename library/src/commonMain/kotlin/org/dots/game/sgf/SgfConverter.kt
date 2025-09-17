@@ -271,9 +271,6 @@ class SgfConverter(
             }
         }
 
-        val player1TimeLeft = gameInfoProperties.getPropertyValue<Double>(PLAYER1_TIME_LEFT_KEY)
-        val player2TimeLeft = gameInfoProperties.getPropertyValue<Double>(PLAYER2_TIME_LEFT_KEY)
-
         val gameProperties = mutableMapOf<KProperty<*>, GameProperty<*>>()
 
         for (sgfProperty in gameInfoProperties.values) {
@@ -290,7 +287,11 @@ class SgfConverter(
             moveInfo.reportPositionThatViolatesRules(withinBounds, width, height, currentMoveNumber)
         }
 
-        val gameTree = GameTree(field, player1TimeLeft, player2TimeLeft).also { it.memoizePaths = false }
+        val player1TimeLeft = gameInfoProperties.getPropertyValue<Double>(PLAYER1_TIME_LEFT_KEY)
+        val player2TimeLeft = gameInfoProperties.getPropertyValue<Double>(PLAYER2_TIME_LEFT_KEY)
+        val comment = gameProperties[Game::comment]?.value as? String
+
+        val gameTree = GameTree(field, player1TimeLeft, player2TimeLeft, comment).also { it.memoizePaths = false }
 
         return Game(gameTree, gameProperties, sgfGameTree)
     }
