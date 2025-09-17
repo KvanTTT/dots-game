@@ -2,6 +2,9 @@ package org.dots.game.sgf
 
 import org.dots.game.Diagnostic
 import org.dots.game.DiagnosticSeverity
+import org.dots.game.core.AppInfo
+import org.dots.game.core.AppType
+import org.dots.game.core.BaseMode
 import org.dots.game.core.EndGameKind
 import org.dots.game.core.Field
 import org.dots.game.core.Game
@@ -282,7 +285,27 @@ class SgfConverter(
             }
         }
 
-        val rules = Rules(width, height, initialMoves = initialMoves, komi = gameProperties[Game::komi]?.value as? Double ?: 0.0)
+        var baseMode = Rules.Standard.baseMode
+        var suicideAllowed = Rules.Standard.suicideAllowed
+
+        if ((gameInfoProperties[SgfMetaInfo.APP_INFO_KEY]?.value as? AppInfo)?.appType == AppType.Katago) {
+            gameInfoProperties[SgfMetaInfo.RULES_KEY]?.let {
+                val kataGoExtraRules = tryParseKataGoExtraRules(it)
+                if (kataGoExtraRules != null) {
+                    baseMode = if (kataGoExtraRules.dotsCaptureEmptyBase) BaseMode.AnySurrounding else Rules.Standard.baseMode
+                    suicideAllowed = kataGoExtraRules.sui
+                }
+            }
+        }
+
+        val rules = Rules(
+            width,
+            height,
+            baseMode = baseMode,
+            suicideAllowed = suicideAllowed,
+            initialMoves = initialMoves,
+            komi = gameProperties[Game::komi]?.value as? Double ?: 0.0
+        )
         val field = Field.create(rules) { moveInfo, withinBounds, currentMoveNumber ->
             moveInfo.reportPositionThatViolatesRules(withinBounds, width, height, currentMoveNumber)
         }
@@ -841,6 +864,83 @@ class SgfConverter(
                 }
             }
         }
+    }
+
+    private data class KataGoExtraRules(val dotsCaptureEmptyBase: Boolean, val sui: Boolean)
+
+    private fun tryParseKataGoExtraRules(sgfRulesProperty: SgfProperty<*>): KataGoExtraRules? {
+        val propertyInfo = sgfRulesProperty.info
+        val sgfPropertyNode = sgfRulesProperty.node
+
+        val propertyValueNode = sgfPropertyNode.value.firstOrNull() ?: return null
+        val propertyValueToken = propertyValueNode.propertyValueToken
+        val propertyValue = propertyValueNode.propertyValueToken.value
+
+        var currentIndex = 0
+
+        fun tryParseKey(property: KProperty<*>): Boolean {
+            val name = property.name
+            for (i in 0 until name.length) {
+                if (propertyValue.elementAtOrNull(currentIndex + i) != name[i]) {
+                    return false
+                }
+            }
+            currentIndex += name.length
+            return true
+        }
+
+        fun tryParseBooleanValue(): Boolean? {
+            when (val element = propertyValue.elementAtOrNull(currentIndex)) {
+                '0', '1' -> {
+                    currentIndex++
+                    return element == '1'
+                }
+                else -> {
+                    val textSpan = TextSpan(propertyValueToken.textSpan.start + currentIndex, if (element == null) 0 else 1)
+                    propertyInfo.reportPropertyDiagnostic(
+                        "Invalid value `$element`. Expected: `0` or `1`.",
+                        textSpan,
+                        DiagnosticSeverity.Error
+                    )
+                    return null
+                }
+            }
+        }
+
+        var dotsCaptureEmptyBase = Rules.Standard.baseMode == BaseMode.AnySurrounding
+        var suicideAllowed = Rules.Standard.suicideAllowed
+
+        while (currentIndex < propertyValue.length) {
+            when {
+                tryParseKey(KataGoExtraRules::dotsCaptureEmptyBase) -> {
+                    val value = tryParseBooleanValue()
+                    if (value != null) {
+                        dotsCaptureEmptyBase = value
+                    } else {
+                        break
+                    }
+                }
+                tryParseKey(KataGoExtraRules::sui) -> {
+                    val value = tryParseBooleanValue()
+                    if (value != null) {
+                        suicideAllowed = value
+                    } else {
+                        break
+                    }
+                }
+                else -> {
+                    val errorTextSpan = TextSpan(propertyValueToken.textSpan.start + currentIndex, propertyValue.length - currentIndex)
+                    propertyInfo.reportPropertyDiagnostic(
+                        "Unrecognized KataGo key `${errorTextSpan.getText()}`.",
+                        errorTextSpan,
+                        DiagnosticSeverity.Error
+                    )
+                    break
+                }
+            }
+        }
+
+        return KataGoExtraRules(dotsCaptureEmptyBase, suicideAllowed)
     }
 
     private data class PropertyInfoAndTextSpan(val propertyInfo: SgfPropertyInfo, val textSpan: TextSpan)

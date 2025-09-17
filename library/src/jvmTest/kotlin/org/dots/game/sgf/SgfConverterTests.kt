@@ -6,6 +6,7 @@ import org.dots.game.LineColumnDiagnostic
 import org.dots.game.buildLineOffsets
 import org.dots.game.core.AppInfo
 import org.dots.game.core.AppType
+import org.dots.game.core.BaseMode
 import org.dots.game.core.GameResult
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Games
@@ -14,7 +15,9 @@ import org.dots.game.core.Player
 import org.dots.game.core.PositionPlayer
 import org.dots.game.core.Position
 import org.dots.game.core.PositionXY
+import org.dots.game.core.Rules
 import org.dots.game.toLineColumnDiagnostic
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -419,7 +422,8 @@ class SgfConverterTests {
 
     @Test
     fun komi() {
-        parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]KM[0.5]RE[W+0.5])").single().result
+        val game = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]KM[0.5]RE[W+0.5])").single()
+        assertEquals(0.5, game.komi)
         parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[39:32]KM[0]RE[W+0.5])",
             listOfNotNull(
@@ -430,6 +434,46 @@ class SgfConverterTests {
                 ),
             )
         ).single().result
+    }
+
+    @Test
+    fun kataGoRules() {
+        val configuredRules = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1sui1])").single().rules
+        assertEquals(BaseMode.AnySurrounding, configuredRules.baseMode)
+        assertTrue(configuredRules.suicideAllowed)
+
+        val configuredRulesReversed = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[sui1dotsCaptureEmptyBase1])").single().rules
+        assertEquals(BaseMode.AnySurrounding, configuredRulesReversed.baseMode)
+        assertTrue(configuredRulesReversed.suicideAllowed)
+
+        val nonConfiguredRules = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase0sui0])").single().rules
+        assertEquals(BaseMode.AtLeastOneOpponentDot, nonConfiguredRules.baseMode)
+        assertFalse(nonConfiguredRules.suicideAllowed)
+
+        val singleExtraRule = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1])").single().rules
+        assertEquals(BaseMode.AnySurrounding, singleExtraRule.baseMode)
+        assertEquals(Rules.Standard.suicideAllowed, singleExtraRule.suicideAllowed)
+    }
+
+    @Test
+    fun kataGoRulesIncorrect() {
+        val rulesWithIncorrectValues = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBaseXsuiX])", listOf(
+            LineColumnDiagnostic("Property RU (Rules) Invalid value `X`. Expected: `0` or `1`.", LineColumn(1, 56), DiagnosticSeverity.Error),
+        )).single().rules
+        assertEquals(Rules.Standard.baseMode, rulesWithIncorrectValues.baseMode)
+        assertEquals(Rules.Standard.suicideAllowed, rulesWithIncorrectValues.suicideAllowed)
+
+        val rulesWithIncorrectKeys = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[error0error1])", listOf(
+            LineColumnDiagnostic("Property RU (Rules) Unrecognized KataGo key `error0error1`.", LineColumn(1, 36), DiagnosticSeverity.Error),
+        )).single().rules
+        assertEquals(Rules.Standard.baseMode, rulesWithIncorrectKeys.baseMode)
+        assertEquals(Rules.Standard.suicideAllowed, rulesWithIncorrectValues.suicideAllowed)
+
+        val rulesPartiallyCorrect = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1suiX])", listOf(
+            LineColumnDiagnostic("Property RU (Rules) Invalid value `X`. Expected: `0` or `1`.", LineColumn(1, 60), DiagnosticSeverity.Error),
+        )).single().rules
+        assertEquals(BaseMode.AnySurrounding, rulesPartiallyCorrect.baseMode)
+        assertEquals(Rules.Standard.suicideAllowed, rulesWithIncorrectValues.suicideAllowed)
     }
 }
 

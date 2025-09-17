@@ -202,5 +202,6 @@ enum class AppType(val value: String) {
     Zagram("zagram.org"),
     Notago("NOTAGO"),
     Playdots("Спортивные Точки (playdots.ru)"),
+    Katago("katago"),
     Unknown(""),
 }
