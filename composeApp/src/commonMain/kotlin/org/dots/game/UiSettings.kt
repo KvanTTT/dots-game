@@ -13,6 +13,7 @@ data class UiSettings(
     val showDiagonalConnections: Boolean = false,
     val showThreats: Boolean = false,
     val showSurroundings: Boolean = false,
+    val developerMode: Boolean = false,
 ) {
     companion object {
         val Standard = UiSettings()

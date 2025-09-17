@@ -97,7 +97,8 @@ fun loadUiSettings(): UiSettings {
             baseDrawMode = getEnumSetting(UiSettings::baseDrawMode, UiSettings.Standard.baseDrawMode),
             showDiagonalConnections = getSetting(UiSettings::showDiagonalConnections, UiSettings.Standard.showDiagonalConnections),
             showThreats = getSetting(UiSettings::showThreats, UiSettings.Standard.showThreats),
-            showSurroundings = getSetting(UiSettings::showSurroundings, UiSettings.Standard.showSurroundings)
+            showSurroundings = getSetting(UiSettings::showSurroundings, UiSettings.Standard.showSurroundings),
+            developerMode = getSetting(UiSettings::developerMode, UiSettings.Standard.developerMode),
         )
     }
 }
@@ -114,6 +115,7 @@ fun saveUiSettings(uiSettings: UiSettings) {
         setSetting(UiSettings::showDiagonalConnections, uiSettings.showDiagonalConnections)
         setSetting(UiSettings::showThreats, uiSettings.showThreats)
         setSetting(UiSettings::showSurroundings, uiSettings.showSurroundings)
+        setSetting(UiSettings::developerMode, uiSettings.developerMode)
     }
 }
 

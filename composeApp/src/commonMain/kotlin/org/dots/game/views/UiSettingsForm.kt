@@ -62,6 +62,12 @@ fun UiSettingsForm(
                         onUiSettingsChange(uiSettings.copy(showSurroundings = it))
                     })
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Developer Mode", Modifier.fillMaxWidth(textFraction))
+                    Switch(uiSettings.developerMode, onCheckedChange = {
+                        onUiSettingsChange(uiSettings.copy(developerMode = it))
+                    })
+                }
             }
         }
     }

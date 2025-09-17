@@ -150,7 +150,7 @@ fun FieldView(currentMove: MoveResult?, moveMode: MoveMode, field: Field, uiSett
                 }
             }
     ) {
-        Grid(field)
+        Grid(field, uiSettings)
         Moves(currentMove, field, uiSettings)
         if (!field.isGameOver()) {
             if (uiSettings.showDiagonalConnections) {
@@ -166,7 +166,7 @@ fun FieldView(currentMove: MoveResult?, moveMode: MoveMode, field: Field, uiSett
 }
 
 @Composable
-private fun Grid(field: Field) {
+private fun Grid(field: Field, uiSettings: UiSettings) {
     val textMeasurer = rememberTextMeasurer()
     with (LocalDensity.current) {
         val fieldPaddingPx = fieldPadding.toPx()
@@ -179,12 +179,12 @@ private fun Grid(field: Field) {
             for (x in Field.OFFSET until field.width + Field.OFFSET) {
                 val xPx = x.coordinateToPx(this)
 
-                val coordinateText = x.toString()
-                val textLayoutResult = textMeasurer.measure(coordinateText)
+                val xCoordinateText = (x + (if (uiSettings.developerMode) -1 else 0)) .toString()
+                val textLayoutResult = textMeasurer.measure(xCoordinateText)
 
                 drawText(
                     textMeasurer,
-                    coordinateText,
+                    xCoordinateText,
                     Offset(
                         xPx - textLayoutResult.size.width / 2,
                         textPaddingPx - textLayoutResult.size.height
@@ -201,12 +201,12 @@ private fun Grid(field: Field) {
             for (y in Field.OFFSET until field.height + Field.OFFSET) {
                 val yPx = y.coordinateToPx(this)
 
-                val coordinateText = (field.height + Field.OFFSET - y).toString()
-                val textLayoutResult = textMeasurer.measure(coordinateText)
+                val yCoordinateText = (if (uiSettings.developerMode) y - 1 else field.height + Field.OFFSET - y).toString()
+                val textLayoutResult = textMeasurer.measure(yCoordinateText)
 
                 drawText(
                     textMeasurer,
-                    coordinateText,
+                    yCoordinateText,
                     Offset(
                         textPaddingPx - textLayoutResult.size.width,
                         yPx - textLayoutResult.size.height / 2
@@ -527,7 +527,7 @@ private fun DrawScope.drawPolygon(
     if (polygonDrawMode.drawFill) {
         drawPath(resultPath, fillColor)
     }
-    if (polygonDrawMode.drawOutline) {
+    if (polygonDrawMode.drawOutline || isGrounding) {
         drawPath(
             resultPath,
             outlineColor,
