@@ -17,7 +17,7 @@ abstract class FieldTests {
     open val suicideAllowed: Boolean = Rules.Standard.suicideAllowed
     open val initialMoves: List<MoveInfo> = listOf()
 
-    fun initRules(width: Int, height: Int): Rules =  Rules(width, height, captureByBorder, baseMode, suicideAllowed, initialMoves)
+    fun initRules(width: Int, height: Int): Rules =  Rules(width, height, captureByBorder, baseMode, suicideAllowed, Rules.NO_RANDOM_SEED, initialMoves)
 
     fun testFieldWithTransformsAndRollback(fieldData: String, check: (field: Field, transformFunc: (x: Int, y: Int) -> PositionXY) -> Unit) {
         val originalField = FieldParser.parseAndConvert(fieldData, initializeRules = { width, height -> initRules(width, height) })

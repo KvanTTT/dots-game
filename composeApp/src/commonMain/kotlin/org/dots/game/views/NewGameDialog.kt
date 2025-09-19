@@ -7,9 +7,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import org.dots.game.core.InitialPositionType
+import org.dots.game.UiSettings
+import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
-import org.dots.game.core.generateDefaultInitialPositions
+import org.dots.game.core.generateDefaultInitPos
 
 private const val minDimension = 2
 private const val maxDimension = 48
@@ -17,6 +18,7 @@ private const val maxDimension = 48
 @Composable
 fun NewGameDialog(
     rules: Rules,
+    uiSettings: UiSettings,
     onDismiss: () -> Unit,
     onConfirmation: (newGameRules: Rules) -> Unit,
 ) {
@@ -24,7 +26,8 @@ fun NewGameDialog(
     var height by remember { mutableStateOf(rules.height.coerceIn(minDimension, maxDimension)) }
     var captureByBorder by remember { mutableStateOf(rules.captureByBorder) }
 
-    var initialPositionType by remember { mutableStateOf(EnumMode(selected = rules.initialPositionType)) }
+    var initPosType by remember { mutableStateOf(EnumMode(selected = rules.initPosType)) }
+    var randomSeed by remember { mutableStateOf(rules.randomSeed) }
     var baseMode by remember { mutableStateOf(EnumMode(selected = rules.baseMode)) }
     var suicideAllowed by remember { mutableStateOf(rules.suicideAllowed) }
 
@@ -38,11 +41,24 @@ fun NewGameDialog(
                     height = it
                 }
 
-                Mode(initialPositionType, ignoredEntries = setOf(InitialPositionType.Custom)) {
-                    initialPositionType = it
+                Mode(initPosType, ignoredEntries = setOf(InitPosType.Custom)) {
+                    initPosType = it
                 }
                 Mode(baseMode) {
                     baseMode = it
+                }
+
+                if (initPosType.selected == InitPosType.QuadrupleCross) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (uiSettings.developerMode) {
+                            IntegerSlider("Random seed", randomSeed, -1, 8) {
+                                randomSeed = it
+                            }
+                        } else {
+                            Text("Random start position", Modifier.fillMaxWidth(textFraction))
+                            Checkbox(randomSeed >= 0, onCheckedChange = { randomSeed = if (it) 0 else -1 })
+                        }
+                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -57,8 +73,8 @@ fun NewGameDialog(
 
                 Button(
                     onClick = {
-                        val initialMoves = initialPositionType.selected.generateDefaultInitialPositions(width, height)!!
-                        onConfirmation(Rules(width, height, captureByBorder, baseMode.selected, suicideAllowed, initialMoves))
+                        val initialMoves = initPosType.selected.generateDefaultInitPos(width, height, randomSeed)!!
+                        onConfirmation(Rules(width, height, captureByBorder, baseMode.selected, suicideAllowed, randomSeed, initialMoves))
                     },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {

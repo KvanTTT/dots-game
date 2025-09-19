@@ -3,12 +3,12 @@ package org.dots.game.field
 import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.Field
 import org.dots.game.core.GameResult
-import org.dots.game.core.InitialPositionType.Cross
+import org.dots.game.core.InitPosType.Cross
 import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
-import org.dots.game.core.generateDefaultInitialPositions
+import org.dots.game.core.generateDefaultInitPos
 import org.dots.game.core.getPositionsOfConnection
 import org.dots.game.core.unmakeAllMovesAndCheck
 import org.dots.game.dump.FieldParser
@@ -135,7 +135,7 @@ class FieldUtilsTests : FieldTests() {
     fun clone() {
         val width = 4
         val height = 4
-        val rules = Rules(width, height, initialMoves = Cross.generateDefaultInitialPositions(width, height)!!)
+        val rules = Rules(width, height, initialMoves = Cross.generateDefaultInitPos(width, height)!!)
         val field = Field.create(rules)
 
         field.makeMove(2, 1, Player.Second)

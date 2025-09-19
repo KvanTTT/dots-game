@@ -11,9 +11,9 @@ import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.parameters.types.restrictTo
 import org.dots.game.core.BaseMode
 import org.dots.game.core.Field
-import org.dots.game.core.InitialPositionType
+import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
-import org.dots.game.core.generateDefaultInitialPositions
+import org.dots.game.core.generateDefaultInitPos
 import java.io.File
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets.UTF_8
@@ -49,12 +49,12 @@ class CliArgs : CliktCommand() {
     val captureEmptyBases: Boolean? by option(captureEmptyBasesOption)
         .boolean()
         .help("If enabled, base is created even if it doesn't have enemy dots inside")
-    val initialPosition: InitialPositionType? by option()
-        .enum<InitialPositionType>()
-        .help("The initial position, allowed values: ${
-            InitialPositionType.entries.filter { it != InitialPositionType.Custom }.joinToString(", ") { it.name }
+    val initPosType: InitPosType? by option()
+        .enum<InitPosType>()
+        .help("The initial position type, allowed values: ${
+            InitPosType.entries.filter { it != InitPosType.Custom }.joinToString(", ") { it.name }
         }")
-        .check { it != InitialPositionType.Custom }
+        .check { it != InitPosType.Custom }
     val seed: Long? by option("-s", "--seed")
         .long()
         .help("Seed. Use `0` value for timestamp-based seed")
@@ -72,7 +72,7 @@ class CliArgs : CliktCommand() {
             outputStream.reportSpecifiedButUnusedParameter(::width, width)
             outputStream.reportSpecifiedButUnusedParameter(::height, height)
             outputStream.reportSpecifiedButUnusedParameter(captureEmptyBasesOption, captureEmptyBases)
-            outputStream.reportSpecifiedButUnusedParameter(::initialPosition, initialPosition)
+            outputStream.reportSpecifiedButUnusedParameter(::initPosType, initPosType)
             outputStream.reportSpecifiedButUnusedParameter(::seed, seed)
             SgfAnalyser.process(outputStream, path, logFile, numberOfFilesToProcess = gamesCount)
         } else {
@@ -80,13 +80,15 @@ class CliArgs : CliktCommand() {
             outputStream.reportSpecifiedButUnusedParameter(::gamesCountToDrop, gamesCountToDrop)
             val fieldWidth = width ?: Rules.Standard.width
             val fieldHeight = height ?: Rules.Standard.height
+            val rulesRandomSeed = seed?.toInt() ?: -1
             val rules = Rules(
                 fieldWidth,
                 fieldHeight,
                 captureByBorder = false,
                 baseMode = if (captureEmptyBases ?: false) BaseMode.AnySurrounding else BaseMode.AtLeastOneOpponentDot,
                 suicideAllowed = true,
-                initialMoves = initialPosition?.generateDefaultInitialPositions(fieldWidth, fieldHeight) ?: emptyList(),
+                randomSeed = rulesRandomSeed,
+                initialMoves = initPosType?.generateDefaultInitPos(fieldWidth, fieldHeight, rulesRandomSeed) ?: emptyList(),
             )
             val warmUpGamesCount = 10000
             outputStream.println("Start warm-up on $warmUpGamesCount games...")

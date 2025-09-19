@@ -102,17 +102,17 @@ fun App() {
         if (showNewGameDialog) {
             NewGameDialog(
                 newGameDialogRules,
+                uiSettings,
                 onDismiss = {
                     showNewGameDialog = false
                     focusRequester.requestFocus()
                 },
-                onConfirmation = {
-                    showNewGameDialog = false
-                    newGameDialogRules = it
-                    saveRules(newGameDialogRules)
-                    resetFieldAndGameTree(newGameDialogRules)
-                }
-            )
+            ) {
+                showNewGameDialog = false
+                newGameDialogRules = it
+                saveRules(newGameDialogRules)
+                resetFieldAndGameTree(newGameDialogRules)
+            }
         } else if (start) {
             if (pathOrContent != null) {
                 coroutineScope.launch {

@@ -2,10 +2,10 @@ package org.dots.game.field
 
 import RandomGameAnalyser
 import org.dots.game.core.Field
-import org.dots.game.core.InitialPositionType
+import org.dots.game.core.InitPosType
 import org.dots.game.core.Player
 import org.dots.game.core.Rules
-import org.dots.game.core.generateDefaultInitialPositions
+import org.dots.game.core.generateDefaultInitPos
 import org.junit.jupiter.api.Assertions.assertTrue
 import java.util.Locale
 import kotlin.test.Test
@@ -15,12 +15,17 @@ import kotlin.test.fail
 class StressTests {
     @Test
     fun standardField() {
-        testStandardField(InitialPositionType.Empty)
+        testStandardField(InitPosType.Empty)
     }
 
     @Test
     fun standardFieldWithCrossOpening() {
-        testStandardField(InitialPositionType.Cross)
+        testStandardField(InitPosType.Cross)
+    }
+
+    @Test
+    fun standardFieldWithRandomQuadrupleCrossOpening() {
+        testStandardField(InitPosType.QuadrupleCross)
     }
 
     @Test
@@ -44,10 +49,10 @@ class StressTests {
         assertTrue(field.isGameOver())
     }
 
-    fun testStandardField(initialPositionType: InitialPositionType) {
+    fun testStandardField(initPosType: InitPosType) {
         var errorIsEncountered = false
         RandomGameAnalyser.process(
-            Rules(39, 32, initialMoves = initialPositionType.generateDefaultInitialPositions(39, 32)!!),
+            Rules(39, 32, randomSeed = 1, initialMoves = initPosType.generateDefaultInitPos(39, 32, 1)!!),
             gamesCount = 10000,
             seed = 1,
             checkRollback = true,

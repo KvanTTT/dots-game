@@ -2,10 +2,10 @@ package org.dots.game.field
 
 import DumpParameters
 import org.dots.game.core.Field
-import org.dots.game.core.InitialPositionType
+import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
 import org.dots.game.core.TransformType
-import org.dots.game.core.generateDefaultInitialPositions
+import org.dots.game.core.generateDefaultInitPos
 import org.dots.game.dump.FieldParser
 import render
 import kotlin.test.Test
@@ -22,7 +22,7 @@ class TransformOperations : FieldTests() {
 . . . . +
 """
         val originField = FieldParser.parseAndConvert(originFieldData, initializeRules = { width, height ->
-            Rules(width, height, captureByBorder, baseMode, suicideAllowed, initialMoves = InitialPositionType.Cross.generateDefaultInitialPositions(width, height)!!)
+            Rules(width, height, captureByBorder, baseMode, suicideAllowed, initialMoves = InitPosType.Cross.generateDefaultInitPos(width, height)!!)
         })
 
         checkOperation(

@@ -20,6 +20,7 @@ fun loadRules(): Rules {
             captureByBorder = getSetting(Rules::captureByBorder, Rules.Standard.captureByBorder),
             baseMode = getEnumSetting(Rules::baseMode, Rules.Standard.baseMode),
             suicideAllowed = getSetting(Rules::suicideAllowed, Rules.Standard.suicideAllowed),
+            randomSeed = getSetting(Rules::randomSeed, Rules.Standard.randomSeed),
             initialMoves = getSetting(Rules::initialMoves, "").let { initialMovesData ->
                 try {
                     buildList {
@@ -49,6 +50,7 @@ fun saveRules(rules: Rules) {
         setSetting(Rules::captureByBorder, rules.captureByBorder)
         setEnumSetting(Rules::baseMode, rules.baseMode)
         setSetting(Rules::suicideAllowed, rules.suicideAllowed)
+        setSetting(Rules::randomSeed, rules.randomSeed)
         setSetting(
             Rules::initialMoves,
             rules.initialMoves.joinToString(secondLevelSeparator) {

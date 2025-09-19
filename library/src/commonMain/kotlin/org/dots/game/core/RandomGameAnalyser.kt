@@ -24,7 +24,7 @@ object RandomGameAnalyser {
 
         outputStream("Games count: $gamesCount")
         outputStream("Field size: ${rules.width};${rules.height}")
-        outputStream("Initial position: ${rules.initialPositionType}")
+        outputStream("Initial position: ${rules.initPosType}")
         outputStream("Capture empty bases: ${rules.baseMode == BaseMode.AnySurrounding}")
         outputStream("Random seed: $seed" + (if (seed == 0L) " (Timestamp)" else ""))
         outputStream("Check rollback: $checkRollback")

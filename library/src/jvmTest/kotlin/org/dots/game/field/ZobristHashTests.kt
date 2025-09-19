@@ -1,9 +1,9 @@
 package org.dots.game.field
 
-import org.dots.game.core.InitialPositionType
+import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
 import org.dots.game.core.TransformType
-import org.dots.game.core.generateDefaultInitialPositions
+import org.dots.game.core.generateDefaultInitPos
 import org.dots.game.dump.FieldParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -148,7 +148,7 @@ class ZobristHashTests {
                 Rules(
                     width,
                     height,
-                    initialMoves = InitialPositionType.Cross.generateDefaultInitialPositions(width, height)!!
+                    initialMoves = InitPosType.Cross.generateDefaultInitPos(width, height)!!
                 )
             }
         )
