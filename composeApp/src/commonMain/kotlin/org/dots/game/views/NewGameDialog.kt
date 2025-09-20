@@ -30,43 +30,59 @@ fun NewGameDialog(
     var initPosIsRandom by remember { mutableStateOf(rules.initPosIsRandom) }
     var baseMode by remember { mutableStateOf(EnumMode(selected = rules.baseMode)) }
     var suicideAllowed by remember { mutableStateOf(rules.suicideAllowed) }
-    var komi by remember { mutableStateOf(rules.komi) }
+    val normalizedKomi = when {
+        uiSettings.developerMode -> rules.komi
+        rules.komi <= 0.0 -> 0.0
+        else -> 0.5
+    }
+    var integerKomi by remember { mutableStateOf((normalizedKomi * 2).toInt()) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(470.dp).wrapContentHeight()) {
             Column(modifier = Modifier.padding(20.dp)) {
-                IntegerSlider("Width", width, minDimension, maxDimension) {
+                DiscreteSliderConfig("Width", width, minDimension, maxDimension) {
                     width = it
                 }
-                IntegerSlider("Height", height, minDimension, maxDimension) {
+                DiscreteSliderConfig("Height", height, minDimension, maxDimension) {
                     height = it
                 }
 
-                Mode(initPosType, ignoredEntries = setOf(InitPosType.Custom)) {
+                ModeConfig(initPosType, ignoredEntries = setOf(InitPosType.Custom)) {
                     initPosType = it
                 }
-                Mode(baseMode) {
+                ModeConfig(baseMode) {
                     baseMode = it
                 }
 
                 if (initPosType.selected == InitPosType.QuadrupleCross) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Random start position", Modifier.fillMaxWidth(textFraction))
+                        Text("Random start position", Modifier.fillMaxWidth(configKeyTextFraction))
                         Checkbox(initPosIsRandom, onCheckedChange = { initPosIsRandom = it })
                     }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Capture by border", Modifier.fillMaxWidth(textFraction))
+                    Text("Capture by border", Modifier.fillMaxWidth(configKeyTextFraction))
                     Checkbox(captureByBorder, onCheckedChange = { captureByBorder = it })
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Suicide allowed", Modifier.fillMaxWidth(textFraction))
+                    Text("Suicide allowed", Modifier.fillMaxWidth(configKeyTextFraction))
                     Checkbox(suicideAllowed, onCheckedChange = { suicideAllowed = it })
                 }
 
-                // TODO: implement Komi setup
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (uiSettings.developerMode) {
+                        DiscreteSliderConfig("Komi", integerKomi, -5, 5,
+                            valueRenderer = { (it.toDouble() / 2.0).toString() }
+                        ) {
+                            integerKomi = it
+                        }
+                    } else {
+                        Text("Round Draw", Modifier.fillMaxWidth(configKeyTextFraction))
+                        Checkbox(integerKomi == 0, onCheckedChange = { integerKomi = if (it) 0 else 1  })
+                    }
+                }
 
                 Button(
                     onClick = {
@@ -79,7 +95,7 @@ fun NewGameDialog(
                                 suicideAllowed,
                                 initPosType.selected,
                                 Random.takeIf { initPosIsRandom },
-                                komi
+                                (integerKomi.toDouble() / 2.0)
                             )
                         )
                     },

@@ -33,37 +33,37 @@ fun UiSettingsForm(
         Card(modifier = Modifier.width(470.dp).wrapContentHeight()) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Mode(connectionDrawMode) {
+                    ModeConfig(connectionDrawMode) {
                         connectionDrawMode = it
                         onUiSettingsChange(uiSettings.copy(connectionDrawMode = connectionDrawMode.selected))
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Mode(baseDrawMode) {
+                    ModeConfig(baseDrawMode) {
                         baseDrawMode = it
                         onUiSettingsChange(uiSettings.copy(baseDrawMode = it.selected))
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Diagonal Connections", Modifier.fillMaxWidth(textFraction))
+                    Text("Diagonal Connections", Modifier.fillMaxWidth(configKeyTextFraction))
                     Switch(uiSettings.showDiagonalConnections, onCheckedChange = {
                         onUiSettingsChange(uiSettings.copy(showDiagonalConnections = it))
                     })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Threats", Modifier.fillMaxWidth(textFraction))
+                    Text("Threats", Modifier.fillMaxWidth(configKeyTextFraction))
                     Switch(uiSettings.showThreats, onCheckedChange = {
                         onUiSettingsChange(uiSettings.copy(showThreats = it))
                     })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Surroundings", Modifier.fillMaxWidth(textFraction))
+                    Text("Surroundings", Modifier.fillMaxWidth(configKeyTextFraction))
                     Switch(uiSettings.showSurroundings, onCheckedChange = {
                         onUiSettingsChange(uiSettings.copy(showSurroundings = it))
                     })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Developer Mode", Modifier.fillMaxWidth(textFraction))
+                    Text("Developer Mode", Modifier.fillMaxWidth(configKeyTextFraction))
                     Switch(uiSettings.developerMode, onCheckedChange = {
                         onUiSettingsChange(uiSettings.copy(developerMode = it))
                     })

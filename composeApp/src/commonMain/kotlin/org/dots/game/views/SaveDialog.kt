@@ -81,20 +81,20 @@ fun SaveDialog(
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Print numbers", Modifier.fillMaxWidth(textFraction))
+                    Text("Print numbers", Modifier.fillMaxWidth(configKeyTextFraction))
                     Checkbox(printNumbers, onCheckedChange = {
                         printNumbers = it
                         updateFieldRepresentation()
                     })
                 }
 
-                IntegerSlider("Padding", padding, 0, maxPadding) {
+                DiscreteSliderConfig("Padding", padding, 0, maxPadding) {
                     padding = it
                     updateFieldRepresentation()
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Print coordinates", Modifier.fillMaxWidth(textFraction))
+                    Text("Print coordinates", Modifier.fillMaxWidth(configKeyTextFraction))
                     Checkbox(printCoordinates, onCheckedChange = {
                         printCoordinates = it
                         updateFieldRepresentation()
@@ -102,7 +102,7 @@ fun SaveDialog(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Debug info", Modifier.fillMaxWidth(textFraction))
+                    Text("Debug info", Modifier.fillMaxWidth(configKeyTextFraction))
                     Checkbox(debugInfo, onCheckedChange = {
                         debugInfo = it
                         updateFieldRepresentation()

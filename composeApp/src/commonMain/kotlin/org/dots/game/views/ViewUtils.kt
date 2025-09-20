@@ -21,12 +21,21 @@ import androidx.compose.ui.unit.dp
 import org.dots.game.splitByUppercase
 import kotlin.math.round
 
+const val configKeyTextFraction = 0.4f
+
 @Composable
-fun IntegerSlider(name: String, currentValue: Int, minValue: Int, maxValue: Int, onValueChange: (Int) -> Unit) {
+fun DiscreteSliderConfig(
+    name: String,
+    currentValue: Int,
+    minValue: Int,
+    maxValue: Int,
+    valueRenderer: (Int) -> String = { it.toString() },
+    onValueChange: (Int) -> Unit
+) {
     val range = maxValue - minValue
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(name, Modifier.fillMaxWidth(textFraction))
+        Text(name, Modifier.fillMaxWidth(configKeyTextFraction))
         Slider(
             value = (currentValue - minValue).toFloat() / range,
             onValueChange = {
@@ -35,20 +44,18 @@ fun IntegerSlider(name: String, currentValue: Int, minValue: Int, maxValue: Int,
             steps = range - 1,
             modifier = Modifier.width(150.dp)
         )
-        Text(currentValue.toString())
+        Text(valueRenderer(currentValue))
     }
 }
-
-const val textFraction = 0.4f
 
 data class EnumMode<E: Enum<E>>(val expanded: Boolean, val selected: E) {
     constructor(selected: E) : this(expanded = false, selected = selected)
 }
 
 @Composable
-inline fun <reified E : Enum<E>> Mode(enumMode: EnumMode<E>, ignoredEntries: Set<E> = emptySet(), crossinline onChange: (newMode: EnumMode<E>) -> Unit) {
+inline fun <reified E : Enum<E>> ModeConfig(enumMode: EnumMode<E>, ignoredEntries: Set<E> = emptySet(), crossinline onChange: (newMode: EnumMode<E>) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 10.dp)) {
-        Text("${splitByUppercase(E::class.simpleName!!)} ", Modifier.fillMaxWidth(textFraction))
+        Text("${splitByUppercase(E::class.simpleName!!)} ", Modifier.fillMaxWidth(configKeyTextFraction))
         Column(Modifier.fillMaxWidth().height(30.dp)
             .border(1.dp, Color.hsv(0f, 0f, 0.4f))
             .clickable(onClick = { onChange(enumMode.copy(expanded = true)) }),
