@@ -7,10 +7,9 @@ import org.dots.game.core.InitPosType.Cross
 import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.core.PositionXY
-import org.dots.game.core.Rules
-import org.dots.game.core.generateDefaultInitPos
 import org.dots.game.core.getPositionsOfConnection
 import org.dots.game.core.unmakeAllMovesAndCheck
+import org.dots.game.createStandardRules
 import org.dots.game.dump.FieldParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -135,7 +134,7 @@ class FieldUtilsTests : FieldTests() {
     fun clone() {
         val width = 4
         val height = 4
-        val rules = Rules(width, height, initialMoves = Cross.generateDefaultInitPos(width, height)!!)
+        val rules = createStandardRules(width, height, initPosType = Cross)
         val field = Field.create(rules)
 
         field.makeMove(2, 1, Player.Second)

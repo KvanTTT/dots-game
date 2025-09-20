@@ -4,6 +4,7 @@ import org.dots.game.Diagnostic
 import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Field
+import org.dots.game.core.InitPosType
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
@@ -14,17 +15,33 @@ import org.dots.game.sgf.TextSpan
 object FieldParser {
     fun parseAndConvertWithNoInitialMoves(data: String, diagnosticReporter: (Diagnostic) -> Unit = { error(it.toString()) }): Field {
         return parseAndConvert(data, { width, height ->
-            Rules(
+            Rules.create(
                 width,
                 height,
-                initialMoves = emptyList()
+                captureByBorder = Rules.Standard.captureByBorder,
+                baseMode = Rules.Standard.baseMode,
+                suicideAllowed = Rules.Standard.suicideAllowed,
+                initPosType = InitPosType.Empty,
+                random = Rules.Standard.random,
+                komi = Rules.Standard.komi
             )
         }, diagnosticReporter)
     }
 
     fun parseAndConvert(
         data: String,
-        initializeRules: (Int, Int) -> Rules = { width, height -> Rules(width, height) },
+        initializeRules: (Int, Int) -> Rules = { width, height ->
+            Rules.create(
+                width,
+                height,
+                captureByBorder = Rules.Standard.captureByBorder,
+                baseMode = Rules.Standard.baseMode,
+                suicideAllowed = Rules.Standard.suicideAllowed,
+                initPosType = Rules.Standard.initPosType,
+                random = Rules.Standard.random,
+                komi = Rules.Standard.komi
+            )
+        },
         diagnosticReporter: (Diagnostic) -> Unit = { error(it.toString()) },
     ): Field {
         val (width, height, allMoves) = parse(data, diagnosticReporter)

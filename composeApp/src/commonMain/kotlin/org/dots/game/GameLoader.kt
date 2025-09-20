@@ -30,12 +30,14 @@ object GameLoader {
                     val field = FieldParser.parseAndConvert(
                         pathOrContent,
                         initializeRules = { width, height ->
-                            Rules(
-                                width, height,
+                            Rules.createAndDetectInitPos(
+                                width,
+                                height,
                                 captureByBorder = rules?.captureByBorder ?: Rules.Standard.captureByBorder,
                                 baseMode = rules?.baseMode ?: Rules.Standard.baseMode,
                                 suicideAllowed = rules?.suicideAllowed ?: Rules.Standard.suicideAllowed,
                                 initialMoves = emptyList(),
+                                komi = Rules.Standard.komi,
                             )
                         }, diagnosticReporter
                     )

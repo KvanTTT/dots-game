@@ -13,7 +13,6 @@ import org.dots.game.core.BaseMode
 import org.dots.game.core.Field
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
-import org.dots.game.core.generateDefaultInitPos
 import java.io.File
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets.UTF_8
@@ -80,20 +79,15 @@ class CliArgs : CliktCommand() {
             outputStream.reportSpecifiedButUnusedParameter(::gamesCountToDrop, gamesCountToDrop)
             val fieldWidth = width ?: Rules.Standard.width
             val fieldHeight = height ?: Rules.Standard.height
-            val rulesRandomSeed = seed?.toInt() ?: -1
-            val rules = Rules(
-                fieldWidth,
-                fieldHeight,
-                captureByBorder = false,
-                baseMode = if (captureEmptyBases ?: false) BaseMode.AnySurrounding else BaseMode.AtLeastOneOpponentDot,
-                suicideAllowed = true,
-                randomSeed = rulesRandomSeed,
-                initialMoves = initPosType?.generateDefaultInitPos(fieldWidth, fieldHeight, rulesRandomSeed) ?: emptyList(),
-            )
+            val baseMode = if (captureEmptyBases ?: false) BaseMode.AnySurrounding else BaseMode.AtLeastOneOpponentDot
             val warmUpGamesCount = 10000
+
             outputStream.println("Start warm-up on $warmUpGamesCount games...")
             RandomGameAnalyser.process(
-                rules,
+                fieldWidth,
+                fieldHeight,
+                initPosType = initPosType ?: InitPosType.Empty,
+                baseMode = baseMode,
                 gamesCount = warmUpGamesCount,
                 seed ?: 0L,
                 checkRollback = true,
@@ -106,7 +100,10 @@ class CliArgs : CliktCommand() {
 
             outputStream.println("Start main loop...")
             RandomGameAnalyser.process(
-                rules,
+                fieldWidth,
+                fieldHeight,
+                initPosType = initPosType ?: InitPosType.Empty,
+                baseMode = baseMode,
                 gamesCount,
                 seed ?: 0L,
                 checkRollback,

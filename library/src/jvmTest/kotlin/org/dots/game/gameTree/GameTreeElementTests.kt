@@ -6,9 +6,9 @@ import org.dots.game.core.GameTree
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.NodeGameTreeElement
 import org.dots.game.core.Position
-import org.dots.game.core.Rules
 import org.dots.game.core.VerticalLineGameTreeElement
 import org.dots.game.core.getElements
+import org.dots.game.createStandardRules
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -232,7 +232,7 @@ class GameTreeElementTests {
     }
 
     private fun initializeGameTree(): GameTree {
-        val field = Field.create(Rules(8, 8))
+        val field = Field.create(createStandardRules(8, 8))
         return GameTree(field)
     }
 

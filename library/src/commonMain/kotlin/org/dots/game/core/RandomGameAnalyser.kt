@@ -1,17 +1,20 @@
 import org.dots.game.core.BaseMode
 import org.dots.game.core.Field
 import org.dots.game.core.GameResult
+import org.dots.game.core.InitPosType
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.Position
-import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import org.dots.game.core.unmakeAllMovesAndCheck
 import kotlin.random.Random
 
 object RandomGameAnalyser {
     fun process(
-        rules: Rules,
+        width: Int,
+        height: Int,
+        initPosType: InitPosType,
+        baseMode: BaseMode,
         gamesCount: Int,
         seed: Long,
         checkRollback: Boolean,
@@ -23,9 +26,9 @@ object RandomGameAnalyser {
         val random = if (seed == 0L) Random.Default else Random(seed)
 
         outputStream("Games count: $gamesCount")
-        outputStream("Field size: ${rules.width};${rules.height}")
-        outputStream("Initial position: ${rules.initPosType}")
-        outputStream("Capture empty bases: ${rules.baseMode == BaseMode.AnySurrounding}")
+        outputStream("Field size: ${width};${height}")
+        outputStream("Initial position: $initPosType")
+        outputStream("Capture empty bases: ${baseMode == BaseMode.AnySurrounding}")
         outputStream("Random seed: $seed" + (if (seed == 0L) " (Timestamp)" else ""))
         outputStream("Check rollback: $checkRollback")
         outputStream("")
@@ -41,15 +44,11 @@ object RandomGameAnalyser {
 
         val startNanos = measureNanos()
 
-        val fieldStride = Field.getStride(rules.width)
+        val fieldStride = Field.getStride(width)
         val randomMoves = buildList {
-            for (y in 1..rules.height) {
-                for (x in 1..rules.width) {
-                    PositionXY(x, y).let { positionXY ->
-                        if (rules.initialMoves.none { it.positionXY == positionXY }) {
-                            add(Position(x, y, fieldStride))
-                        }
-                    }
+            for (y in 1..height) {
+                for (x in 1..width) {
+                    add(Position(x, y, fieldStride))
                 }
             }
         }.toTypedArray()
@@ -58,6 +57,16 @@ object RandomGameAnalyser {
             randomMoves.shuffle(random)
 
             try {
+                val rules = Rules.create(
+                    width,
+                    height,
+                    captureByBorder = Rules.Standard.captureByBorder,
+                    baseMode = baseMode,
+                    suicideAllowed = Rules.Standard.suicideAllowed,
+                    initPosType = initPosType,
+                    random = random,
+                    komi = Rules.Standard.komi,
+                )
                 val field = Field.create(rules) { moveInfo: MoveInfo, _: Boolean, moveNumber: Int ->
                     outputStream("Incorrect initial move #$moveNumber at ${moveInfo.positionXY} (${moveInfo.player})")
                 }

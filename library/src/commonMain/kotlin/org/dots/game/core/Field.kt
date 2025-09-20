@@ -141,7 +141,7 @@ class Field {
         val newFieldStride = getStride(newWidth)
         fun Position.transform(): Position = transform(transformType, realWidth, realHeight, newFieldStride)
 
-        val newField = Field(Rules(
+        val newField = Field(Rules.createAndDetectInitPos(
             width = newWidth,
             height = newHeight,
             captureByBorder = rules.captureByBorder,
@@ -150,6 +150,7 @@ class Field {
             initialMoves = rules.initialMoves.map {
                 MoveInfo(it.positionXY?.transform(transformType, width, height), it.player, it.extraInfo)
             },
+            komi = rules.komi,
         ))
         newField.initialMovesCount = initialMovesCount
 

@@ -298,9 +298,10 @@ class SgfConverter(
             }
         }
 
-        val rules = Rules(
+        val rules = Rules.createAndDetectInitPos(
             width,
             height,
+            captureByBorder = false,
             baseMode = baseMode,
             suicideAllowed = suicideAllowed,
             initialMoves = initialMoves,

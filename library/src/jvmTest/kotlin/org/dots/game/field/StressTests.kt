@@ -1,11 +1,12 @@
 package org.dots.game.field
 
 import RandomGameAnalyser
+import org.dots.game.core.BaseMode
 import org.dots.game.core.Field
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Player
 import org.dots.game.core.Rules
-import org.dots.game.core.generateDefaultInitPos
+import org.dots.game.createStandardRules
 import org.junit.jupiter.api.Assertions.assertTrue
 import java.util.Locale
 import kotlin.test.Test
@@ -30,7 +31,7 @@ class StressTests {
 
     @Test
     fun maxTerritory() {
-        val field = Field.create(Rules(initialMoves = emptyList()))
+        val field = Field.create(createStandardRules(initPosType = InitPosType.Empty))
         for (y in 1..field.height) {
             for (x in 1..field.width) {
                 val player = if (y == 1 || y == field.height || x == 1 || x == field.width) {
@@ -52,7 +53,10 @@ class StressTests {
     fun testStandardField(initPosType: InitPosType) {
         var errorIsEncountered = false
         RandomGameAnalyser.process(
-            Rules(39, 32, randomSeed = 1, initialMoves = initPosType.generateDefaultInitPos(39, 32, 1)!!),
+            width = Rules.Standard.width,
+            height = Rules.Standard.height,
+            initPosType = initPosType,
+            baseMode = BaseMode.AtLeastOneOpponentDot,
             gamesCount = 10000,
             seed = 1,
             checkRollback = true,

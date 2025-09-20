@@ -131,15 +131,16 @@ fun GameTree.transform(transformType: TransformType): GameTree {
     val newFieldStride = Field.getStride(newWidth)
     fun Position.transform() = transform(transformType, field.realWidth, field.realHeight, newFieldStride)
 
-    val newField = Field.create(Rules(
+    val newField = Field.create(Rules.createAndDetectInitPos(
         width = newWidth,
         height = newHeight,
         captureByBorder = rules.captureByBorder,
         baseMode = rules.baseMode,
         suicideAllowed = rules.suicideAllowed,
         initialMoves = rules.initialMoves.map { (positionXY, player, extraInfo) ->
-            MoveInfo(positionXY?.transform(transformType, field.realWidth, field.realHeight), player, extraInfo)
-        }
+            MoveInfo(positionXY?.transform(transformType, field.width, field.height), player, extraInfo)
+        },
+        komi = rules.komi,
     ))
 
     val newGameTree = GameTree(newField, player1TimeLeft, player2TimeLeft)

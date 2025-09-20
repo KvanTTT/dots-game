@@ -190,26 +190,26 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
     check(positionHash == emptyField.positionHash, ::positionHash)
 }
 
-fun Position.transform(type: TransformType, fieldStride: Int, height: Int, newFieldStride: Int): Position {
+fun Position.transform(type: TransformType, realWidth: Int, realHeight: Int, newFieldStride: Int): Position {
     if (isGameOverMove) return this
-    val (x, y) = toXY(fieldStride)
+    val (x, y) = toXY(realWidth)
     return when (type) {
-        TransformType.RotateCw90 -> Position(height - 1 - y, x, newFieldStride)
-        TransformType.Rotate180 -> Position(fieldStride - x, height - y - 1, newFieldStride)
-        TransformType.RotateCw270 -> Position(y, fieldStride - x, newFieldStride)
-        TransformType.FlipHorizontal -> Position(fieldStride - x, y, newFieldStride)
-        TransformType.FlipVertical -> Position(x, height - 1 - y, newFieldStride)
+        TransformType.RotateCw90 -> Position(realHeight - 1 - y, x, newFieldStride)
+        TransformType.Rotate180 -> Position(realWidth - x, realHeight - y - 1, newFieldStride)
+        TransformType.RotateCw270 -> Position(y, realWidth - x, newFieldStride)
+        TransformType.FlipHorizontal -> Position(realWidth - x, y, newFieldStride)
+        TransformType.FlipVertical -> Position(x, realHeight - 1 - y, newFieldStride)
     }
 }
 
-fun PositionXY.transform(type: TransformType, fieldStride: Int, height: Int): PositionXY {
+fun PositionXY.transform(type: TransformType, width: Int, height: Int): PositionXY {
     if (isGameOverMove) return this
     val (x, y) = this
     return when (type) {
-        TransformType.RotateCw90 -> PositionXY(height - 1 - y, x)
-        TransformType.Rotate180 -> PositionXY(fieldStride - x, height - y - 1)
-        TransformType.RotateCw270 -> PositionXY(y, fieldStride - x)
-        TransformType.FlipHorizontal -> PositionXY(fieldStride - x, y)
-        TransformType.FlipVertical -> PositionXY(x, height - 1 - y)
+        TransformType.RotateCw90 -> PositionXY(height - y + 1, x)
+        TransformType.Rotate180 -> PositionXY(width - x + 1, height - y + 1)
+        TransformType.RotateCw270 -> PositionXY(y, width - x + 1)
+        TransformType.FlipHorizontal -> PositionXY(width - x + 1, y)
+        TransformType.FlipVertical -> PositionXY(x, height - y + 1)
     }
 }

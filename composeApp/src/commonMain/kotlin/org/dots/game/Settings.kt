@@ -1,42 +1,23 @@
 package org.dots.game
 
 import DumpParameters
-import org.dots.game.core.MoveInfo
-import org.dots.game.core.Player
-import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import org.dots.game.views.OpenGameSettings
-
-private const val firstLevelSeparator = ","
-private const val secondLevelSeparator = ";"
+import kotlin.random.Random
 
 fun loadRules(): Rules {
     val settings = appSettings ?: return Rules.Standard
     val ruleClass = Rules::class // TODO: inline after KT-80853
     context (settings, ruleClass) {
-        return Rules(
+        return Rules.create(
             getSetting(Rules::width, Rules.Standard.width),
             getSetting(Rules::height, Rules.Standard.height),
             captureByBorder = getSetting(Rules::captureByBorder, Rules.Standard.captureByBorder),
             baseMode = getEnumSetting(Rules::baseMode, Rules.Standard.baseMode),
             suicideAllowed = getSetting(Rules::suicideAllowed, Rules.Standard.suicideAllowed),
-            randomSeed = getSetting(Rules::randomSeed, Rules.Standard.randomSeed),
-            initialMoves = getSetting(Rules::initialMoves, "").let { initialMovesData ->
-                try {
-                    buildList {
-                        if (initialMovesData.isNotEmpty()) {
-                            initialMovesData.split(secondLevelSeparator).forEach { moveInfo ->
-                                val parts = moveInfo.split(firstLevelSeparator)
-                                add(MoveInfo(PositionXY(parts[0].toInt(), parts[1].toInt()), Player.validateAndCreate(parts[2].toInt())))
-                            }
-                        }
-                    }
-                }
-                catch (e: Exception) {
-                    println("Error while reading ${Rules::class.getSettingName(Rules::initialMoves)} `${initialMovesData}` (${e.message})")
-                    null
-                }
-            } ?: listOf()
+            initPosType = getEnumSetting(Rules::initPosType, Rules.Standard.initPosType),
+            random = Random.takeIf { getSetting(Rules::initPosIsRandom, Rules.Standard.initPosIsRandom) },
+            komi = getSetting(Rules::komi, Rules.Standard.komi),
         )
     }
 }
@@ -50,17 +31,9 @@ fun saveRules(rules: Rules) {
         setSetting(Rules::captureByBorder, rules.captureByBorder)
         setEnumSetting(Rules::baseMode, rules.baseMode)
         setSetting(Rules::suicideAllowed, rules.suicideAllowed)
-        setSetting(Rules::randomSeed, rules.randomSeed)
-        setSetting(
-            Rules::initialMoves,
-            rules.initialMoves.joinToString(secondLevelSeparator) {
-                val positionXY = it.positionXY
-                if (positionXY != null) {
-                    "${positionXY.x}$firstLevelSeparator${positionXY.y}$firstLevelSeparator${it.player.value}"
-                } else {
-                    ""
-                }
-            })
+        setEnumSetting(Rules::initPosType, rules.initPosType)
+        setSetting(Rules::initPosIsRandom, rules.initPosIsRandom)
+        setSetting(Rules::komi, rules.komi)
     }
 }
 

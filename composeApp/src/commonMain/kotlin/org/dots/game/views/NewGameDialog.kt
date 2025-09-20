@@ -10,7 +10,7 @@ import androidx.compose.ui.window.Dialog
 import org.dots.game.UiSettings
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
-import org.dots.game.core.generateDefaultInitPos
+import kotlin.random.Random
 
 private const val minDimension = 2
 private const val maxDimension = 48
@@ -27,9 +27,10 @@ fun NewGameDialog(
     var captureByBorder by remember { mutableStateOf(rules.captureByBorder) }
 
     var initPosType by remember { mutableStateOf(EnumMode(selected = rules.initPosType)) }
-    var randomSeed by remember { mutableStateOf(rules.randomSeed) }
+    var initPosIsRandom by remember { mutableStateOf(rules.initPosIsRandom) }
     var baseMode by remember { mutableStateOf(EnumMode(selected = rules.baseMode)) }
     var suicideAllowed by remember { mutableStateOf(rules.suicideAllowed) }
+    var komi by remember { mutableStateOf(rules.komi) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(470.dp).wrapContentHeight()) {
@@ -50,14 +51,8 @@ fun NewGameDialog(
 
                 if (initPosType.selected == InitPosType.QuadrupleCross) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (uiSettings.developerMode) {
-                            IntegerSlider("Random seed", randomSeed, -1, 8) {
-                                randomSeed = it
-                            }
-                        } else {
-                            Text("Random start position", Modifier.fillMaxWidth(textFraction))
-                            Checkbox(randomSeed >= 0, onCheckedChange = { randomSeed = if (it) 0 else -1 })
-                        }
+                        Text("Random start position", Modifier.fillMaxWidth(textFraction))
+                        Checkbox(initPosIsRandom, onCheckedChange = { initPosIsRandom = it })
                     }
                 }
 
@@ -71,10 +66,22 @@ fun NewGameDialog(
                     Checkbox(suicideAllowed, onCheckedChange = { suicideAllowed = it })
                 }
 
+                // TODO: implement Komi setup
+
                 Button(
                     onClick = {
-                        val initialMoves = initPosType.selected.generateDefaultInitPos(width, height, randomSeed)!!
-                        onConfirmation(Rules(width, height, captureByBorder, baseMode.selected, suicideAllowed, randomSeed, initialMoves))
+                        onConfirmation(
+                            Rules.create(
+                                width,
+                                height,
+                                captureByBorder,
+                                baseMode.selected,
+                                suicideAllowed,
+                                initPosType.selected,
+                                Random.takeIf { initPosIsRandom },
+                                komi
+                            )
+                        )
                     },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {

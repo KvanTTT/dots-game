@@ -3,9 +3,10 @@ package org.dots.game.gameTree
 import org.dots.game.core.Field
 import org.dots.game.core.GameTree
 import org.dots.game.core.GameTreeNode
+import org.dots.game.core.InitPosType
 import org.dots.game.core.Player
 import org.dots.game.core.Position
-import org.dots.game.core.Rules
+import org.dots.game.createStandardRules
 import org.dots.game.field.FieldTests
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -222,7 +223,7 @@ class GameTreeTests : FieldTests() {
     }
 
     private fun initializeGameTree(): GameTree {
-        val field = Field.create(Rules(4, 4, initialMoves = emptyList()))
+        val field = Field.create(createStandardRules(4, 4, initPosType = InitPosType.Empty))
         return GameTree(field)
     }
 
