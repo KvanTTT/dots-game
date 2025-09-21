@@ -156,9 +156,9 @@ enum class InitPosType {
                     val middleY = height / 2
 
                     // Obey notago implementation but generalize it to arbitrary field size
-                    fun nextRandomOffset(): Int = random.nextInt(4, 7 + 1)
-                    fun nextRandomOffsetX(): Int = round ( nextRandomOffset() / 39.0 * width).toInt()
-                    fun nextRandomOffsetY(): Int = round (nextRandomOffset()  / 32.0 * height).toInt()
+                    fun nextRandomOffset(): Double = random.nextDouble(4.0, 7.0)
+                    fun nextRandomOffsetX(): Int = round(nextRandomOffset() / 39.0 * width).toInt()
+                    fun nextRandomOffsetY(): Int = round(nextRandomOffset() / 32.0 * height).toInt()
 
                     offsetX1 = middleX - nextRandomOffsetX()
                     offsetY1 = middleY - nextRandomOffsetY()

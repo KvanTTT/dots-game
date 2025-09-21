@@ -6,6 +6,7 @@ import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import org.dots.game.core.recognizeInitPosType
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -41,7 +42,7 @@ class InitPosesTests {
     }
 
     @Test
-    fun singlePositionGeneration() {
+    fun singleDotGeneration() {
         assertNull(InitPosType.Single.generateMoves(0, 0))
         assertEquals(MoveInfo(PositionXY(1, 1), Player.First), InitPosType.Single.generateMoves(1, 1)!!.single())
         assertEquals(MoveInfo(PositionXY(2, 2), Player.First), InitPosType.Single.generateMoves(2, 2)!!.single())
@@ -131,6 +132,12 @@ class InitPosesTests {
             drop(8).take(4).checkCross(24, 24)
             drop(12).take(4).checkCross(12, 24)
         }
+    }
+
+    @Test
+    fun quadrupleRandomCrossGeneration() {
+        val randomCrossesOnSmallField = InitPosType.QuadrupleCross.generateMoves(5, 5, random = Random.Default)!!
+        assertEquals(16, randomCrossesOnSmallField.map { it.positionXY!! }.toSet().size)
     }
 
     @Test
