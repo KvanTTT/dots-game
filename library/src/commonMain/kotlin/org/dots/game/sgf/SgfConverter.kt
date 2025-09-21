@@ -287,13 +287,16 @@ class SgfConverter(
 
         var baseMode = Rules.Standard.baseMode
         var suicideAllowed = Rules.Standard.suicideAllowed
+        var initPosIsRandom: Boolean? = null
 
+        val rulesProperty = gameInfoProperties[SgfMetaInfo.RULES_KEY]
         if ((gameInfoProperties[SgfMetaInfo.APP_INFO_KEY]?.value as? AppInfo)?.appType == AppType.Katago) {
-            gameInfoProperties[SgfMetaInfo.RULES_KEY]?.let {
+            rulesProperty?.let {
                 val kataGoExtraRules = tryParseKataGoExtraRules(it)
                 if (kataGoExtraRules != null) {
                     baseMode = if (kataGoExtraRules.dotsCaptureEmptyBase) BaseMode.AnySurrounding else Rules.Standard.baseMode
                     suicideAllowed = kataGoExtraRules.sui
+                    initPosIsRandom = kataGoExtraRules.startPosIsRandom
                 }
             }
         }
@@ -307,6 +310,13 @@ class SgfConverter(
             initialMoves = initialMoves,
             komi = gameProperties[Game::komi]?.value as? Double ?: 0.0
         )
+        if (rules.initPosIsRandom && initPosIsRandom == false) {
+            rulesProperty?.info?.reportPropertyDiagnostic(
+                "Random `${rules.initPosType}` is detected but strict is expected according to extra rules.",
+                rulesProperty.node.textSpan,
+                DiagnosticSeverity.Warning,
+            )
+        }
         val field = Field.create(rules) { moveInfo, withinBounds, currentMoveNumber ->
             moveInfo.reportPositionThatViolatesRules(withinBounds, width, height, currentMoveNumber)
         }
@@ -867,7 +877,7 @@ class SgfConverter(
         }
     }
 
-    private data class KataGoExtraRules(val dotsCaptureEmptyBase: Boolean, val sui: Boolean)
+    private data class KataGoExtraRules(val dotsCaptureEmptyBase: Boolean, val sui: Boolean, val startPosIsRandom: Boolean)
 
     private fun tryParseKataGoExtraRules(sgfRulesProperty: SgfProperty<*>): KataGoExtraRules? {
         val propertyInfo = sgfRulesProperty.info
@@ -910,6 +920,7 @@ class SgfConverter(
 
         var dotsCaptureEmptyBase = Rules.Standard.baseMode == BaseMode.AnySurrounding
         var suicideAllowed = Rules.Standard.suicideAllowed
+        var startPosIsRandom = Rules.Standard.initPosIsRandom
 
         while (currentIndex < propertyValue.length) {
             when {
@@ -929,6 +940,14 @@ class SgfConverter(
                         break
                     }
                 }
+                tryParseKey(KataGoExtraRules::startPosIsRandom) -> {
+                    val value = tryParseBooleanValue()
+                    if (value != null) {
+                        startPosIsRandom = value
+                    } else {
+                        break
+                    }
+                }
                 else -> {
                     val errorTextSpan = TextSpan(propertyValueToken.textSpan.start + currentIndex, propertyValue.length - currentIndex)
                     propertyInfo.reportPropertyDiagnostic(
@@ -941,7 +960,7 @@ class SgfConverter(
             }
         }
 
-        return KataGoExtraRules(dotsCaptureEmptyBase, suicideAllowed)
+        return KataGoExtraRules(dotsCaptureEmptyBase, suicideAllowed, startPosIsRandom)
     }
 
     private data class PropertyInfoAndTextSpan(val propertyInfo: SgfPropertyInfo, val textSpan: TextSpan)

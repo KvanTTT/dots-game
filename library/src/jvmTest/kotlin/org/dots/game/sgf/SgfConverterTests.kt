@@ -10,6 +10,7 @@ import org.dots.game.core.BaseMode
 import org.dots.game.core.GameResult
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Games
+import org.dots.game.core.InitPosType
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionPlayer
@@ -453,6 +454,10 @@ class SgfConverterTests {
         val singleExtraRule = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1])").single().rules
         assertEquals(BaseMode.AnySurrounding, singleExtraRule.baseMode)
         assertEquals(Rules.Standard.suicideAllowed, singleExtraRule.suicideAllowed)
+
+        val detectInitPosRules = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[4]RU[startPosIsRandom0]AB[bb][cc]AW[cb][bc])").single().rules
+        assertEquals(InitPosType.Cross, detectInitPosRules.initPosType)
+        assertFalse(detectInitPosRules.initPosIsRandom)
     }
 
     @Test
@@ -474,6 +479,16 @@ class SgfConverterTests {
         )).single().rules
         assertEquals(BaseMode.AnySurrounding, rulesPartiallyCorrect.baseMode)
         assertEquals(Rules.Standard.suicideAllowed, rulesWithIncorrectValues.suicideAllowed)
+
+        val randomInitPosFromMovesButNotRandomFromRules = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[4]RU[startPosIsRandom0]AB[cb][bc]AW[bb][cc])", listOf(
+            LineColumnDiagnostic(
+                "Property RU (Rules) Random `Cross` is detected but strict is expected according to extra rules.",
+                LineColumn(1, 29),
+                DiagnosticSeverity.Warning
+            )
+        )).single().rules
+        assertEquals(InitPosType.Cross, randomInitPosFromMovesButNotRandomFromRules.initPosType)
+        assertTrue(randomInitPosFromMovesButNotRandomFromRules.initPosIsRandom)
     }
 }
 
