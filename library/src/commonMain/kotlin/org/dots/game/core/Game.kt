@@ -16,7 +16,8 @@ class Games(games: List<Game>, val parsedNode: ParsedNode? = null) : MutableList
 class Game(
     val gameTree: GameTree,
     val gameProperties: MutableMap<KProperty<*>, GameProperty<*>> = mutableMapOf(),
-    val parsedNode: ParsedNode? = null
+    val parsedNode: ParsedNode? = null,
+    val remainingInitMoves: List<MoveInfo> = emptyList(),
 ) {
     init {
         val sizeProperty = gameProperties[Game::size]
@@ -65,6 +66,7 @@ class Game(
     var overtime: String? by PropertyDelegate()
     var result: GameResult? by PropertyDelegate()
     var round: String? by PropertyDelegate()
+    var handicap: Int? by PropertyDelegate()
 
     var unknownProperties: List<String> by PropertyDelegate()
 

@@ -38,7 +38,7 @@ object GameLoader {
                                 suicideAllowed = rules?.suicideAllowed ?: Rules.Standard.suicideAllowed,
                                 initialMoves = emptyList(),
                                 komi = Rules.Standard.komi,
-                            )
+                            ).first
                         }, diagnosticReporter
                     )
                     val gameTree = GameTree(field).apply {

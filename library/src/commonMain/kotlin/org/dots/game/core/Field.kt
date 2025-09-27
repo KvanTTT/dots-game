@@ -151,7 +151,7 @@ class Field {
                 MoveInfo(it.positionXY?.transform(transformType, width, height), it.player, it.extraInfo)
             },
             komi = rules.komi,
-        ))
+        ).first)
         newField.initialMovesCount = initialMovesCount
 
         for (posIndex in 0..<dots.size - 1) {

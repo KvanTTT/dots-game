@@ -20,6 +20,7 @@ import org.dots.game.core.Rules
 import org.dots.game.toLineColumnDiagnostic
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.collections.single
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -435,6 +436,41 @@ class SgfConverterTests {
                 ),
             )
         ).single().result
+    }
+
+    @Test
+    fun handicap() {
+        val zeroHandicapAndEmpty = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[0];B[on])").single()
+        assertEquals(0, zeroHandicapAndEmpty.handicap)
+        val doubleHandicapAndEmpty = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[2];B[on];B[pq];W[ss])").single()
+        assertEquals(2, doubleHandicapAndEmpty.handicap)
+        val zeroHandicapAndCross = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[0]AB[jj][kk]AW[kj][jk];B[on])").single()
+        assertEquals(0, zeroHandicapAndCross.handicap)
+        val doubleHandicapAndCross = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[2]AB[oi][jj][kk]AW[kj][jk];B[on])").single()
+        assertEquals(2, doubleHandicapAndCross.handicap)
+    }
+
+    @Test
+    fun handicapIncorrect() {
+        parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[x]AB[jj][kk]AW[kj][jk])", listOf(
+            LineColumnDiagnostic("Property HA (Handicap) has incorrect format: `x`. Expected: Number.", LineColumn(1, 23), DiagnosticSeverity.Warning),
+        )).single()
+
+        // Handicap always starts with 2 dots (as for Go Game)
+        val zeroHandicapAndEmpty = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[0];B[on];B[pq];W[ss])", listOf(
+            LineColumnDiagnostic("Property HA (Handicap) has `0` value but expected value from field is `2`", LineColumn(1, 22), DiagnosticSeverity.Warning),
+        )).single()
+
+        assertEquals(0, zeroHandicapAndEmpty.handicap) // Preserve the value from game info
+        val singleHandicapAndEmpty = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[1];B[on];B[pq];W[ss])", listOf(
+            LineColumnDiagnostic("Property HA (Handicap) has `1` value but expected value from field is `2`", LineColumn(1, 22), DiagnosticSeverity.Warning),
+        )).single()
+        assertEquals(1, singleHandicapAndEmpty.handicap)
+
+        val tripleFromPropertyButDoubleFromField = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[3]AB[jj][kk][on]AW[kj][jk];B[mo];W[ck])", listOf(
+            LineColumnDiagnostic("Property HA (Handicap) has `3` value but expected value from field is `2`", LineColumn(1, 22), DiagnosticSeverity.Warning),
+        )).single()
+        assertEquals(3, tripleFromPropertyButDoubleFromField.handicap)
     }
 
     @Test

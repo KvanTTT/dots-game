@@ -7,6 +7,7 @@ import org.dots.game.core.InitPosType.Empty
 import org.dots.game.core.InitPosType.QuadrupleCross
 import org.dots.game.core.InitPosType.RecognitionInfo
 import org.dots.game.core.InitPosType.Single
+import kotlin.collections.elementAtOrNull
 import kotlin.math.round
 import kotlin.random.Random
 
@@ -67,8 +68,8 @@ class Rules private constructor(
             suicideAllowed: Boolean,
             initialMoves: List<MoveInfo>,
             komi: Double,
-        ): Rules {
-            val (initPosType, random) = recognizeInitPosType(initialMoves, width, height)
+        ): Pair<Rules, List<MoveInfo>> {
+            val (initPosType, random, remainingInitMoves) = recognizeInitPosType(initialMoves, width, height)
             return Rules(
                 width,
                 height,
@@ -79,7 +80,7 @@ class Rules private constructor(
                 initPosType,
                 random,
                 komi
-            )
+            ) to remainingInitMoves
         }
     }
 }
@@ -92,7 +93,7 @@ enum class InitPosType {
     QuadrupleCross,
     Custom;
 
-    data class RecognitionInfo(val initPosType: InitPosType, val randomized: Boolean)
+    data class RecognitionInfo(val initPosType: InitPosType, val randomized: Boolean, val remainingInitMoves: List<MoveInfo>)
 
     /**
      * The generator tries to obey notago and bbs implementations.
@@ -200,98 +201,75 @@ fun recognizeInitPosType(initialMoves: List<MoveInfo>, width: Int, height: Int):
         recognizedMoves.sortBy { it.positionXY!!.position }
 
         require(recognizedMoves.size == nonRandomInitPosMoves.size)
+        val remainingMoves = initialMoves.toMutableSet()
+
         var randomized = false
         for (index in 0..<recognizedMoves.size) {
             val recognizedMove = recognizedMoves[index]
             val nonRandomInitPosMove = nonRandomInitPosMoves[index]
-            if (recognizedMove.positionXY != nonRandomInitPosMove.positionXY || recognizedMove.player != nonRandomInitPosMove.player) {
+            if (!randomized && (recognizedMove.positionXY != nonRandomInitPosMove.positionXY || recognizedMove.player != nonRandomInitPosMove.player)) {
                 randomized = true
-                break
             }
+            require(remainingMoves.remove(recognizedMove))
         }
 
         // If the recognized moves sequence is not random, it's not possible to detect whether it's generated or not
         // because randomizer can generate ordinary poses in rare cases
 
-        return RecognitionInfo(expectedInitPosType, randomized)
+        return RecognitionInfo(expectedInitPosType, randomized, remainingMoves.toList())
     }
 
     return when (initialMoves.size) {
-        0 -> RecognitionInfo(Empty, false)
+        0 -> RecognitionInfo(Empty, false, emptyList())
         1 -> {
             recognizedMoves.add(initialMoves.single())
             detectRandomization(Single)
         }
         else -> {
-            var maxX = 0
-            var maxY = 0
-            for (initialMove in initialMoves) {
-                initialMove.positionXY.let {
-                    val (x, y) = it ?: break
-                    if (x > maxX) maxX = x
-                    if (y > maxY) maxY = y
-                }
-            }
-
-            val movesArray: Array<Array<Player?>> = Array(maxX) { Array(maxY) { null } }
+            val movesArray: Array<Array<MoveInfo?>> = Array(width) { Array(height) { null } }
 
             for (initialMove in initialMoves) {
-                val (positionXY, player, _) = initialMove
-                val (x, y) = positionXY ?: break
-                movesArray[x - 1][y - 1] = player
+                val (x, y) = initialMove.positionXY ?: break
+                movesArray[x - 1][y - 1] = initialMove
             }
 
-            val ignoredPositions = hashSetOf<PositionXY>()
-            for (y in 0 until maxY) {
-                for (x in 0 until maxX) {
-                    val x1 = x + 1
-                    val y1= y + 1
-                    if (ignoredPositions.contains(PositionXY(x1, y1))) continue
+            for (xyMoveInfo in initialMoves) {
+                val (x, y) = xyMoveInfo.positionXY?.let { it.x - 1 to it.y - 1 } ?: break
+                val firstPlayer = xyMoveInfo.player
 
-                    val crossFirstPlayer = movesArray.recognizeCross(x, y) ?: continue
+                val x1yMoveInfo = movesArray.elementAtOrNull(x + 1)?.elementAt(y) ?: continue
+                val secondPlayer = x1yMoveInfo.player
 
-                    PositionXY(x1, y1).let {
-                        recognizedMoves.add(MoveInfo(it, crossFirstPlayer))
-                        ignoredPositions.add(it)
-                    }
+                if (firstPlayer == secondPlayer) continue
 
-                    PositionXY(x1 + 1, y1).let {
-                        recognizedMoves.add(MoveInfo(it, crossFirstPlayer.opposite()))
-                        ignoredPositions.add(it)
-                    }
+                val x1y1MoveInfo = movesArray[x + 1].elementAt(y + 1) ?: continue
+                if (x1y1MoveInfo.player != firstPlayer) continue
 
-                    PositionXY(x1 + 1, y1 + 1).let {
-                        recognizedMoves.add(MoveInfo(it, crossFirstPlayer))
-                        ignoredPositions.add(it)
-                    }
+                val xy1MoveInfo = movesArray[x][y + 1] ?: continue
+                if (xy1MoveInfo.player != secondPlayer) continue
 
-                    PositionXY(x1, y1 + 1).let {
-                        recognizedMoves.add(MoveInfo(it, crossFirstPlayer.opposite()))
-                        ignoredPositions.add(it)
-                    }
+                recognizedMoves.apply {
+                    add(xyMoveInfo)
+                    add(x1yMoveInfo)
+                    add(x1y1MoveInfo)
+                    add(xy1MoveInfo)
                 }
+
+                // Clean up the move array because the recognized cross is already stored
+                movesArray[x][y] = null
+                movesArray[x + 1][y] = null
+                movesArray[x + 1][y + 1] = null
+                movesArray[x][y + 1] = null
             }
 
             when (recognizedMoves.size) {
                 4 -> detectRandomization(Cross)
                 8 -> detectRandomization(DoubleCross)
                 16 -> detectRandomization(QuadrupleCross)
-                else -> RecognitionInfo(Custom, false) // Assume custom poses always are not random
+                else -> RecognitionInfo(Custom, false, initialMoves) // Assume custom poses always are not random
             }
         }
     }
-}
-
-private fun Array<Array<Player?>>.recognizeCross(x: Int, y: Int): Player? {
-    fun getPlayer(x: Int, y: Int): Player? {
-        return elementAtOrNull(x)?.elementAtOrNull(y)
-    }
-
-    val firstPlayer = getPlayer(x, y) ?: return null
-    val secondPlayer = getPlayer(x + 1, y) ?: return null
-    if (getPlayer(x + 1, y + 1) != firstPlayer) return null
-    if (getPlayer(x, y + 1) != secondPlayer) return null
-    return firstPlayer
 }
 
 enum class BaseMode {

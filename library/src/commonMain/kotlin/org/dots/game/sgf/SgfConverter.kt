@@ -2,6 +2,7 @@ package org.dots.game.sgf
 
 import org.dots.game.Diagnostic
 import org.dots.game.DiagnosticSeverity
+import org.dots.game.ParsedNode
 import org.dots.game.core.AppInfo
 import org.dots.game.core.AppType
 import org.dots.game.core.BaseMode
@@ -27,6 +28,7 @@ import org.dots.game.sgf.SgfMetaInfo.COMMENT_KEY
 import org.dots.game.sgf.SgfMetaInfo.FILE_FORMAT_KEY
 import org.dots.game.sgf.SgfMetaInfo.GAME_MODE_KEY
 import org.dots.game.sgf.SgfMetaInfo.GROUNDING_WIN_GAME_RESULT
+import org.dots.game.sgf.SgfMetaInfo.HANDICAP_KEY
 import org.dots.game.sgf.SgfMetaInfo.LABEL_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_ADD_DOTS_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_MARKER
@@ -158,6 +160,25 @@ class SgfConverter(
         var addedMovesCount = 0
 
         val gameResultProperty by lazy(LazyThreadSafetyMode.NONE) { getValue(RESULT_KEY) }
+
+        val handicapProperty = get(HANDICAP_KEY)
+        if (handicapProperty != null) {
+            val handicapValueFromGameInfo = handicapProperty.value as? Int
+            if (handicapValueFromGameInfo != null) {
+                val extraBlackDotsCount = field.moveSequence.drop(field.initialMovesCount).takeWhile { it.player == Player.First }.count()
+                val remainingFirstPlayerInitDotsCount = game.remainingInitMoves.count { it.player == Player.First }
+                val remainingSecondPlayerInitDotsCount = game.remainingInitMoves.count { it.player == Player.Second }
+                val handicapFromField =
+                    remainingFirstPlayerInitDotsCount - remainingSecondPlayerInitDotsCount + extraBlackDotsCount
+                if ((handicapValueFromGameInfo > 1 || handicapFromField > 1) && handicapValueFromGameInfo != handicapFromField) {
+                    handicapProperty.info.reportPropertyDiagnostic(
+                        "has `$handicapValueFromGameInfo` value but expected value from field is `$handicapFromField`",
+                        handicapProperty.node.value.first().textSpan,
+                        DiagnosticSeverity.Warning
+                    )
+                }
+            }
+        }
 
         if (definedGameResult is GameResult.Draw) {
             // Check if the game is not automatically over because of no legal moves or a grounding move
@@ -301,7 +322,7 @@ class SgfConverter(
             }
         }
 
-        val rules = Rules.createAndDetectInitPos(
+        val (rules, remainingInitMoves) = Rules.createAndDetectInitPos(
             width,
             height,
             captureByBorder = false,
@@ -327,7 +348,7 @@ class SgfConverter(
 
         val gameTree = GameTree(field, player1TimeLeft, player2TimeLeft, comment).also { it.memoizePaths = false }
 
-        return Game(gameTree, gameProperties, sgfGameTree)
+        return Game(gameTree, gameProperties, sgfGameTree, remainingInitMoves)
     }
 
     private fun convertMovesInfo(
@@ -963,7 +984,10 @@ class SgfConverter(
         return KataGoExtraRules(dotsCaptureEmptyBase, suicideAllowed, startPosIsRandom)
     }
 
-    private data class PropertyInfoAndTextSpan(val propertyInfo: SgfPropertyInfo, val textSpan: TextSpan)
+    private class PropertyInfoAndTextSpan(val propertyInfo: SgfPropertyInfo, textSpan: TextSpan) : ParsedNode(textSpan) {
+        operator fun component1(): SgfPropertyInfo = propertyInfo
+        operator fun component2(): TextSpan = textSpan
+    }
 
     private fun Char.convertToCoordinateOrNull(): Int? {
         return when (this) {

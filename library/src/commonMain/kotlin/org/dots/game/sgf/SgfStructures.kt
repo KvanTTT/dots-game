@@ -147,6 +147,7 @@ object SgfMetaInfo {
     const val PLAYER1_TIME_LEFT_KEY = "${PLAYER1_MARKER}L"
     const val PLAYER2_TIME_LEFT_KEY = "${PLAYER2_MARKER}L"
     const val ROUND_KEY = "RO"
+    const val HANDICAP_KEY = "HA"
 
     const val PLAYER1_MOVE_KEY = PLAYER1_MARKER.toString()
     const val PLAYER2_MOVE_KEY = PLAYER2_MARKER.toString()
@@ -193,6 +194,7 @@ object SgfMetaInfo {
         PLAYER1_TIME_LEFT_KEY to SgfPropertyInfo("Player1 time left", Game::player1TimeLeft, SgfPropertyType.Double, scope = SgfPropertyScope.Both),
         PLAYER2_TIME_LEFT_KEY to SgfPropertyInfo("Player2 time left", Game::player2TimeLeft, SgfPropertyType.Double, scope = SgfPropertyScope.Both),
         ROUND_KEY to SgfPropertyInfo("Round", Game::round),
+        HANDICAP_KEY to SgfPropertyInfo("Handicap", Game::handicap, SgfPropertyType.Number),
 
         PLAYER1_MOVE_KEY to SgfPropertyInfo("Player1 move", GameTreeNode::moveResult, SgfPropertyType.MovePosition, multipleValues = true, scope = SgfPropertyScope.Move),
         PLAYER2_MOVE_KEY to SgfPropertyInfo("Player2 move", GameTreeNode::moveResult, SgfPropertyType.MovePosition, multipleValues = true, scope = SgfPropertyScope.Move),

@@ -141,7 +141,7 @@ fun GameTree.transform(transformType: TransformType): GameTree {
             MoveInfo(positionXY?.transform(transformType, field.width, field.height), player, extraInfo)
         },
         komi = rules.komi,
-    ))
+    ).first)
 
     val newGameTree = GameTree(newField, player1TimeLeft, player2TimeLeft)
     newGameTree.memoizePaths = memoizePaths
