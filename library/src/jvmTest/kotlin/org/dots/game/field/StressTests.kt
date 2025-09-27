@@ -60,7 +60,6 @@ class StressTests {
             gamesCount = 10000,
             seed = 1,
             checkRollback = true,
-            measureNanos = { System.nanoTime() },
             formatDouble = { String.format(Locale.ENGLISH, "%.4f", it) },
             outputStream = { println(it) },
             errorStream = {

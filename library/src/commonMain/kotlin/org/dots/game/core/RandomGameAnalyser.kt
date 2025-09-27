@@ -8,6 +8,7 @@ import org.dots.game.core.Position
 import org.dots.game.core.Rules
 import org.dots.game.core.unmakeAllMovesAndCheck
 import kotlin.random.Random
+import kotlin.time.TimeSource
 
 object RandomGameAnalyser {
     fun process(
@@ -18,7 +19,6 @@ object RandomGameAnalyser {
         gamesCount: Int,
         seed: Long,
         checkRollback: Boolean,
-        measureNanos: () -> Long,
         formatDouble: (Double) -> String,
         outputStream: (String) -> Unit,
         errorStream: (String) -> Unit = outputStream,
@@ -40,9 +40,7 @@ object RandomGameAnalyser {
         var basesCount = 0
         var emptyBasesCount = 0
 
-        var totalTimeNs = 0L
-
-        val startNanos = measureNanos()
+        val startTimeMark = TimeSource.Monotonic.markNow()
 
         val fieldStride = Field.getStride(width)
         val randomMoves = buildList {
@@ -108,9 +106,10 @@ object RandomGameAnalyser {
             }
         }
 
-        totalTimeNs += measureNanos() - startNanos
+        val totalTime = startTimeMark.elapsedNow()
+        val totalTimeNs = totalTime.inWholeNanoseconds
 
-        outputStream("Total time: ${totalTimeNs / nanosInMs} ms")
+        outputStream("Total time: ${totalTime.inWholeMilliseconds} ms")
         outputStream("First player wins: $firstPlayerWins")
         outputStream("Second player wins: $secondPlayerWins")
         outputStream("Draw count: $drawCount")

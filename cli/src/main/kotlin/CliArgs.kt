@@ -91,7 +91,6 @@ class CliArgs : CliktCommand() {
                 gamesCount = warmUpGamesCount,
                 seed ?: 0L,
                 checkRollback = true,
-                measureNanos = { 0 },
                 formatDouble = { it.toString() },
                 outputStream = { },
             )
@@ -107,7 +106,6 @@ class CliArgs : CliktCommand() {
                 gamesCount,
                 seed ?: 0L,
                 checkRollback,
-                measureNanos = { System.nanoTime() },
                 formatDouble = { String.format(Locale.ENGLISH, "%.4f", it) },
                 outputStream = { outputStream.println(it) },
             )

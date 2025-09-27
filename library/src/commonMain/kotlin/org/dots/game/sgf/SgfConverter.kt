@@ -50,12 +50,13 @@ import org.dots.game.sgf.SgfMetaInfo.sgfPropertyInfoToKey
 import org.dots.game.sgf.SgfMetaInfo.propertyInfos
 import org.dots.game.toNeatNumber
 import kotlin.reflect.KProperty
+import kotlin.time.Duration
+import kotlin.time.measureTime
 
 class SgfConverter(
     val sgf: SgfRoot,
     val warnOnMultipleGames: Boolean = false,
     val useEndingMove: Boolean = true,
-    val measureNanos: (() -> Long)?,
     val diagnosticReporter: (Diagnostic) -> Unit,
 ) {
     companion object {
@@ -70,8 +71,8 @@ class SgfConverter(
          *   * Unsupported mode (not Kropki)
          *   * Incorrect or unspecified size
          */
-        fun convert(sgf: SgfRoot, warnOnMultipleGames: Boolean = false, addFinishingMove: Boolean = true, measureNanos: (() -> Long)? = null, diagnosticReporter: (Diagnostic) -> Unit): Games {
-            return SgfConverter(sgf, warnOnMultipleGames, addFinishingMove, measureNanos, diagnosticReporter).convert()
+        fun convert(sgf: SgfRoot, warnOnMultipleGames: Boolean = false, addFinishingMove: Boolean = true, diagnosticReporter: (Diagnostic) -> Unit): Games {
+            return SgfConverter(sgf, warnOnMultipleGames, addFinishingMove, diagnosticReporter).convert()
         }
     }
 
@@ -79,7 +80,7 @@ class SgfConverter(
 
     private var capturingIsCalculatedAutomaticallyIsReported: Boolean = false
 
-    var fieldNanos: Long = 0L
+    var fieldTime: Duration = Duration.ZERO
         private set
 
     fun convert(): Games {
@@ -143,10 +144,8 @@ class SgfConverter(
                 )
             }
 
-            val startNanos = measureNanos?.invoke()
-            initializedGame.gameTree.back(movesCount)
-            if (measureNanos != null) {
-                fieldNanos += measureNanos() - startNanos!!
+            fieldTime += measureTime {
+                initializedGame.gameTree.back(movesCount)
             }
         }
 
@@ -387,10 +386,8 @@ class SgfConverter(
                     val withinBounds: Boolean
                     val position = field.getPositionIfWithinBounds(moveInfo.positionXY)
                     if (position != null) {
-                        val startNanos = measureNanos?.invoke()
-                        moveResult = field.makeMoveUnsafe(position, moveInfo.player)
-                        if (measureNanos != null) {
-                            fieldNanos += measureNanos() - startNanos!!
+                        fieldTime += measureTime {
+                            moveResult = field.makeMoveUnsafe(position, moveInfo.player)
                         }
                         withinBounds = true
                     } else {
