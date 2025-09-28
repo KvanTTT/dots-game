@@ -20,7 +20,7 @@ class GameOverMoveTests : FieldTests() {
              . . . . .
         """) {
             it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
-            val base = it.lastMove!!.bases!!.single()
+            val base = it.lastMove!!.bases.single()
 
             val sortedPositions = base.getSortedClosurePositions(it, considerTerritoryPositions = true)
             assertEquals(2, sortedPositions.outerClosure.size)
@@ -46,7 +46,7 @@ class GameOverMoveTests : FieldTests() {
              * + .
         """) {
             it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
-            assertNull(it.lastMove!!.bases)
+            assertTrue(it.lastMove!!.bases.isEmpty())
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
             assertEquals(GameResult.Draw(EndGameKind.Grounding, Player.First), it.gameResult)
@@ -70,7 +70,7 @@ class GameOverMoveTests : FieldTests() {
             . . . . . .
         """) {
             it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
-            val base = it.lastMove!!.bases!!.single()
+            val base = it.lastMove!!.bases.single()
             val sortedPositions = base.getSortedClosurePositions(it, considerTerritoryPositions = true)
             assertEquals(6, sortedPositions.outerClosure.size)
             assertTrue(sortedPositions.innerClosures.isEmpty())
@@ -92,7 +92,7 @@ class GameOverMoveTests : FieldTests() {
         ) {
             it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
             val lastMove = it.lastMove!!
-            assertEquals(2, lastMove.bases!!.size)
+            assertEquals(2, lastMove.bases.size)
 
             val firstBase = lastMove.bases[0]
             val sortedPositions = firstBase.getSortedClosurePositions(it, considerTerritoryPositions = true)
@@ -116,7 +116,7 @@ class GameOverMoveTests : FieldTests() {
         """
         ) {
             it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
-            assertEquals(4, it.lastMove!!.bases!!.size)
+            assertEquals(4, it.lastMove!!.bases.size)
 
             with (it) {
                 assertEquals(Player.None, Position(3, 3, it.realWidth).getState().getEmptyTerritoryPlayer())
@@ -135,7 +135,7 @@ class GameOverMoveTests : FieldTests() {
         """
         ) {
             it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
-            assertNull(it.lastMove!!.bases)
+            assertTrue(it.lastMove!!.bases.isEmpty())
 
             with (it) {
                 assertTrue(Position(2, 2, it.realWidth).getState().isWithinEmptyTerritory(Player.First))

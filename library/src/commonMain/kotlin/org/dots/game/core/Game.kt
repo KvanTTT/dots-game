@@ -196,7 +196,7 @@ sealed class GameResult(val player: Player?) {
     }
 }
 
-data class MoveInfo(val positionXY: PositionXY?, val player: Player, val extraInfo: Any? = null)
+data class MoveInfo(val positionXY: PositionXY?, val player: Player, val extraInfo: ParsedNode? = null)
 
 data class Label(val positionXY: PositionXY, val text: String)
 

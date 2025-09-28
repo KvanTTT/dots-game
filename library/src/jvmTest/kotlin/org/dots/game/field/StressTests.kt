@@ -41,7 +41,7 @@ class StressTests {
                 }
                 val moveResult = field.makeMove(x, y, player)!!
                 if (x == field.width - 1 && y == field.height) {
-                    val bigBase = moveResult.bases!!.single()
+                    val bigBase = moveResult.bases.single()
                     assertEquals((field.width - 2) * (field.height - 2), bigBase.rollbackPositions.size)
                     assertEquals((field.width - 2) * 2 + (field.height - 2) * 2, bigBase.closurePositions.size)
                 }

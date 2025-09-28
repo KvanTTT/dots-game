@@ -27,17 +27,15 @@ fun Field.getOneMoveCapturingAndBasePositions(): OneMoveCapturingAndBasePosition
                     if (moveResult != null) {
                         unmakeMove()
 
-                        if (moveResult.bases != null) {
-                            if (moveResult.bases.any { it.isReal && it.player == player }) {
-                                oneMoveCapturingPositions[position] =
-                                    (oneMoveCapturingPositions[position] ?: Player.None) + player
-                            }
+                        if (moveResult.bases.any { it.isReal && it.player == player }) {
+                            oneMoveCapturingPositions[position] =
+                                (oneMoveCapturingPositions[position] ?: Player.None) + player
+                        }
 
-                            for (base in moveResult.bases) {
-                                base.rollbackPositions.iterate { position ->
-                                    oneMoveBasePositions[position] =
-                                        (oneMoveBasePositions[position] ?: Player.None) + base.player
-                                }
+                        for (base in moveResult.bases) {
+                            base.rollbackPositions.iterate { position ->
+                                oneMoveBasePositions[position] =
+                                    (oneMoveBasePositions[position] ?: Player.None) + base.player
                             }
                         }
                     }

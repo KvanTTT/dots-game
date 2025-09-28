@@ -74,13 +74,11 @@ object RandomGameAnalyser {
 
                     if (moveResult != null) {
                         movesCount++
-                        if (moveResult.bases != null) {
-                            for (base in moveResult.bases) {
-                                if (base.isReal) {
-                                    basesCount++
-                                } else {
-                                    emptyBasesCount++
-                                }
+                        for (base in moveResult.bases) {
+                            if (base.isReal) {
+                                basesCount++
+                            } else {
+                                emptyBasesCount++
                             }
                         }
                     }

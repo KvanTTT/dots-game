@@ -175,7 +175,7 @@ class Field {
                 moveResult.player,
                 moveResult.previousState,
                 emptyBaseInvalidatePositions = moveResult.emptyBaseInvalidatePositions.map { it.transform() },
-                bases = moveResult.bases?.map { base ->
+                bases = moveResult.bases.map { base ->
                     Base(
                         base.player,
                         closurePositions = base.closurePositions.map { it.transform() },
@@ -232,7 +232,7 @@ class Field {
 
         val currentPlayer = player ?: getCurrentPlayer()
 
-        var resultBases: List<Base>? = emptyList()
+        var resultBases: List<Base> = emptyList()
         var emptyBaseInvalidatePositions: PositionsList = PositionsList.EMPTY
 
         gameResult = when (externalFinishReason) {
@@ -245,7 +245,7 @@ class Field {
                 }
 
                 val (localResultBases, localEmptyBaseInvalidatePositions) = ground(currentPlayer)
-                resultBases = localResultBases.takeIf { it.isNotEmpty() }
+                resultBases = localResultBases
                 emptyBaseInvalidatePositions = localEmptyBaseInvalidatePositions
 
                 finishGame(EndGameKind.Grounding, currentPlayer)
@@ -291,16 +291,14 @@ class Field {
 
         val moveResult = moveResults.removeLast()
 
-        if (moveResult.bases != null) {
-            for (base in moveResult.bases.reversed()) {
-                val basePlayer = base.player
+        for (base in moveResult.bases.reversed()) {
+            val basePlayer = base.player
 
-                base.rollbackPositions.iterateWithIndex { index, rollbackPosition ->
-                    val rollbackDotState = base.rollbackDotStates.get(index)
-                    rollbackPosition.setState(rollbackDotState)
-                    if (base.isReal) {
-                        updateScoreAndHashForTerritory(rollbackPosition, rollbackDotState, basePlayer, rollback = true)
-                    }
+            base.rollbackPositions.iterateWithIndex { index, rollbackPosition ->
+                val rollbackDotState = base.rollbackDotStates.get(index)
+                rollbackPosition.setState(rollbackDotState)
+                if (base.isReal) {
+                    updateScoreAndHashForTerritory(rollbackPosition, rollbackDotState, basePlayer, rollback = true)
                 }
             }
         }
@@ -1065,7 +1063,7 @@ class MoveResult(
     val player: Player,
     val previousState: DotState,
     val emptyBaseInvalidatePositions: PositionsList,
-    val bases: List<Base>?,
+    val bases: List<Base>,
 ) {
     val positionPlayer: PositionPlayer
         get() = PositionPlayer(position, player)
