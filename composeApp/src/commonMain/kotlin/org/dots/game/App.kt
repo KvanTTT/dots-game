@@ -44,7 +44,6 @@ fun App() {
 
         var gameTreeViewData: GameTreeViewData by remember { mutableStateOf(GameTreeViewData(currentGame.gameTree)) }
 
-        var lastMove: MoveResult? by remember { mutableStateOf(null) }
         var currentGameTreeNode by remember { mutableStateOf<GameTreeNode?>(null) }
         var player1Score by remember { mutableStateOf(0) }
         var player2Score by remember { mutableStateOf(0) }
@@ -64,7 +63,6 @@ fun App() {
 
             val currentNode = getGameTree().currentNode
             currentGameTreeNode = currentNode
-            lastMove = currentNode.moveResult
             moveNumber = currentNode.number
         }
 
@@ -207,7 +205,7 @@ fun App() {
                     Text("  ($player2Score)", color = winnerColor)
                 }
                 Row {
-                    FieldView(lastMove, moveMode, getField(), uiSettings) {
+                    FieldView(currentGameTreeNode, moveMode, getField(), uiSettings) {
                         getGameTree().add(it)
                         updateFieldAndGameTree()
                     }

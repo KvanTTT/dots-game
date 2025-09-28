@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
+import org.dots.game.core.GameTreeNode
 import org.dots.game.core.MoveMode
 import org.dots.game.core.MoveResult
 import org.dots.game.core.Player
@@ -116,7 +117,7 @@ fun Field.getDpSize(): DpSize {
 }
 
 @Composable
-fun FieldView(currentMove: MoveResult?, moveMode: MoveMode, field: Field, uiSettings: UiSettings, onMovePlaced: (MoveResult) -> Unit) {
+fun FieldView(currentTreeNode: GameTreeNode?, moveMode: MoveMode, field: Field, uiSettings: UiSettings, onMovePlaced: (MoveResult) -> Unit) {
     val currentDensity = LocalDensity.current
     var pointerFieldPosition: Position? by remember { mutableStateOf(null) }
 
@@ -151,14 +152,14 @@ fun FieldView(currentMove: MoveResult?, moveMode: MoveMode, field: Field, uiSett
             }
     ) {
         Grid(field, uiSettings)
-        Moves(currentMove, field, uiSettings)
+        Moves(currentTreeNode, field, uiSettings)
         if (!field.isGameOver()) {
             if (uiSettings.showDiagonalConnections) {
-                AllConnections(currentMove, field, uiSettings)
+                AllConnections(currentTreeNode, field, uiSettings)
             }
 
             if (uiSettings.showThreats || uiSettings.showSurroundings) {
-                ThreatsAndSurroundings(currentMove, field, uiSettings)
+                ThreatsAndSurroundings(currentTreeNode, field, uiSettings)
             }
         }
         Pointer(pointerFieldPosition, moveMode, field, uiSettings)
@@ -225,7 +226,7 @@ private fun Grid(field: Field, uiSettings: UiSettings) {
 }
 
 @Composable
-private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings) {
+private fun Moves(currentTreeNode: GameTreeNode?, field: Field, uiSettings: UiSettings) {
     val fieldWithIncrementalUpdate = Field.create(field.rules) // TODO: rewrite without using temp field
 
     val gameOverMove = field.moveSequence.lastOrNull()?.takeIf { it.position.isGameOverMove }
@@ -260,7 +261,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
             drawCircle(
                 color,
                 dotRadiusPx,
-                moveResultPosition.toPxOffset(field,this)
+                moveResultPosition.toPxOffset(field, this)
             )
 
             for (base in moveResult.bases) {
@@ -278,7 +279,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
             }
         }
 
-        currentMove?.let {
+        currentTreeNode?.moveResult?.let {
             drawCircle(
                 lastMoveColor,
                 lastMoveRadius.toPx(),
@@ -323,7 +324,7 @@ private fun Moves(currentMove: MoveResult?, field: Field, uiSettings: UiSettings
 }
 
 @Composable
-private fun AllConnections(currentMove: MoveResult?, field: Field, uiSettings: UiSettings) {
+private fun AllConnections(currentTreeNode: GameTreeNode?, field: Field, uiSettings: UiSettings) {
     Canvas(Modifier.fillMaxSize().graphicsLayer()) {
         with(field) {
             for (distanceId in minDistanceId..maxDistanceId) {
@@ -386,13 +387,13 @@ private fun AllConnections(currentMove: MoveResult?, field: Field, uiSettings: U
                 }
             }
 
-            currentMove
+            currentTreeNode
         }
     }
 }
 
 @Composable
-private fun ThreatsAndSurroundings(currentMove: MoveResult?, field: Field, uiSettings: UiSettings) {
+private fun ThreatsAndSurroundings(currentTreeNode: GameTreeNode?, field: Field, uiSettings: UiSettings) {
     Canvas(Modifier.fillMaxSize().graphicsLayer()) {
         val (oneMoveCapturingPositions, oneMoveBasePositions) = field.getOneMoveCapturingAndBasePositions()
 
@@ -436,7 +437,7 @@ private fun ThreatsAndSurroundings(currentMove: MoveResult?, field: Field, uiSet
             }
         }
 
-        currentMove
+        currentTreeNode
     }
 }
 
