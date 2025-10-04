@@ -55,7 +55,7 @@ class Field {
                 DotState.Empty.value
             }
         }
-        this.numberOfLegalMoves = width * height
+        this.numberOfLegalMovesIfSuicideAllowed = width * height
         this.positionHash = ZobristHash.widthHash[width] xor ZobristHash.heightHash[height]
         require(checkSize(width) && checkSize(height))
 
@@ -82,7 +82,11 @@ class Field {
 
     private val moveResults = mutableListOf<MoveResult>()
 
-    var numberOfLegalMoves: Int
+    /**
+     * The field is being updated iteratively.
+     * It's relevant only to suicidal mode because overwise it's expensive or complicated to update it iteratively.
+     */
+    var numberOfLegalMovesIfSuicideAllowed: Int
         private set
 
     var gameResult: GameResult? = null
@@ -110,7 +114,7 @@ class Field {
         dots.copyInto(new.dots)
         new.moveResults.clear()
         new.moveResults.addAll(moveResults)
-        new.numberOfLegalMoves = numberOfLegalMoves
+        new.numberOfLegalMovesIfSuicideAllowed = numberOfLegalMovesIfSuicideAllowed
         new.gameResult = gameResult
         new.player1Score = player1Score
         new.player2Score = player2Score
@@ -186,7 +190,7 @@ class Field {
                 },
             ))
         }
-        newField.numberOfLegalMoves = numberOfLegalMoves
+        newField.numberOfLegalMovesIfSuicideAllowed = numberOfLegalMovesIfSuicideAllowed
         newField.gameResult = gameResult
         newField.player1Score = player1Score
         newField.player2Score = player2Score
@@ -319,7 +323,9 @@ class Field {
         if (isRealMove) {
             moveResult.position.setState(moveResult.previousState)
             updatePositionHash(moveResult.position, moveResult.player)
-            numberOfLegalMoves++
+            if (rules.suicideAllowed) {
+                numberOfLegalMovesIfSuicideAllowed++
+            }
         }
         gameResult = null
 
@@ -366,7 +372,9 @@ class Field {
         val resultBases: List<Base>
         val emptyBaseInvalidatePositions: PositionsList
 
-        numberOfLegalMoves--
+        if (rules.suicideAllowed) {
+            numberOfLegalMovesIfSuicideAllowed--
+        }
 
         position.setState(DotState.createPlaced(currentPlayer))
         val hashValue = ZobristHash.getPositionsValue(position, currentPlayer)
@@ -387,7 +395,9 @@ class Field {
                     } else {
                         position.setState(originalState)
                         updatePositionHash(hashValue)
-                        numberOfLegalMoves++
+                        if (rules.suicideAllowed) {
+                            numberOfLegalMovesIfSuicideAllowed++
+                        }
                         return null
                     }
                 } else {
@@ -403,7 +413,9 @@ class Field {
                         // Rollback state in case of a suicidal move
                         position.setState(originalState)
                         updatePositionHash(hashValue)
-                        numberOfLegalMoves++
+                        if (rules.suicideAllowed) {
+                            numberOfLegalMovesIfSuicideAllowed++
+                        }
                         return null
                     } else {
                         base?.let { listOf(it) } ?: bases
@@ -425,7 +437,7 @@ class Field {
             }
         }
 
-        if (numberOfLegalMoves == 0) {
+        if (rules.suicideAllowed && numberOfLegalMovesIfSuicideAllowed == 0) {
             gameResult = finishGame(EndGameKind.NoLegalMoves, currentPlayer)
         }
 
@@ -1031,10 +1043,12 @@ class Field {
         }
 
         if (currentPlayer == Player.None) {
-            if (!rollback) {
-                numberOfLegalMoves--
-            } else {
-                numberOfLegalMoves++
+            if (rules.suicideAllowed) {
+                if (!rollback) {
+                    numberOfLegalMovesIfSuicideAllowed--
+                } else {
+                    numberOfLegalMovesIfSuicideAllowed++
+                }
             }
             updatePositionHash(position, basePlayer)
         } else {

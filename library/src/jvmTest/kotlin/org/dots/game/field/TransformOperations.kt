@@ -101,6 +101,6 @@ class TransformOperations : FieldTests() {
         assertEquals(originField.player2Score, transformedField.player2Score)
         assertEquals(1, transformedField.player1Score)
         assertEquals(originField.gameResult, transformedField.gameResult)
-        assertEquals(originField.numberOfLegalMoves, transformedField.numberOfLegalMoves)
+        assertEquals(originField.numberOfLegalMovesIfSuicideAllowed, transformedField.numberOfLegalMovesIfSuicideAllowed)
     }
 }

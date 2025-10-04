@@ -304,6 +304,18 @@ class SgfConverterMovesTests {
     }
 
     @Test
+    fun groundingAndNoLegalMoves() {
+        parseConvertAndCheck("(;FF[4]AP[katago]RU[sui1]GM[40]SZ[2];B[aa];W[ab];B[bb];W[ba];B[])", listOf(
+            LineColumnDiagnostic("Property B (Player1 move) is defined (``), however the game is already over with the result: Draw (NoLegalMoves)",
+                LineColumn(1, 64), DiagnosticSeverity.Error)
+        ))
+
+        // Allow last grounding move because there is no simple way to update the number of legal moves iteratively
+        // if suicidal moves are allowed
+        parseConvertAndCheck("(;FF[4]AP[katago]RU[sui0]GM[40]SZ[2];B[aa];W[ab];B[bb];W[ba];B[])")
+    }
+
+    @Test
     fun noLegalMovesAndDefinedGameResult() {
         parseConvertAndCheck("(;GM[40]FF[4]SZ[2]RE[Draw];B[aa];B[ab];W[ba];W[bb])")
         parseConvertAndCheck("(;GM[40]FF[4]SZ[3]RE[Draw];W[aa];W[ca];W[bb];W[ac];W[cc];B[ba];B[ab];B[cb];B[bc])",

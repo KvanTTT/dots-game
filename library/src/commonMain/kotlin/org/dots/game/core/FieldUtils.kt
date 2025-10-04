@@ -171,7 +171,7 @@ fun Field.unmakeAllMovesAndCheck(failFunc: (String) -> Unit) {
     check(emptyField.player1Score == player1Score, ::player1Score)
     check(emptyField.player2Score == player2Score, ::player2Score)
     check(emptyField.gameResult == gameResult, ::gameResult)
-    check(emptyField.numberOfLegalMoves == numberOfLegalMoves, ::numberOfLegalMoves)
+    check(emptyField.numberOfLegalMovesIfSuicideAllowed == numberOfLegalMovesIfSuicideAllowed, ::numberOfLegalMovesIfSuicideAllowed)
 
     for (x in 0 until realWidth) {
         for (y in 0 until realHeight) {
