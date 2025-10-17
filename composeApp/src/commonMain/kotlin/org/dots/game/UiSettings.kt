@@ -5,6 +5,9 @@ import org.dots.game.core.Player
 import org.dots.game.views.ConnectionDrawMode
 import org.dots.game.views.PolygonDrawMode
 
+const val minFieldDimension = 4
+const val maxFieldDimension = 39
+
 data class UiSettings(
     val playerFirstColor: Color = Color.Blue,
     val playerSecondColor: Color = Color.Red,

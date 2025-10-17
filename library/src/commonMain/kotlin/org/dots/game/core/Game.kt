@@ -158,9 +158,7 @@ sealed class GameResult(val player: Player?) {
 
         override fun toString(): String {
             return this::class.simpleName + "(${::winner.name}: $winner, $score" +
-                    endGameKind?.let { ", $endGameKind" } +
-                    player.takeIf { it != winner }?.let { ", ${::player.name}: $player" } +
-                    ")"
+                    endGameKind?.let { ", $endGameKind" } + ", ${::player.name}: $player" + ")"
         }
     }
 

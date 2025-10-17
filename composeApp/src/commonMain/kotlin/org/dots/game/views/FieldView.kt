@@ -45,6 +45,7 @@ import org.dots.game.core.getPositionsOfConnection
 import org.dots.game.core.getSortedClosurePositions
 import org.dots.game.core.getStrongConnectionLinePositions
 import org.dots.game.core.squareDistanceTo
+import org.dots.game.maxFieldDimension
 import kotlin.math.round
 
 private val borderPaddingRatio = 2.0f
@@ -109,12 +110,14 @@ enum class PolygonDrawMode {
 
 private val linesThickness = 0.75.dp
 
-fun Field.getDpSize(): DpSize {
+fun getFieldSizeSize(width: Int, height: Int): DpSize {
     return DpSize(
         cellSize * (width - 1) + fieldPadding * 2,
         cellSize * (height - 1) + fieldPadding * 2
     )
 }
+
+val maxFieldSize = getFieldSizeSize(maxFieldDimension, maxFieldDimension)
 
 @Composable
 fun FieldView(currentTreeNode: GameTreeNode?, moveMode: MoveMode, field: Field, uiSettings: UiSettings, onMovePlaced: (MoveResult) -> Unit) {
@@ -123,7 +126,7 @@ fun FieldView(currentTreeNode: GameTreeNode?, moveMode: MoveMode, field: Field, 
 
     Box(
         Modifier
-            .size(field.getDpSize())
+            .size(getFieldSizeSize(field.width, field.height))
             .pointerInput(moveMode, field) {
                 awaitPointerEventScope {
                     while (true) {
@@ -177,20 +180,21 @@ private fun Grid(field: Field, uiSettings: UiSettings) {
         val textPaddingPx = (fieldPadding - textPadding).toPx()
 
         Canvas(Modifier.fillMaxSize().graphicsLayer().background(fieldColor)) {
+            val sizeWidth = size.width
+            val sizeHeight = size.height
+
             for (x in Field.OFFSET until field.width + Field.OFFSET) {
                 val xPx = x.coordinateToPx(this)
 
                 val xCoordinateText = (x + (if (uiSettings.developerMode) -1 else 0)) .toString()
                 val textLayoutResult = textMeasurer.measure(xCoordinateText)
 
-                drawText(
-                    textMeasurer,
-                    xCoordinateText,
-                    Offset(
-                        xPx - textLayoutResult.size.width / 2,
-                        textPaddingPx - textLayoutResult.size.height
-                    )
-                )
+                val textX = xPx - textLayoutResult.size.width / 2
+                val textY = textPaddingPx - textLayoutResult.size.height
+
+                if (textX < sizeWidth && textY < sizeHeight) {
+                    drawText(textMeasurer, xCoordinateText, Offset(textX, textY))
+                }
 
                 drawLine(linesColor,
                     Offset(xPx, fieldPaddingPx),
@@ -205,14 +209,12 @@ private fun Grid(field: Field, uiSettings: UiSettings) {
                 val yCoordinateText = (if (uiSettings.developerMode) y - 1 else field.height + Field.OFFSET - y).toString()
                 val textLayoutResult = textMeasurer.measure(yCoordinateText)
 
-                drawText(
-                    textMeasurer,
-                    yCoordinateText,
-                    Offset(
-                        textPaddingPx - textLayoutResult.size.width,
-                        yPx - textLayoutResult.size.height / 2
-                    )
-                )
+                val textX = textPaddingPx - textLayoutResult.size.width
+                val textY = yPx - textLayoutResult.size.height / 2
+
+               if (textX < sizeWidth && textY < sizeHeight) {
+                    drawText(textMeasurer, yCoordinateText, Offset(textX, textY))
+                }
 
                 drawLine(
                     linesColor,

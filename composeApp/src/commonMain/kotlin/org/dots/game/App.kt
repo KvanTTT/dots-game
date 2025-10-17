@@ -9,6 +9,7 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -18,6 +19,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isBackPressed
 import androidx.compose.ui.input.pointer.isForwardPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.dots.game.core.*
@@ -188,29 +190,37 @@ fun App() {
                 }
             }
         }) {
-            val fieldDpSize = getField().getDpSize()
-            Column(Modifier.padding(5.dp)) {
-                Row(Modifier.width(fieldDpSize.width), horizontalArrangement = Arrangement.Center) {
-                    Text(player1Score.toString(), color = uiSettings.playerFirstColor)
-                    Text(" : ")
-                    Text(player2Score.toString(), color = uiSettings.playerSecondColor)
-                    val player2Score = getField().getScoreDiff(Player.Second)
-                    val winnerColor: Color = if (player2Score > 0.0f) {
-                        uiSettings.playerSecondColor
-                    } else if (player2Score < 0.0f) {
-                        uiSettings.playerFirstColor
-                    } else {
-                        Color.Black
-                    }
-                    Text("  ($player2Score)", color = winnerColor)
-                }
+            Column(Modifier.padding(5.dp).width(maxFieldSize.width), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row {
                     FieldView(currentGameTreeNode, moveMode, getField(), uiSettings) {
                         getGameTree().add(it)
                         updateFieldAndGameTree()
                     }
                 }
-                Row(Modifier.width(fieldDpSize.width), horizontalArrangement = Arrangement.Center) {
+                Row(Modifier.padding(bottom = 10.dp)) {
+                    val player1Name = currentGame.player1Name ?: Player.First.toString()
+                    val player2Name = currentGame.player2Name ?: Player.Second.toString()
+
+                    Text("$player1Name   ", color = uiSettings.playerFirstColor)
+                    Text(player1Score.toString(), color = uiSettings.playerFirstColor, fontWeight = FontWeight.Bold)
+
+                    Text(" : ")
+
+                    Text(player2Score.toString(), color = uiSettings.playerSecondColor, fontWeight = FontWeight.Bold)
+                    Text("   $player2Name", color = uiSettings.playerSecondColor)
+
+                    if (uiSettings.developerMode) {
+                        val winnerColor: Color = if (player2Score > 0.0f) {
+                            uiSettings.playerSecondColor
+                        } else if (player2Score < 0.0f) {
+                            uiSettings.playerFirstColor
+                        } else {
+                            Color.Black
+                        }
+                        Text("  ($player2Score)", color = winnerColor)
+                    }
+                }
+                Row {
                     val gameNumberText = if (games.size > 1)
                         "Game: ${games.indexOf(currentGame)}; "
                     else

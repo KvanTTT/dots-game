@@ -10,10 +10,9 @@ import androidx.compose.ui.window.Dialog
 import org.dots.game.UiSettings
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
+import org.dots.game.maxFieldDimension
+import org.dots.game.minFieldDimension
 import kotlin.random.Random
-
-private const val minDimension = 2
-private const val maxDimension = 48
 
 @Composable
 fun NewGameDialog(
@@ -22,8 +21,8 @@ fun NewGameDialog(
     onDismiss: () -> Unit,
     onConfirmation: (newGameRules: Rules) -> Unit,
 ) {
-    var width by remember { mutableStateOf(rules.width.coerceIn(minDimension, maxDimension)) }
-    var height by remember { mutableStateOf(rules.height.coerceIn(minDimension, maxDimension)) }
+    var width by remember { mutableStateOf(rules.width.coerceIn(minFieldDimension, maxFieldDimension)) }
+    var height by remember { mutableStateOf(rules.height.coerceIn(minFieldDimension, maxFieldDimension)) }
     var captureByBorder by remember { mutableStateOf(rules.captureByBorder) }
 
     var initPosType by remember { mutableStateOf(EnumMode(selected = rules.initPosType)) }
@@ -40,10 +39,10 @@ fun NewGameDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(470.dp).wrapContentHeight()) {
             Column(modifier = Modifier.padding(20.dp)) {
-                DiscreteSliderConfig("Width", width, minDimension, maxDimension) {
+                DiscreteSliderConfig("Width", width, minFieldDimension, maxFieldDimension) {
                     width = it
                 }
-                DiscreteSliderConfig("Height", height, minDimension, maxDimension) {
+                DiscreteSliderConfig("Height", height, minFieldDimension, maxFieldDimension) {
                     height = it
                 }
 

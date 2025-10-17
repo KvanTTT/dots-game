@@ -17,13 +17,13 @@ class SgfConverterMovesTests {
     @Test
     fun initialPositionsAreCorrect() {
         val game = parseConvertAndCheck(
-            "(;GM[40]FF[4]SZ[62:62]AB[az][mm]AW[AZ][])"
+            "(;GM[40]FF[4]SZ[39:32]AB[az][mm]AW[AF][])"
         ).single()
         val rules = game.rules
         assertEquals(4, rules.initialMoves.size)
         checkMoveDisregardExtraInfo(1, 26, Player.First, rules.initialMoves[0])
         checkMoveDisregardExtraInfo(13, 13, Player.First, rules.initialMoves[1])
-        checkMoveDisregardExtraInfo(27, 52, Player.Second, rules.initialMoves[2])
+        checkMoveDisregardExtraInfo(27, 32, Player.Second, rules.initialMoves[2])
         val groundingMove = rules.initialMoves[3]
         assertEquals(null, groundingMove.positionXY)
         assertEquals(Player.Second, groundingMove.player)
