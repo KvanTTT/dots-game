@@ -232,10 +232,11 @@ private fun ConnectionsAndNodes(
                         color = rootNodeColor
                         moveNumber = 0
                     } else {
-                        color = when {
-                            node.gameResult != null -> endNodeColor
-                            node.moveResult != null -> uiSettings.toColor(node.moveResult!!.player)
-                            else -> incorrectNodeColor
+                        // TODO: make more understandable colors
+                        color = if (node.moveResults.isEmpty() || node.moveResults.any { it is IllegalMove }) {
+                            incorrectNodeColor
+                        } else {
+                            uiSettings.toColor((node.moveResults.first() as LegalMove).player)
                         }
 
                         moveNumber = node.number

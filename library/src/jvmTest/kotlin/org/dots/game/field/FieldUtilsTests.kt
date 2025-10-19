@@ -139,7 +139,7 @@ class FieldUtilsTests : FieldTests() {
 
         field.makeMove(2, 1, Player.Second)
         field.makeMove(1, 2, Player.Second)
-        field.finishGame(ExternalFinishReason.Resign, Player.Second)
+        field.makeMove(positionXY = null, Player.Second, ExternalFinishReason.Resign)
 
         val newField = field.clone()
         assertEquals(field.width, newField.width)

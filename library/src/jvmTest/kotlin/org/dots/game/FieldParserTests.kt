@@ -1,6 +1,6 @@
 package org.dots.game
 
-import org.dots.game.core.MoveResult
+import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
 import org.dots.game.dump.FieldParser
@@ -140,7 +140,7 @@ class FieldParserTests {
         )
     }
 
-    private fun MoveResult.checkPositionAndPlayer(x: Int, y: Int, expectedPlayer: Player, fieldStride: Int) {
+    private fun LegalMove.checkPositionAndPlayer(x: Int, y: Int, expectedPlayer: Player, fieldStride: Int) {
         assertEquals(PositionXY(x, y), position.toXY(fieldStride))
         assertEquals(expectedPlayer, player)
     }

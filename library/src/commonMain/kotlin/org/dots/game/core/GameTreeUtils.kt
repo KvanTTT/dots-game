@@ -7,7 +7,7 @@ private const val Y_OFFSET = 1
 
 typealias GameTreeElements = List<List<GameTreeElement>>
 
-sealed class GameTreeElement()
+sealed class GameTreeElement
 
 data class NodeGameTreeElement(val node: GameTreeNode) : GameTreeElement() {
     override fun toString(): String = node.toString()
@@ -39,7 +39,7 @@ fun GameTree.getElements(mainBranchIsAlwaysStraight: Boolean = true, diagonalCon
     fun walk(node: GameTreeNode, xIndex: Int) {
         val currentYLine = result[xIndex]
 
-        val nextNodes = node.nextNodes.values
+        val nextNodes = node.children
         val firstNode = nextNodes.firstOrNull()
         val lastNode = nextNodes.lastOrNull()
         for (nextNode in nextNodes) {
@@ -84,7 +84,7 @@ fun GameTree.getElements(mainBranchIsAlwaysStraight: Boolean = true, diagonalCon
                         yLineOfMainBranch = result[xIndexOfMainBranch]
                         currentNode = nodeToRealign
                         nodeToRealign = currentNode.previousNode!!
-                    } while (nodeToRealign.nextNodes.values.firstOrNull() == currentNode && maxYSize > yLineOfMainBranch.size)
+                    } while (nodeToRealign.children.firstOrNull() == currentNode && maxYSize > yLineOfMainBranch.size)
 
                     // Draw connection line from parent to each child node
                     insertVerticalLines(yLineOfMainBranch, maxYSize)
@@ -108,77 +108,4 @@ fun GameTree.getElements(mainBranchIsAlwaysStraight: Boolean = true, diagonalCon
     walk(rootNode, 0)
 
     return result
-}
-
-fun GameTree.transform(transformType: TransformType): GameTree {
-    val newWidth: Int
-    val newHeight: Int
-    val rules = field.rules
-    when (transformType) {
-        TransformType.RotateCw90,
-        TransformType.RotateCw270 -> {
-            newWidth = rules.height
-            newHeight = rules.width
-        }
-        TransformType.Rotate180,
-        TransformType.FlipHorizontal,
-        TransformType.FlipVertical -> {
-            newWidth = rules.width
-            newHeight = rules.height
-        }
-    }
-
-    val newFieldStride = Field.getStride(newWidth)
-    fun Position.transform() = transform(transformType, field.realWidth, field.realHeight, newFieldStride)
-
-    val newField = Field.create(Rules.createAndDetectInitPos(
-        width = newWidth,
-        height = newHeight,
-        captureByBorder = rules.captureByBorder,
-        baseMode = rules.baseMode,
-        suicideAllowed = rules.suicideAllowed,
-        initialMoves = rules.initialMoves.map { (positionXY, player, extraInfo) ->
-            MoveInfo(positionXY?.transform(transformType, field.width, field.height), player, extraInfo)
-        },
-        komi = rules.komi,
-    ).first)
-
-    val newGameTree = GameTree(newField, player1TimeLeft, player2TimeLeft)
-    newGameTree.memoizePaths = memoizePaths
-    newGameTree.loopedSiblingNavigation = loopedSiblingNavigation
-
-    val savedCurrentNode = currentNode
-    var newCurrentNode = newGameTree.currentNode
-
-    fun GameTreeNode.traverseChildren() {
-        if (!isRoot) {
-            val positionPlayer = moveResult?.positionPlayer
-            val newMoveResult = positionPlayer?.let {
-                newField.makeMoveUnsafe(it.position.transform(), it.player)
-            }
-            newGameTree.add(
-                newMoveResult,
-                newField.gameResult,
-                timeLeft,
-                comment,
-                labels,
-                circles?.map { it.transform() },
-                squares?.map { it.transform() },
-            )
-        }
-        if (this == savedCurrentNode) {
-            newCurrentNode = newGameTree.currentNode
-        }
-        for (nextNode in nextNodes.values) {
-            nextNode.traverseChildren()
-            back()
-            newGameTree.back()
-        }
-    }
-
-    rootNode.traverseChildren()
-
-    newGameTree.switch(newCurrentNode)
-
-    return newGameTree
 }

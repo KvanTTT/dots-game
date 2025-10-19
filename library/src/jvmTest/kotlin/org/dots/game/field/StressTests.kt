@@ -4,6 +4,7 @@ import RandomGameAnalyser
 import org.dots.game.core.BaseMode
 import org.dots.game.core.Field
 import org.dots.game.core.InitPosType
+import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
 import org.dots.game.core.Rules
 import org.dots.game.createStandardRules
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.fail
 
 class StressTests {
@@ -39,9 +41,9 @@ class StressTests {
                 } else {
                     Player.Second
                 }
-                val moveResult = field.makeMove(x, y, player)!!
+                val legalMove = assertIs<LegalMove>(field.makeMove(x, y, player))
                 if (x == field.width - 1 && y == field.height) {
-                    val bigBase = moveResult.bases.single()
+                    val bigBase = legalMove.bases.single()
                     assertEquals((field.width - 2) * (field.height - 2), bigBase.rollbackPositions.size)
                     assertEquals((field.width - 2) * 2 + (field.height - 2) * 2, bigBase.closurePositions.size)
                 }

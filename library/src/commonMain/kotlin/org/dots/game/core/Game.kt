@@ -3,6 +3,29 @@ package org.dots.game.core
 import org.dots.game.ParsedNode
 import kotlin.reflect.KProperty
 
+typealias PropertiesMap = MutableMap<KProperty<*>, GameProperty<*>>
+
+sealed class PropertiesHolder(val properties: PropertiesMap, val parsedNode: ParsedNode?) {
+    var player1TimeLeft: Double? by PropertyDelegate()
+    var player2TimeLeft: Double? by PropertyDelegate()
+    var comment: String? by PropertyDelegate()
+    var unknownProperties: List<String> by PropertyDelegate()
+}
+
+data class GameProperty<T>(val value: T?, val changed: Boolean = false, val parsedNodes: List<ParsedNode> = emptyList())
+
+class PropertyDelegate {
+    operator fun <T> getValue(thisRef: PropertiesHolder, property: KProperty<*>): T {
+        @Suppress("UNCHECKED_CAST")
+        return thisRef.properties[property]?.value as T
+    }
+
+    operator fun <T> setValue(thisRef: PropertiesHolder, property: KProperty<*>, value: T) {
+        thisRef.properties[property] =
+            GameProperty(value, changed = true, thisRef.properties[property]?.parsedNodes ?: emptyList())
+    }
+}
+
 class Games(games: List<Game>, val parsedNode: ParsedNode? = null) : MutableList<Game> by mutableListOf() {
     init {
         addAll(games)
@@ -15,12 +38,12 @@ class Games(games: List<Game>, val parsedNode: ParsedNode? = null) : MutableList
 
 class Game(
     val gameTree: GameTree,
-    val gameProperties: MutableMap<KProperty<*>, GameProperty<*>> = mutableMapOf(),
-    val parsedNode: ParsedNode? = null,
+    properties: PropertiesMap = mutableMapOf(),
+    parsedNode: ParsedNode? = null,
     val remainingInitMoves: List<MoveInfo> = emptyList(),
-) {
+) : PropertiesHolder(properties, parsedNode) {
     init {
-        val sizeProperty = gameProperties[Game::size]
+        val sizeProperty = properties[Game::size]
         val rules = gameTree.field.rules
         @Suppress("UNCHECKED_CAST")
         if (sizeProperty != null) {
@@ -28,7 +51,7 @@ class Game(
             require(width == rules.width)
             require(height == rules.height)
         } else {
-            gameProperties[Game::size] = GameProperty(rules.width to rules.height, true)
+            properties[Game::size] = GameProperty(rules.width to rules.height, true)
         }
     }
 
@@ -41,9 +64,6 @@ class Game(
     val extraRules: String? by PropertyDelegate()
     val player1AddDots: List<MoveInfo> by PropertyDelegate()
     val player2AddDots: List<MoveInfo> by PropertyDelegate()
-
-    var player1TimeLeft: Double? by PropertyDelegate()
-    var player2TimeLeft: Double? by PropertyDelegate()
     var appInfo: AppInfo? by PropertyDelegate()
     var gameName: String? by PropertyDelegate()
     var player1Name: String? by PropertyDelegate()
@@ -55,7 +75,7 @@ class Game(
     var komi: Double? by PropertyDelegate()
     var date: String? by PropertyDelegate()
     var description: String? by PropertyDelegate()
-    var comment: String? by PropertyDelegate()
+
     var place: String? by PropertyDelegate()
     var event: String? by PropertyDelegate()
     var opening: String? by PropertyDelegate()
@@ -68,23 +88,7 @@ class Game(
     var round: String? by PropertyDelegate()
     var handicap: Int? by PropertyDelegate()
 
-    var unknownProperties: List<String> by PropertyDelegate()
-
     var initialization: Boolean = true
-}
-
-data class GameProperty<T>(val value: T?, val changed: Boolean = false, val parsedNodes: List<ParsedNode> = emptyList())
-
-class PropertyDelegate {
-    operator fun <T> getValue(thisRef: Game, property: KProperty<*>): T {
-        @Suppress("UNCHECKED_CAST")
-        return thisRef.gameProperties[property]?.value as T
-    }
-
-    operator fun <T> setValue(thisRef: Game, property: KProperty<*>, value: T) {
-        thisRef.gameProperties[property] =
-            GameProperty(value, changed = true, thisRef.gameProperties[property]?.parsedNodes ?: emptyList())
-    }
 }
 
 data class AppInfo(val name: String, val version: String?) {
@@ -95,106 +99,28 @@ data class AppInfo(val name: String, val version: String?) {
     }
 }
 
-enum class EndGameKind {
-    Grounding,
-    NoLegalMoves,
-}
-
-sealed class GameResult(val player: Player?) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        return other != null && this::class == other::class && player == (other as GameResult).player
-    }
-
-    override fun hashCode(): Int {
-        return 31 * this::class.hashCode() + player.hashCode()
-    }
-
-    class Draw(val endGameKind: EndGameKind?, player: Player?) : GameResult(player) {
-        override fun equals(other: Any?): Boolean {
-            if (!super.equals(other)) return false
-            return endGameKind == (other as Draw).endGameKind
-        }
-
-        override fun hashCode(): Int {
-            return 31 * super.hashCode() + endGameKind.hashCode()
-        }
-
-        override fun toString(): String {
-            return this::class.simpleName + endGameKind?.let { " ($it)" }
+@ConsistentCopyVisibility
+data class MoveInfo internal constructor(
+    val positionXY: PositionXY?,
+    val player: Player,
+    val externalFinishReason: ExternalFinishReason? = null,
+    val parsedNode: ParsedNode? = null,
+) {
+    companion object {
+        fun createFinishingMove(player: Player, externalFinishReason: ExternalFinishReason, parsedNode: ParsedNode? = null): MoveInfo {
+            return MoveInfo(positionXY = null, player, externalFinishReason, parsedNode)
         }
     }
 
-    sealed class WinGameResult(val winner: Player, player: Player?) : GameResult(player) {
-        override fun equals(other: Any?): Boolean {
-            if (!super.equals(other)) return false
-            return winner == (other as WinGameResult).winner
-        }
+    constructor(positionXY: PositionXY, player: Player, parsedNode: ParsedNode? = null) :
+            this(positionXY, player, null, parsedNode)
 
-        override fun hashCode(): Int {
-            return 31 * super.hashCode() + winner.hashCode()
-        }
-
-        override fun toString(): String {
-            return this::class.simpleName + "(${::winner.name} : $winner" +
-                    player?.let { ", ${::player.name}: $player" } +
-                    ")"
-        }
-    }
-
-    class ScoreWin(val score: Double, val endGameKind: EndGameKind?, winner: Player, player: Player?) : WinGameResult(winner, player) {
-        override fun equals(other: Any?): Boolean {
-            if (!super.equals(other)) return false
-            other as ScoreWin
-            return score == other.score && endGameKind == other.endGameKind
-        }
-
-        override fun hashCode(): Int {
-            var result = super.hashCode()
-            result = 31 * result + score.hashCode()
-            result = 31 * result + endGameKind.hashCode()
-            return result
-        }
-
-        override fun toString(): String {
-            return this::class.simpleName + "(${::winner.name}: $winner, $score" +
-                    endGameKind?.let { ", $endGameKind" } + ", ${::player.name}: $player" + ")"
-        }
-    }
-
-    class ResignWin(winner: Player) : WinGameResult(winner, winner.opposite())
-
-    class TimeWin(winner: Player) : WinGameResult(winner, winner.opposite())
-
-    class InterruptWin(winner: Player) : WinGameResult(winner, winner.opposite())
-
-    class UnknownWin(winner: Player) : WinGameResult(winner, winner.opposite())
-
-    fun toExternalFinishReason(): ExternalFinishReason? {
-        return when (this) {
-            is Draw -> {
-                when (endGameKind) {
-                    EndGameKind.Grounding -> ExternalFinishReason.Grounding
-                    EndGameKind.NoLegalMoves -> null
-                    null -> ExternalFinishReason.Unknown
-                }
-            }
-            is ResignWin -> ExternalFinishReason.Resign
-            is TimeWin -> ExternalFinishReason.Time
-            is InterruptWin -> ExternalFinishReason.Interrupt
-            is UnknownWin -> ExternalFinishReason.Unknown
-            is ScoreWin -> {
-                when (endGameKind) {
-                    EndGameKind.Grounding -> ExternalFinishReason.Grounding
-                    EndGameKind.NoLegalMoves -> null
-                    null -> ExternalFinishReason.Unknown
-                }
-            }
+    init {
+        if (positionXY == null) {
+            require(externalFinishReason != null)
         }
     }
 }
-
-data class MoveInfo(val positionXY: PositionXY?, val player: Player, val extraInfo: ParsedNode? = null)
 
 data class Label(val positionXY: PositionXY, val text: String)
 

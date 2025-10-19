@@ -2,6 +2,7 @@ import org.dots.game.core.BaseMode
 import org.dots.game.core.Field
 import org.dots.game.core.GameResult
 import org.dots.game.core.InitPosType
+import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.Position
@@ -72,7 +73,7 @@ object RandomGameAnalyser {
                 for (randomMove in randomMoves) {
                     val moveResult = field.makeMoveUnsafe(randomMove)
 
-                    if (moveResult != null) {
+                    if (moveResult is LegalMove) {
                         movesCount++
                         for (base in moveResult.bases) {
                             if (base.isReal) {

@@ -257,7 +257,10 @@ class InitPosesTests {
             isRandom = true,
             MoveInfo(PositionXY(standardQuadrupleCrossXLeftWithOffset, standardQuadrupleCrossYTop), Player.First),
             MoveInfo(PositionXY(standardQuadrupleCrossXLeftWithOffset + 1, standardQuadrupleCrossYTop), Player.Second),
-            MoveInfo(PositionXY(standardQuadrupleCrossXLeftWithOffset + 1, standardQuadrupleCrossYTop + 1), Player.First),
+            MoveInfo(
+                PositionXY(standardQuadrupleCrossXLeftWithOffset + 1, standardQuadrupleCrossYTop + 1),
+                Player.First
+            ),
             MoveInfo(PositionXY(standardQuadrupleCrossXLeftWithOffset, standardQuadrupleCrossYTop + 1), Player.Second),
 
             MoveInfo(PositionXY(standardQuadrupleCrossXRight, standardQuadrupleCrossYTop), Player.First),
@@ -271,9 +274,18 @@ class InitPosesTests {
             MoveInfo(PositionXY(standardQuadrupleCrossXRight, standardQuadrupleCrossYBottom + 1), Player.Second),
 
             MoveInfo(PositionXY(standardQuadrupleCrossXLeftWithOffset, standardQuadrupleCrossYBottom), Player.First),
-            MoveInfo(PositionXY(standardQuadrupleCrossXLeftWithOffset + 1, standardQuadrupleCrossYBottom), Player.Second),
-            MoveInfo(PositionXY(standardQuadrupleCrossXLeftWithOffset + 1, standardQuadrupleCrossYBottom + 1), Player.First),
-            MoveInfo(PositionXY(standardQuadrupleCrossXLeftWithOffset, standardQuadrupleCrossYBottom + 1), Player.Second),
+            MoveInfo(
+                PositionXY(standardQuadrupleCrossXLeftWithOffset + 1, standardQuadrupleCrossYBottom),
+                Player.Second
+            ),
+            MoveInfo(
+                PositionXY(standardQuadrupleCrossXLeftWithOffset + 1, standardQuadrupleCrossYBottom + 1),
+                Player.First
+            ),
+            MoveInfo(
+                PositionXY(standardQuadrupleCrossXLeftWithOffset, standardQuadrupleCrossYBottom + 1),
+                Player.Second
+            ),
         )
     }
 

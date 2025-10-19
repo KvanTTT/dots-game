@@ -98,7 +98,7 @@ class DotStatesList private constructor(val internalArray: ByteArray, initialSiz
     }
 
     internal inline fun iterate(func: (dotState: DotState) -> Unit) {
-        for (index in 0..<size) {
+        for (index in 0 until size) {
             func(DotState(internalArray[index]))
         }
     }

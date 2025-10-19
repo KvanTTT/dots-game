@@ -13,8 +13,6 @@ import org.dots.game.core.Games
 import org.dots.game.core.InitPosType
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
-import org.dots.game.core.PositionPlayer
-import org.dots.game.core.Position
 import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
 import org.dots.game.toLineColumnDiagnostic
@@ -299,20 +297,6 @@ class SgfConverterTests {
     }
 
     @Test
-    fun timeLeft() {
-        val gameTree = parseConvertAndCheck(
-            "(;GM[40]FF[4]SZ[39:32]BL[315]WL[312];B[bc]BL[308.3];W[de]WL[294.23])",
-        ).single().gameTree
-        assertEquals(gameTree.player1TimeLeft, 315.0)
-        assertEquals(gameTree.player2TimeLeft, 312.0)
-        val fieldStride = gameTree.field.realWidth
-        var nextNode = gameTree.rootNode.getNextNode(2, 3, fieldStride, Player.First)!!
-        assertEquals(308.3, nextNode.timeLeft)
-        nextNode = nextNode.getNextNode(4, 5, fieldStride, Player.Second)!!
-        assertEquals(294.23, nextNode.timeLeft)
-    }
-
-    @Test
     fun incorrectFormatWarnings() {
         val gameInfo = parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[39:32]BR[asdf])", listOf(
@@ -543,6 +527,20 @@ internal fun checkMoveDisregardExtraInfo(x: Int, y: Int, expectedPlayer: Player,
     assertEquals(expectedPlayer, actualMoveInfo.player)
 }
 
-internal fun GameTreeNode.getNextNode(x: Int, y: Int, fieldStride: Int, player: Player): GameTreeNode? {
-    return nextNodes[PositionPlayer(Position(x, y, fieldStride), player)]
+internal fun GameTreeNode.getNextNode(x: Int, y: Int, player: Player): GameTreeNode? {
+    val moveInfo = MoveInfo(PositionXY(x, y), player)
+
+    fun MoveInfo.compareIgnoringParsedNode(other: MoveInfo?): Boolean {
+        if (other == null) return false
+        return positionXY == other.positionXY && player == other.player && externalFinishReason == other.externalFinishReason
+    }
+
+    for (child in children) {
+        if (player == Player.First && moveInfo.compareIgnoringParsedNode(child.player1Moves?.singleOrNull()) ||
+            player == Player.Second && moveInfo.compareIgnoringParsedNode(child.player2Moves?.singleOrNull())
+        ) {
+            return child
+        }
+    }
+    return null
 }

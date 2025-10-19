@@ -1,6 +1,7 @@
 package org.dots.game.core.features
 
 import org.dots.game.core.Field
+import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
 import org.dots.game.core.Position
 
@@ -24,7 +25,7 @@ fun Field.getOneMoveCapturingAndBasePositions(): OneMoveCapturingAndBasePosition
                     }
 
                     val moveResult = makeMoveUnsafe(position, player)
-                    if (moveResult != null) {
+                    if (moveResult is LegalMove) {
                         unmakeMove()
 
                         if (moveResult.bases.any { it.isReal && it.player == player }) {

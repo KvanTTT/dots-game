@@ -53,7 +53,7 @@ class SgfWriter(val oldSgfRoot: SgfRoot?) {
             appendProperty(Game::sgfFileFormat, GameProperty(SUPPORTED_FILE_FORMAT, changed = true))
         }
 
-        for ((key, gameProperty) in game.gameProperties) {
+        for ((key, gameProperty) in game.properties) {
             appendProperty(key, gameProperty)
         }
 

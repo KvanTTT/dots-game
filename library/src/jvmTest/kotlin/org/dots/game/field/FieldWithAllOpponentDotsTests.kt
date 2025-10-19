@@ -1,13 +1,15 @@
 package org.dots.game.field
 
 import org.dots.game.core.BaseMode
+import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
 import org.dots.game.core.Position
+import org.dots.game.core.SuicidalIllegalMove
 import org.dots.game.core.getSortedClosurePositions
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FieldWithAllOpponentDotsAndBorderTests : FieldTests() {
@@ -28,10 +30,10 @@ class FieldWithAllOpponentDotsAndBorderTests : FieldTests() {
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
 
-            assertNull(it.makeMove(1, 2, Player.Second)) // Suicide is disallowed
+            assertIs<SuicidalIllegalMove>(it.makeMove(1, 2, Player.Second)) // Suicide is disallowed
+            val legalMove = assertIs<LegalMove>(it.makeMove(1, 2, Player.First))
 
-            val moveResult = it.makeMove(1, 2, Player.First)!!
-            val base = moveResult.bases.single()
+            val base = legalMove.bases.single()
             val (outerClosure, innerClosure) = base.getSortedClosurePositions(it)
 
             assertEquals(
@@ -48,7 +50,7 @@ class FieldWithAllOpponentDotsAndBorderTests : FieldTests() {
 
             it.makeMove(3, 4, Player.Second)
             it.makeMove(2, 4, Player.First)
-            val base2 = it.makeMove(3, 3, Player.First)!!.bases.single()
+            val base2 = assertIs<LegalMove>(it.makeMove(3, 3, Player.First)).bases.single()
 
             val (outerClosure2, innerClosure2) = base2.getSortedClosurePositions(it)
             assertEquals(
@@ -70,7 +72,7 @@ class FieldWithAllOpponentDotsAndBorderTests : FieldTests() {
             * .
         """) {
             // Follow Go game in this case: the result group should have at least one liberty
-            assertNull(it.makeMove(2, 2, Player.First))
+            assertIs<SuicidalIllegalMove>(it.makeMove(2, 2, Player.First))
         }
     }
 
@@ -100,8 +102,8 @@ class FieldWithAllOpponentDotsAndBorderTests : FieldTests() {
         """
         ) {
             assertEquals(5, it.player2Score)
-            assertNull(it.makeMove(1, 1, Player.First))
-            assertNotNull(it.makeMove(1, 1, Player.Second))
+            assertIs<SuicidalIllegalMove>(it.makeMove(1, 1, Player.First))
+            assertIs<LegalMove>(it.makeMove(1, 1, Player.Second))
         }
     }
 
@@ -155,8 +157,8 @@ class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
 
-            val moveResult = it.makeMove(3, 3, Player.First)!!
-            val bases = moveResult.bases
+            val legalMove = assertIs<LegalMove>(it.makeMove(3, 3, Player.First))
+            val bases = legalMove.bases
             assertEquals(4, bases.size)
             assertEquals(4, it.player1Score)
             assertEquals(0, it.player2Score)
@@ -176,8 +178,8 @@ class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
             . . + + +
         """
         ) {
-            val moveResult = it.makeMove(2, 2, Player.Second)!!
-            val base = moveResult.bases.single()
+            val legalMove = assertIs<LegalMove>(it.makeMove(2, 2, Player.Second))
+            val base = legalMove.bases.single()
             assertEquals(16, it.player2Score)
             val (_, innerClosures) = base.getSortedClosurePositions(it)
             val innerClosure = innerClosures.single()
@@ -198,8 +200,8 @@ class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
             . . + + + + +
         """
         ) {
-            val moveResult = it.makeMove(2, 2, Player.Second)!!
-            val base = moveResult.bases.single()
+            val legalMove = assertIs<LegalMove>(it.makeMove(2, 2, Player.Second))
+            val base = legalMove.bases.single()
             assertEquals(22, it.player2Score)
             val (_, innerClosures) = base.getSortedClosurePositions(it)
             assertTrue(innerClosures.single().size.let { size -> size == 7 || size == 8 })
@@ -219,8 +221,8 @@ class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
             . . + + + + + + +
         """
         ) {
-            val moveResult = it.makeMove(2, 2, Player.Second)!!
-            val base = moveResult.bases.single()
+            val legalMove = assertIs<LegalMove>(it.makeMove(2, 2, Player.Second))
+            val base = legalMove.bases.single()
             assertEquals(31, it.player2Score)
             val (_, innerClosures) = base.getSortedClosurePositions(it)
             assertEquals(2, innerClosures.size)
@@ -238,8 +240,8 @@ class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
             . * * * 
         """
         ) {
-            val moveResult = it.makeMove(3, 3, Player.First)!!
-            val base = moveResult.bases.single()
+            val legalMove = assertIs<LegalMove>(it.makeMove(3, 3, Player.First))
+            val base = legalMove.bases.single()
             val (outerClosure, innerClosure) = base.getSortedClosurePositions(it)
             assertEquals(
                 listOf(
@@ -273,8 +275,8 @@ class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
             . * * * *
         """
         ) {
-            val moveResult = it.makeMove(4, 3, Player.First)!!
-            val base = moveResult.bases.single()
+            val legalMove = assertIs<LegalMove>(it.makeMove(4, 3, Player.First))
+            val base = legalMove.bases.single()
             val (outerClosure, innerClosure) = base.getSortedClosurePositions(it)
             assertTrue(outerClosure.isNotEmpty())
             assertEquals(listOf(
@@ -298,8 +300,8 @@ class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
             . . * * *
         """
         ) {
-            val moveResult = it.makeMove(4, 4, Player.First)!!
-            val base = moveResult.bases.single()
+            val legalMove = assertIs<LegalMove>(it.makeMove(4, 4, Player.First))
+            val base = legalMove.bases.single()
             val (outerClosure, innerClosure) = base.getSortedClosurePositions(it)
             assertTrue(outerClosure.isNotEmpty())
             assertEquals(

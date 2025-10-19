@@ -1,13 +1,16 @@
 package org.dots.game.field
 
+import org.dots.game.core.PosIsOccupiedIllegalMove
 import org.dots.game.core.DotState
 import org.dots.game.core.EndGameKind
 import org.dots.game.core.GameResult
+import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
 import org.dots.game.core.Position
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.assertIs
+
 import kotlin.test.assertNull
 
 class StandardFieldTests : FieldTests() {
@@ -18,7 +21,7 @@ class StandardFieldTests : FieldTests() {
             . * .
             . . .
         """) {
-            assertNull(it.makeMove(2, 2, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(2, 2, Player.First))
         }
     }
 
@@ -31,8 +34,8 @@ class StandardFieldTests : FieldTests() {
             . . .
         """
         ) {
-            val moveResult = it.makeMove(2, 3, Player.First)!!
-            val base = moveResult.bases.single()
+            val legalMove = assertIs<LegalMove>(it.makeMove(2, 3, Player.First))
+            val base = legalMove.bases.single()
             assertEquals(
                 listOf(
                     Position(2, 3, it.realWidth),
@@ -89,8 +92,8 @@ class StandardFieldTests : FieldTests() {
             . * + * .
             . . * . .
         """) {
-            val moveResult = it.makeMove(3, 2, Player.First)!!
-            val bases = moveResult.bases
+            val legalMove = assertIs<LegalMove>(it.makeMove(3, 2, Player.First))
+            val bases = legalMove.bases
             assertEquals(3, bases.size)
             assertEquals(3, it.player1Score)
         }
@@ -103,8 +106,8 @@ class StandardFieldTests : FieldTests() {
             * + . *
             . * * .
         """) {
-            assertNull(it.makeMove(3, 2, Player.First))
-            assertNull(it.makeMove(3, 2, Player.Second))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(3, 2, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(3, 2, Player.Second))
         }
     }
 
@@ -146,10 +149,10 @@ class StandardFieldTests : FieldTests() {
         ) {
             assertEquals(1, it.player2Score)
 
-            assertNotNull(it.makeMove(6, 4, Player.Second))
-            assertNull(it.makeMove(6, 4, Player.Second))
+            assertIs<LegalMove>(it.makeMove(6, 4, Player.Second))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(6, 4, Player.Second))
 
-            assertNotNull(it.makeMove(4, 2, Player.First))
+            assertIs<LegalMove>(it.makeMove(4, 2, Player.First))
             assertEquals(2, it.player2Score)
         }
     }
@@ -167,7 +170,7 @@ class StandardFieldTests : FieldTests() {
         """) {
             assertEquals(1, it.player2Score)
 
-            assertNotNull(it.makeMove(4, 2, Player.First))
+            assertIs<LegalMove>(it.makeMove(4, 2, Player.First))
             assertEquals(2, it.player2Score)
         }
     }
@@ -185,7 +188,7 @@ class StandardFieldTests : FieldTests() {
         """) {
             assertEquals(1, it.player2Score)
 
-            assertNotNull(it.makeMove(4, 2, Player.First))
+            assertIs<LegalMove>(it.makeMove(4, 2, Player.First))
             assertEquals(2, it.player2Score)
         }
     }
@@ -202,7 +205,7 @@ class StandardFieldTests : FieldTests() {
             ... ... +17 +18 +19
         """) {
             assertEquals(2, it.player2Score)
-            assertNull(it.makeMove(8, 4, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(8, 4, Player.First))
         }
     }
 
@@ -218,8 +221,7 @@ class StandardFieldTests : FieldTests() {
             ... ... +17 +18 +19
         """) {
             assertEquals(1, it.player2Score)
-            assertNull(it.makeMove(8, 4, Player.First))
-            assertNull(it.makeMove(4, 4, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(8, 4, Player.First))
         }
     }
 
@@ -238,31 +240,31 @@ class StandardFieldTests : FieldTests() {
             ... ... +23 ... ... ... ... ... +17 ... ...
             ... ... ... +22 +21 +20 +19 +18 ... ... ...
         """) {
-            assertNotNull(it.makeMove(6, 6, Player.First))
+            assertIs<LegalMove>(it.makeMove(6, 6, Player.First))
             assertEquals(1, it.player2Score)
-            assertNotNull(it.makeMove(4, 6, Player.First))
+            assertIs<LegalMove>(it.makeMove(4, 6, Player.First))
             assertEquals(2, it.player2Score)
-            assertNotNull(it.makeMove(2, 6, Player.First))
+            assertIs<LegalMove>(it.makeMove(2, 6, Player.First))
             assertEquals(3, it.player2Score)
 
-            assertNotNull(it.unmakeMove())
-            assertNotNull(it.unmakeMove())
-            assertNotNull(it.unmakeMove())
+            assertIs<LegalMove>(it.unmakeMove())
+            assertIs<LegalMove>(it.unmakeMove())
+            assertIs<LegalMove>(it.unmakeMove())
 
-            assertNotNull(it.makeMove(4, 6, Player.First))
+            assertIs<LegalMove>(it.makeMove(4, 6, Player.First))
             assertEquals(1, it.player2Score)
-            assertNull(it.makeMove(6, 6, Player.First))
-            assertNotNull(it.makeMove(2, 6, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(6, 6, Player.First))
+            assertIs<LegalMove>(it.makeMove(2, 6, Player.First))
             assertEquals(2, it.player2Score)
 
-            assertNotNull(it.unmakeMove())
-            assertNotNull(it.unmakeMove())
+            assertIs<LegalMove>(it.unmakeMove())
+            assertIs<LegalMove>(it.unmakeMove())
 
-            assertNotNull(it.makeMove(2, 6, Player.First))
+            assertIs<LegalMove>(it.makeMove(2, 6, Player.First))
             assertEquals(1, it.player2Score)
-            assertNull(it.makeMove(6, 6, Player.First))
-            assertNull(it.makeMove(4, 6, Player.First))
-            assertNotNull(it.unmakeMove())
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(6, 6, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(4, 6, Player.First))
+            assertIs<LegalMove>(it.unmakeMove())
         }
     }
 
@@ -331,8 +333,8 @@ class StandardFieldTests : FieldTests() {
             ..   ..  *9  .. ..
         """) {
             assertEquals(4, it.player1Score)
-            assertNull(it.makeMove(3, 3, Player.First))
-            assertNull(it.makeMove(3, 3, Player.Second))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(3, 3, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(3, 3, Player.Second))
         }
     }
 
@@ -351,22 +353,22 @@ class StandardFieldTests : FieldTests() {
             ... ... *37 ... ... ... ... ... *31 ... ...
             ... ... ... *36 *35 *34 *33 *32 ... ... ...
         """) {
-            assertNotNull(it.makeMove(3, 2, Player.First))
-            assertNull(it.makeMove(6, 6, Player.First))
-            assertNull(it.makeMove(6, 6, Player.Second))
-            assertNull(it.makeMove(4, 6, Player.First))
-            assertNull(it.makeMove(2, 6, Player.First))
+            assertIs<LegalMove>(it.makeMove(3, 2, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(6, 6, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(6, 6, Player.Second))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(4, 6, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(2, 6, Player.First))
             assertEquals(20, it.player1Score)
-            assertNotNull(it.unmakeMove())
+            assertIs<LegalMove>(it.unmakeMove())
 
-            assertNotNull(it.makeMove(6, 6, Player.First))
+            assertIs<LegalMove>(it.makeMove(6, 6, Player.First))
             assertEquals(1, it.player2Score)
-            assertNotNull(it.makeMove(3, 2, Player.First))
+            assertIs<LegalMove>(it.makeMove(3, 2, Player.First))
             assertEquals(20, it.player1Score)
             assertEquals(0, it.player2Score)
-            assertNull(it.makeMove(4, 6, Player.First))
-            assertNull(it.makeMove(2, 6, Player.First))
-            assertNotNull(it.unmakeMove())
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(4, 6, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(2, 6, Player.First))
+            assertIs<LegalMove>(it.unmakeMove())
         }
     }
 
@@ -449,15 +451,15 @@ class StandardFieldTests : FieldTests() {
             ... ... +17 +18 +19
         """
         ) {
-            assertNotNull(it.makeMove(7, 4, Player.First))
+            assertIs<LegalMove>(it.makeMove(7, 4, Player.First))
             assertEquals(1, it.player1Score)
             assertEquals(0, it.player2Score)
 
-            assertNotNull(it.makeMove(2, 4, Player.First))
+            assertIs<LegalMove>(it.makeMove(2, 4, Player.First))
             assertEquals(1, it.player1Score)
             assertEquals(0, it.player2Score)
 
-            assertNotNull(it.makeMove(4, 4, Player.First))
+            assertIs<LegalMove>(it.makeMove(4, 4, Player.First))
             assertEquals(1, it.player1Score)
             assertEquals(1, it.player2Score)
         }
@@ -473,7 +475,7 @@ class StandardFieldTests : FieldTests() {
         """
         ) {
             assertEquals(1, it.player1Score)
-            assertNull(it.makeMove(3, 2, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(3, 2, Player.First))
         }
     }
 
@@ -487,8 +489,8 @@ class StandardFieldTests : FieldTests() {
             .  .  *5 .  .
             .  .  .  .  .
         """) {
-            val moveResult = it.makeMove(3, 3, Player.Second)!!
-            val base = moveResult.bases.single()
+            val legalMove = assertIs<LegalMove>(it.makeMove(3, 3, Player.Second))
+            val base = legalMove.bases.single()
             assertEquals(1, base.rollbackPositions.size)
         }
     }
@@ -502,7 +504,7 @@ class StandardFieldTests : FieldTests() {
             *10 .   .   .   *6
             .   *9  *8  *7  .
         """) {
-            it.makeMove(3, 2, Player.Second)!!
+            assertIs<LegalMove>(it.makeMove(3, 2, Player.Second))
         }
     }
 
@@ -513,7 +515,7 @@ class StandardFieldTests : FieldTests() {
             *2 *1 .  *7
             .  *4 *5 .
         """) {
-            it.makeMove(3, 2, Player.Second)!!
+            assertIs<LegalMove>(it.makeMove(3, 2, Player.Second))
         }
     }
 
@@ -584,10 +586,10 @@ class StandardFieldTests : FieldTests() {
 . + . . . + .
 . . + + + . .
 """) { field, transformFunc ->
-            assertNotNull(field.makeMove(transformFunc(4, 2), Player.Second))
+            assertIs<LegalMove>(field.makeMove(transformFunc(4, 2), Player.Second))
             assertEquals(1, field.player2Score)
-            assertNull(field.makeMove(transformFunc(4, 5), Player.First))
-            assertNull(field.makeMove(transformFunc(4, 5), Player.Second))
+            assertIs<PosIsOccupiedIllegalMove>(field.makeMove(transformFunc(4, 5), Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(field.makeMove(transformFunc(4, 5), Player.Second))
         }
     }
 
@@ -601,9 +603,9 @@ class StandardFieldTests : FieldTests() {
 + . . . . . +
 . + + . + + .
 """) { field, transformFunc ->
-            assertNotNull(field.makeMove( transformFunc(4, 5), Player.Second))
+            assertIs<LegalMove>(field.makeMove(transformFunc(4, 5), Player.Second))
             assertEquals(1, field.player2Score)
-            assertNotNull(field.makeMove(transformFunc(4, 2), Player.First))
+            assertIs<LegalMove>(field.makeMove(transformFunc(4, 2), Player.First))
             assertEquals(2, field.player2Score)
         }
     }
@@ -618,10 +620,10 @@ class StandardFieldTests : FieldTests() {
 . * . . . * .
 . . * . * . .
 """) { field, transformFunc ->
-            assertNotNull(field.makeMove(transformFunc(4, 6), Player.First))
+            assertIs<LegalMove>(field.makeMove(transformFunc(4, 6), Player.First))
             assertEquals(1, field.player1Score)
-            assertNull(field.makeMove(transformFunc(4, 3), Player.Second))
-            assertNull(field.makeMove(transformFunc(4, 3), Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(field.makeMove(transformFunc(4, 3), Player.Second))
+            assertIs<PosIsOccupiedIllegalMove>(field.makeMove(transformFunc(4, 3), Player.First))
         }
     }
 }

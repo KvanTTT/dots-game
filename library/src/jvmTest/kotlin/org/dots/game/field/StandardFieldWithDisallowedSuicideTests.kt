@@ -1,11 +1,12 @@
 package org.dots.game.field
 
+import org.dots.game.core.PosIsOccupiedIllegalMove
+import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
-import org.dots.game.core.Position
+import org.dots.game.core.SuicidalIllegalMove
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.assertIs
 
 class StandardFieldWithDisallowedSuicideTests : FieldTests() {
     override val suicideAllowed = false
@@ -17,9 +18,9 @@ class StandardFieldWithDisallowedSuicideTests : FieldTests() {
             * . *
             . * .
         """) {
-            assertNull(it.makeMove(2, 2, Player.Second))
-            assertNotNull(it.makeMove(2, 2, Player.First))
-            assertNull(it.makeMove(2, 2, Player.First))
+            assertIs<SuicidalIllegalMove>(it.makeMove(2, 2, Player.Second))
+            assertIs<LegalMove>(it.makeMove(2, 2, Player.First))
+            assertIs<PosIsOccupiedIllegalMove>(it.makeMove(2, 2, Player.First))
         }
     }
 
@@ -48,10 +49,10 @@ class StandardFieldWithDisallowedSuicideTests : FieldTests() {
             ... ... +17 +18 +19
         """
         ) {
-            assertNull(it.makeMove(4, 4, Player.First))
-            assertNull(it.makeMove(2, 4, Player.First))
-            assertNotNull(it.makeMove(4, 4, Player.Second))
-            assertNotNull(it.makeMove(2, 4, Player.Second))
+            assertIs<SuicidalIllegalMove>(it.makeMove(4, 4, Player.First))
+            assertIs<SuicidalIllegalMove>(it.makeMove(2, 4, Player.First))
+            assertIs<LegalMove>(it.makeMove(4, 4, Player.Second))
+            assertIs<LegalMove>(it.makeMove(2, 4, Player.Second))
         }
     }
 }

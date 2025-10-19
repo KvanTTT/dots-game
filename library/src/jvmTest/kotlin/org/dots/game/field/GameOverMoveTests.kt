@@ -3,12 +3,13 @@ package org.dots.game.field
 import org.dots.game.core.EndGameKind
 import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.GameResult
+import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.core.getSortedClosurePositions
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class GameOverMoveTests : FieldTests() {
@@ -19,7 +20,7 @@ class GameOverMoveTests : FieldTests() {
              . * * + .
              . . . . .
         """) {
-            it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
+            assertIs<GameResult.WinGameResult>(it.makeMove(positionXY = null, Player.First, ExternalFinishReason.Grounding))
             val base = it.lastMove!!.bases.single()
 
             val sortedPositions = base.getSortedClosurePositions(it, considerTerritoryPositions = true)
@@ -32,7 +33,7 @@ class GameOverMoveTests : FieldTests() {
             assertEquals(GameResult.ScoreWin(2.0, EndGameKind.Grounding, Player.Second, Player.First), it.gameResult)
             it.unmakeMove()
 
-            it.finishGame(ExternalFinishReason.Grounding, Player.Second)!!
+            assertIs<GameResult.WinGameResult>(it.makeMove(positionXY = null, Player.Second, ExternalFinishReason.Grounding))
             assertEquals(1, it.player1Score)
             assertEquals(0, it.player2Score)
             assertEquals(GameResult.ScoreWin(1.0, EndGameKind.Grounding, Player.First, Player.Second), it.gameResult)
@@ -45,14 +46,14 @@ class GameOverMoveTests : FieldTests() {
         testFieldWithRollback("""
              * + .
         """) {
-            it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
+            assertIs<LegalMove>(it.makeMove(positionXY = null, player = Player.First, externalFinishReason = ExternalFinishReason.Grounding))
             assertTrue(it.lastMove!!.bases.isEmpty())
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
             assertEquals(GameResult.Draw(EndGameKind.Grounding, Player.First), it.gameResult)
             it.unmakeMove()
 
-            it.finishGame(ExternalFinishReason.Grounding, Player.Second)
+            it.makeMove(positionXY = null, player = Player.Second, ExternalFinishReason.Grounding)
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
             assertEquals(GameResult.Draw(EndGameKind.Grounding, Player.Second), it.gameResult)
@@ -69,7 +70,7 @@ class GameOverMoveTests : FieldTests() {
             . . * * . .
             . . . . . .
         """) {
-            it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
+            assertIs<GameResult.WinGameResult>(it.makeMove(positionXY = null, Player.First, ExternalFinishReason.Grounding))
             val base = it.lastMove!!.bases.single()
             val sortedPositions = base.getSortedClosurePositions(it, considerTerritoryPositions = true)
             assertEquals(6, sortedPositions.outerClosure.size)
@@ -90,7 +91,7 @@ class GameOverMoveTests : FieldTests() {
             . . . .
         """
         ) {
-            it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
+            assertIs<GameResult.WinGameResult>(it.makeMove(positionXY = null, Player.First, ExternalFinishReason.Grounding))
             val lastMove = it.lastMove!!
             assertEquals(2, lastMove.bases.size)
 
@@ -115,7 +116,7 @@ class GameOverMoveTests : FieldTests() {
             . . . . . .
         """
         ) {
-            it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
+            assertIs<GameResult.WinGameResult>(it.makeMove(positionXY = null, Player.First, ExternalFinishReason.Grounding))
             assertEquals(4, it.lastMove!!.bases.size)
 
             with (it) {
@@ -126,7 +127,7 @@ class GameOverMoveTests : FieldTests() {
     }
 
     @Test
-    fun groundingDontInvalidateEmptyTerritoryForStrongConnection() {
+    fun groundingDoesntInvalidateEmptyTerritoryForStrongConnection() {
         testFieldWithRollback(
             """
             * * *
@@ -134,7 +135,7 @@ class GameOverMoveTests : FieldTests() {
             * * *
         """
         ) {
-            it.finishGame(ExternalFinishReason.Grounding, Player.First)!!
+            assertIs<GameResult.Draw>(it.makeMove(positionXY = null, Player.First, ExternalFinishReason.Grounding))
             assertTrue(it.lastMove!!.bases.isEmpty())
 
             with (it) {

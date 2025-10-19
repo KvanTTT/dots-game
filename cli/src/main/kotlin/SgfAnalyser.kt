@@ -150,7 +150,11 @@ object SgfAnalyser {
                     diagnosticsCount++
                 }
                 games = sgfConverter.convert()
-                movesCount = games.sumOf { it.gameTree.allNodesCount }
+                movesCount = games.sumOf {
+                    var counter = 0
+                    it.gameTree.forEachNode { counter++ }
+                    counter
+                }
             }
 
             val fieldTimeElapsed = sgfConverter.fieldTime

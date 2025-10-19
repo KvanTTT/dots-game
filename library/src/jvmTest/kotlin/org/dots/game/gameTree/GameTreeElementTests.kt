@@ -4,14 +4,14 @@ import org.dots.game.core.EmptyGameTreeElement
 import org.dots.game.core.Field
 import org.dots.game.core.GameTree
 import org.dots.game.core.GameTreeNode
+import org.dots.game.core.MoveInfo
 import org.dots.game.core.NodeGameTreeElement
-import org.dots.game.core.Position
+import org.dots.game.core.PositionXY
 import org.dots.game.core.VerticalLineGameTreeElement
 import org.dots.game.core.getElements
 import org.dots.game.createStandardRules
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class GameTreeElementTests {
     /**
@@ -237,7 +237,7 @@ class GameTreeElementTests {
     }
 
     private fun GameTree.makeMove(x: Int, y: Int): GameTreeNode {
-        assertTrue(add(field.makeMoveUnsafe(Position(x, y, field.realWidth))!!))
+        addChild(MoveInfo(PositionXY(x, y), field.getCurrentPlayer()))
         return currentNode
     }
 }

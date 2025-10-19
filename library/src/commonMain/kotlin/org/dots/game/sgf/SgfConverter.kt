@@ -10,40 +10,39 @@ import org.dots.game.core.EndGameKind
 import org.dots.game.core.Field
 import org.dots.game.core.Game
 import org.dots.game.core.ExternalFinishReason
+import org.dots.game.core.GameIsAlreadyOverIllegalMove
 import org.dots.game.core.GameProperty
 import org.dots.game.core.GameResult
 import org.dots.game.core.GameTree
+import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Games
 import org.dots.game.core.Label
+import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
-import org.dots.game.core.MoveResult
+import org.dots.game.core.NoLegalMoves
 import org.dots.game.core.Player
-import org.dots.game.core.Position
+import org.dots.game.core.PosIsOccupiedIllegalMove
+import org.dots.game.core.PosOutOfBoundsIllegalMove
 import org.dots.game.core.PositionXY
+import org.dots.game.core.PropertiesHolder
+import org.dots.game.core.PropertiesMap
 import org.dots.game.core.Rules
+import org.dots.game.core.SuicidalIllegalMove
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_KEY
 import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_NAME
-import org.dots.game.sgf.SgfMetaInfo.CIRCLE_KEY
-import org.dots.game.sgf.SgfMetaInfo.COMMENT_KEY
 import org.dots.game.sgf.SgfMetaInfo.FILE_FORMAT_KEY
 import org.dots.game.sgf.SgfMetaInfo.GAME_MODE_KEY
 import org.dots.game.sgf.SgfMetaInfo.GROUNDING_WIN_GAME_RESULT
 import org.dots.game.sgf.SgfMetaInfo.HANDICAP_KEY
-import org.dots.game.sgf.SgfMetaInfo.LABEL_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_ADD_DOTS_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_MARKER
-import org.dots.game.sgf.SgfMetaInfo.PLAYER1_MOVE_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_RATING_KEY
-import org.dots.game.sgf.SgfMetaInfo.PLAYER1_TIME_LEFT_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_ADD_DOTS_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_MARKER
-import org.dots.game.sgf.SgfMetaInfo.PLAYER2_MOVE_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_RATING_KEY
-import org.dots.game.sgf.SgfMetaInfo.PLAYER2_TIME_LEFT_KEY
 import org.dots.game.sgf.SgfMetaInfo.RESIGN_WIN_GAME_RESULT
 import org.dots.game.sgf.SgfMetaInfo.RESULT_KEY
 import org.dots.game.sgf.SgfMetaInfo.SIZE_KEY
-import org.dots.game.sgf.SgfMetaInfo.SQUARE_KEY
 import org.dots.game.sgf.SgfMetaInfo.TIME_WIN_GAME_RESULT
 import org.dots.game.sgf.SgfMetaInfo.UNKNOWN_WIN_GAME_RESULT
 import org.dots.game.sgf.SgfMetaInfo.sgfPropertyInfoToKey
@@ -114,7 +113,7 @@ class SgfConverter(
 
         var initializedGame: Game? = game
         var initializedRootConverterProperties: Map<String, SgfProperty<*>>? = rootConverterProperties
-        var movesCount = 0
+        var rollbackNode: GameTreeNode? = initializedGame?.gameTree?.currentNode
 
         for ((index, sgfNode) in sgfGameTree.nodes.withIndex()) {
             val isRootScope = root && index == 0
@@ -124,15 +123,15 @@ class SgfConverter(
                 require(initializedRootConverterProperties == null)
                 initializedGame = convertGameInfo(sgfGameTree, sgfNode, convertedProperties, hasCriticalError)
                 initializedRootConverterProperties = convertedProperties
-            }
-            if (initializedGame?.gameTree != null) {
-                movesCount += convertMovesInfo(initializedGame.gameTree, convertedProperties)
+                rollbackNode = initializedGame?.gameTree?.rootNode
+            } else if (initializedGame?.gameTree != null) {
+                convertMovesInfo(initializedGame.gameTree, convertedProperties, sgfNode)
             }
         }
 
         if (initializedGame != null) {
             if (mainBranch && sgfGameTree.childrenGameTrees.isEmpty() && initializedRootConverterProperties != null) {
-                movesCount += initializedRootConverterProperties.finishAndValidateGameResult(initializedGame, sgfGameTree)
+                initializedRootConverterProperties.finishAndValidateGameResult(initializedGame, sgfGameTree)
             }
 
             for ((index, childGameTree) in sgfGameTree.childrenGameTrees.withIndex()) {
@@ -145,18 +144,17 @@ class SgfConverter(
             }
 
             fieldTime += measureTime {
-                initializedGame.gameTree.back(movesCount)
+                initializedGame.gameTree.switch(rollbackNode)
             }
         }
 
         return initializedGame
     }
 
-    private fun Map<String, SgfProperty<*>>.finishAndValidateGameResult(game: Game, currentGameTree: SgfGameTree): Int {
+    private fun Map<String, SgfProperty<*>>.finishAndValidateGameResult(game: Game, currentGameTree: SgfGameTree) {
         val definedGameResult = game.result
         val gameTree = game.gameTree
         val field = gameTree.field
-        var addedMovesCount = 0
 
         val gameResultProperty by lazy(LazyThreadSafetyMode.NONE) { getValue(RESULT_KEY) }
 
@@ -182,9 +180,11 @@ class SgfConverter(
         if (definedGameResult is GameResult.Draw) {
             // Check if the game is not automatically over because of no legal moves or a grounding move
             if (useEndingMove && field.gameResult == null) {
-                val gameResult = field.finishGame(ExternalFinishReason.Draw, definedGameResult.player)!!
-                gameTree.add(field.lastMove, gameResult)
-                addedMovesCount = 1
+                fieldTime += measureTime {
+                    gameTree.addChild(
+                        MoveInfo.createFinishingMove(definedGameResult.player, ExternalFinishReason.Draw)
+                    )
+                }
             }
 
             val actualWinner = (field.gameResult as? GameResult.WinGameResult)?.winner
@@ -203,12 +203,17 @@ class SgfConverter(
             //  but actual field result is also null (legal moves still exist)
             // Check if the game is not automatically over because of no legal moves of a grounding move
             if (useEndingMove && field.gameResult == null && definedFinishReason != null) {
-                // In case of grounding rely on the last player's move; otherwise it's a move of looser
-                val activePlayer = definedGameResult.player
-                    ?: (if (definedFinishReason == ExternalFinishReason.Grounding) null else definedWinner.opposite())
-                val gameResult = field.finishGame(definedFinishReason, activePlayer)!!
-                gameTree.add(field.lastMove, gameResult)
-                addedMovesCount = 1
+                // In case of grounding, rely on the last player's move; otherwise it's a move of looser
+                val activePlayer = definedGameResult.player.takeIf { it != Player.None }
+                    ?: if (definedFinishReason == ExternalFinishReason.Grounding)
+                        field.getCurrentPlayer()
+                    else
+                        definedWinner.opposite()
+                fieldTime += measureTime {
+                    gameTree.addChild(
+                        MoveInfo.createFinishingMove(activePlayer, definedFinishReason)
+                    )
+                }
             }
 
             val actualWinner = if (field.gameResult != null) {
@@ -238,8 +243,6 @@ class SgfConverter(
                 }
             }
         }
-
-        return addedMovesCount
     }
 
     private fun convertGameInfo(
@@ -281,7 +284,7 @@ class SgfConverter(
             for (player2InitialMoveInfo in (gameInfoProperties.getPropertyValue<List<MoveInfo>>(PLAYER2_ADD_DOTS_KEY)
                 ?: emptyList())) {
                 if (removeAll { it.positionXY == player2InitialMoveInfo.positionXY }) {
-                    val (propertyInfo, textSpan) = player2InitialMoveInfo.extraInfo as PropertyInfoAndTextSpan
+                    val (propertyInfo, textSpan) = player2InitialMoveInfo.parsedNode as PropertyInfoAndTextSpan
                     propertyInfo.reportPropertyDiagnostic(
                         "value `${textSpan.getText()}` overwrites one the previous position of first player ${
                             propertyInfos.getValue(PLAYER1_ADD_DOTS_KEY).getFullName()
@@ -294,16 +297,7 @@ class SgfConverter(
             }
         }
 
-        val gameProperties = mutableMapOf<KProperty<*>, GameProperty<*>>()
-
-        for (sgfProperty in gameInfoProperties.values) {
-            val gameProperty = gameProperties[sgfProperty.info.gameInfoProperty]
-            gameProperties[sgfProperty.info.gameInfoProperty] = if (gameProperty == null) {
-                GameProperty(sgfProperty.value, parsedNodes = listOf(sgfProperty.node))
-            } else {
-                GameProperty(gameProperty.value, parsedNodes = gameProperty.parsedNodes + sgfProperty.node)
-            }
-        }
+        val gameProperties = transformSgfToGameProperties(gameInfoProperties)
 
         var baseMode = Rules.Standard.baseMode
         var suicideAllowed = Rules.Standard.suicideAllowed
@@ -341,11 +335,7 @@ class SgfConverter(
             moveInfo.reportPositionThatViolatesRules(withinBounds, width, height, currentMoveNumber)
         }
 
-        val player1TimeLeft = gameInfoProperties.getPropertyValue<Double>(PLAYER1_TIME_LEFT_KEY)
-        val player2TimeLeft = gameInfoProperties.getPropertyValue<Double>(PLAYER2_TIME_LEFT_KEY)
-        val comment = gameProperties[Game::comment]?.value as? String
-
-        val gameTree = GameTree(field, player1TimeLeft, player2TimeLeft, comment).also { it.memoizePaths = false }
+        val gameTree = GameTree(field, sgfNode).also { it.memoizePaths = false }
 
         return Game(gameTree, gameProperties, sgfGameTree, remainingInitMoves)
     }
@@ -353,73 +343,67 @@ class SgfConverter(
     private fun convertMovesInfo(
         gameTree: GameTree,
         convertedProperties: Map<String, SgfProperty<*>>,
-    ): Int {
+        sgfNode: SgfNode,
+    ) {
         val field = gameTree.field
-        val player1Moves = convertedProperties.getPropertyValue<List<MoveInfo>>(PLAYER1_MOVE_KEY)
-        val player2Moves = convertedProperties.getPropertyValue<List<MoveInfo>>(PLAYER2_MOVE_KEY)
-        val player1TimeLeft = convertedProperties.getPropertyValue<Double>(PLAYER1_TIME_LEFT_KEY)
-        val player2TimeLeft = convertedProperties.getPropertyValue<Double>(PLAYER2_TIME_LEFT_KEY)
-        val comment = convertedProperties.getPropertyValue<String>(COMMENT_KEY)
-        val labels = convertedProperties.getPropertyValue<List<Label>>(LABEL_KEY)
-        val circles = convertedProperties.getPropertyValue<List<PositionXY>>(CIRCLE_KEY)
-        val squares = convertedProperties.getPropertyValue<List<PositionXY>>(SQUARE_KEY)
-        var movesCount = 0
 
-        fun processMoves(moveInfos: List<MoveInfo>?) {
-            if (moveInfos == null) return
+        val gameProperties = transformSgfToGameProperties(convertedProperties)
 
-            for (moveInfo in moveInfos) {
-                var moveResult: MoveResult? = null
-                var gameResult: GameResult? = null
-
-                if (field.gameResult != null) {
-                    val (propertyInfo, textSpan) = moveInfo.extraInfo as PropertyInfoAndTextSpan
-                    propertyInfo.reportPropertyDiagnostic("is defined (`${textSpan.getText()}`), however the game is already over with the result: ${field.gameResult}",
-                        textSpan,
-                        DiagnosticSeverity.Error
-                    )
-                }
-
-                if (moveInfo.positionXY == null) {
-                    gameResult = field.finishGame(ExternalFinishReason.Grounding, moveInfo.player)
-                } else {
-                    val withinBounds: Boolean
-                    val position = field.getPositionIfWithinBounds(moveInfo.positionXY)
-                    if (position != null) {
-                        fieldTime += measureTime {
-                            moveResult = field.makeMoveUnsafe(position, moveInfo.player)
-                        }
-                        withinBounds = true
-                    } else {
-                        moveResult = null
-                        withinBounds = false
+        fieldTime += measureTime {
+            gameTree.addChild(gameProperties, sgfNode) { moveInfo, moveResult ->
+                when (moveResult) {
+                    is GameIsAlreadyOverIllegalMove -> {
+                        val (propertyInfo, textSpan) = moveInfo.parsedNode as PropertyInfoAndTextSpan
+                        propertyInfo.reportPropertyDiagnostic(
+                            "is defined (`${textSpan.getText()}`), however the game is already over with the result: ${field.gameResult}",
+                            textSpan,
+                            DiagnosticSeverity.Error
+                        )
                     }
-                    if (moveResult == null && field.gameResult == null) {
+
+                    is PosOutOfBoundsIllegalMove -> {
                         moveInfo.reportPositionThatViolatesRules(
-                            withinBounds = withinBounds,
+                            withinBounds = false,
                             field.width,
                             field.height,
                             field.currentMoveNumber
                         )
                     }
+
+                    is PosIsOccupiedIllegalMove,
+                    is SuicidalIllegalMove,
+                    NoLegalMoves -> {
+                        moveInfo.reportPositionThatViolatesRules(
+                            withinBounds = true,
+                            field.width,
+                            field.height,
+                            field.currentMoveNumber
+                        )
+                    }
+
+                    else -> {
+                        require(moveResult is LegalMove)
+                    }
                 }
-                val timeLeft = if (moveInfo.player == Player.First) player1TimeLeft else player2TimeLeft
-                gameTree.add(moveResult, gameResult = gameResult, timeLeft, comment, labels,
-                    circles?.map { Position(it.x, it.y, field.realWidth) },
-                    squares?.map { Position(it.x, it.y, field.realWidth) }
-                )
-                movesCount++
             }
         }
+    }
 
-        processMoves(player1Moves)
-        processMoves(player2Moves)
-
-        return movesCount
+    private fun transformSgfToGameProperties(gameInfoProperties: Map<String, SgfProperty<*>>): PropertiesMap {
+        return mutableMapOf<KProperty<*>, GameProperty<*>>().apply {
+            for (sgfProperty in gameInfoProperties.values) {
+                val gameProperty = this[sgfProperty.info.gameInfoProperty]
+                this[sgfProperty.info.gameInfoProperty] = if (gameProperty == null) {
+                    GameProperty(sgfProperty.value, parsedNodes = listOf(sgfProperty.node))
+                } else {
+                    GameProperty(gameProperty.value, parsedNodes = gameProperty.parsedNodes + sgfProperty.node)
+                }
+            }
+        }
     }
 
     private fun MoveInfo.reportPositionThatViolatesRules(withinBounds: Boolean, width: Int, height: Int, currentMoveNumber: Int) {
-        val (propertyInfo, textSpan) = extraInfo as PropertyInfoAndTextSpan
+        val (propertyInfo, textSpan) = parsedNode as PropertyInfoAndTextSpan
         val errorMessageSuffix = if (!withinBounds) {
             "The position $positionXY is out of bounds $width:$height"
         } else {
@@ -499,7 +483,7 @@ class SgfConverter(
         val propertyIdentifier = identifier.value
         val propertyInfo = propertyInfos[propertyIdentifier] ?: SgfPropertyInfo(
             propertyIdentifier,
-            Game::unknownProperties,
+            PropertiesHolder::unknownProperties,
             SgfPropertyType.Text,
             multipleValues = true,
             scope = SgfPropertyScope.Both,
@@ -775,7 +759,8 @@ class SgfConverter(
                 isMoveInfo -> MoveInfo(
                     position,
                     propertyInfo.getPlayer(),
-                    PropertyInfoAndTextSpan(propertyInfo, textSpan)
+                    if (position == null) ExternalFinishReason.Grounding else null, // TODO: probably support other reasons?
+                    parsedNode = PropertyInfoAndTextSpan(propertyInfo, textSpan)
                 ) as T
                 T::class == PositionXY::class -> position as T
                 else -> error("Unexpected type ${T::class.simpleName}")

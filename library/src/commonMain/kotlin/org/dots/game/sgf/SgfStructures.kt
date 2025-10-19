@@ -1,9 +1,9 @@
 package org.dots.game.sgf
 
 import org.dots.game.core.Game
-import org.dots.game.core.GameProperty
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Player
+import org.dots.game.core.PropertiesHolder
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_ADD_DOTS_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_MOVE_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_NAME_KEY
@@ -163,6 +163,11 @@ object SgfMetaInfo {
     const val GROUNDING_WIN_GAME_RESULT = 'G'
 
     val propertyInfos: Map<String, SgfPropertyInfo> = mapOf(
+        PLAYER1_TIME_LEFT_KEY to SgfPropertyInfo("Player1 time left", PropertiesHolder::player1TimeLeft, SgfPropertyType.Double, scope = SgfPropertyScope.Both),
+        PLAYER2_TIME_LEFT_KEY to SgfPropertyInfo("Player2 time left", PropertiesHolder::player2TimeLeft, SgfPropertyType.Double, scope = SgfPropertyScope.Both),
+        COMMENT_KEY to SgfPropertyInfo("Comment", PropertiesHolder::comment, SgfPropertyType.Text, scope = SgfPropertyScope.Both),
+        UNKNOWN_KEY to SgfPropertyInfo("Unknown property", PropertiesHolder::unknownProperties, SgfPropertyType.SimpleText, multipleValues = true, scope = SgfPropertyScope.Both, isKnown = false),
+
         GAME_MODE_KEY to SgfPropertyInfo("Game Mode", Game::sgfGameMode, SgfPropertyType.Number),
         FILE_FORMAT_KEY to SgfPropertyInfo("File Format", Game::sgfFileFormat, SgfPropertyType.Number),
         CHARSET_KEY to SgfPropertyInfo("Charset", Game::charset),
@@ -179,7 +184,6 @@ object SgfMetaInfo {
         KOMI_KEY to SgfPropertyInfo("Komi", Game::komi, SgfPropertyType.Double),
         DATE_KEY to SgfPropertyInfo("Date", Game::date),
         GAME_COMMENT_KEY to SgfPropertyInfo("Game Comment", Game::description, SgfPropertyType.Text),
-        COMMENT_KEY to SgfPropertyInfo("Comment", Game::comment, SgfPropertyType.Text, scope = SgfPropertyScope.Both),
         PLACE_KEY to SgfPropertyInfo("Place", Game::place),
         EVENT_KEY to SgfPropertyInfo("Event", Game::event),
         OPENING_KEY to SgfPropertyInfo("Opening", Game::opening),
@@ -191,18 +195,14 @@ object SgfMetaInfo {
         APP_INFO_KEY to SgfPropertyInfo("App Info", Game::appInfo, SgfPropertyType.AppInfo),
         PLAYER1_ADD_DOTS_KEY to SgfPropertyInfo("Player1 initial dots", Game::player1AddDots, SgfPropertyType.MovePosition, multipleValues = true),
         PLAYER2_ADD_DOTS_KEY to SgfPropertyInfo("Player2 initial dots", Game::player2AddDots, SgfPropertyType.MovePosition, multipleValues = true),
-        PLAYER1_TIME_LEFT_KEY to SgfPropertyInfo("Player1 time left", Game::player1TimeLeft, SgfPropertyType.Double, scope = SgfPropertyScope.Both),
-        PLAYER2_TIME_LEFT_KEY to SgfPropertyInfo("Player2 time left", Game::player2TimeLeft, SgfPropertyType.Double, scope = SgfPropertyScope.Both),
         ROUND_KEY to SgfPropertyInfo("Round", Game::round),
         HANDICAP_KEY to SgfPropertyInfo("Handicap", Game::handicap, SgfPropertyType.Number),
 
-        PLAYER1_MOVE_KEY to SgfPropertyInfo("Player1 move", GameTreeNode::moveResult, SgfPropertyType.MovePosition, multipleValues = true, scope = SgfPropertyScope.Move),
-        PLAYER2_MOVE_KEY to SgfPropertyInfo("Player2 move", GameTreeNode::moveResult, SgfPropertyType.MovePosition, multipleValues = true, scope = SgfPropertyScope.Move),
+        PLAYER1_MOVE_KEY to SgfPropertyInfo("Player1 move", GameTreeNode::player1Moves, SgfPropertyType.MovePosition, multipleValues = true, scope = SgfPropertyScope.Move),
+        PLAYER2_MOVE_KEY to SgfPropertyInfo("Player2 move", GameTreeNode::player2Moves, SgfPropertyType.MovePosition, multipleValues = true, scope = SgfPropertyScope.Move),
         LABEL_KEY to SgfPropertyInfo("Label", GameTreeNode::labels, SgfPropertyType.Label, multipleValues = true, scope = SgfPropertyScope.Move),
         CIRCLE_KEY to SgfPropertyInfo("Circle", GameTreeNode::circles, SgfPropertyType.Position, multipleValues = true, scope = SgfPropertyScope.Move),
         SQUARE_KEY to SgfPropertyInfo("Square", GameTreeNode::squares, SgfPropertyType.Position, multipleValues = true, scope = SgfPropertyScope.Move),
-
-        UNKNOWN_KEY to SgfPropertyInfo("Unknown property", Game::unknownProperties, SgfPropertyType.SimpleText, multipleValues = true, scope = SgfPropertyScope.Both, isKnown = false)
     )
 
     val sgfPropertyInfoToKey: Map<SgfPropertyInfo, String> = propertyInfos.entries.associateBy({ it.value }) { it.key }.also {

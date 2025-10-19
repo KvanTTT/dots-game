@@ -203,7 +203,6 @@ fun Position.transform(type: TransformType, realWidth: Int, realHeight: Int, new
 }
 
 fun PositionXY.transform(type: TransformType, width: Int, height: Int): PositionXY {
-    if (isGameOverMove) return this
     val (x, y) = this
     return when (type) {
         TransformType.RotateCw90 -> PositionXY(height - y + 1, x)

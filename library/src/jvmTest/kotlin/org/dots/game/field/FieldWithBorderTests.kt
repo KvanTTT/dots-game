@@ -1,9 +1,10 @@
 package org.dots.game.field
 
+import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.assertIs
 
 class FieldWithBorderTests() : FieldTests() {
     override val captureByBorder = true
@@ -73,7 +74,7 @@ class FieldWithBorderTests() : FieldTests() {
             . .  . .
         """) {
             assertEquals(2, it.player1Score)
-            assertNotNull(it.makeMove(4, 2, Player.Second))
+            assertIs<LegalMove>(it.makeMove(4, 2, Player.Second))
             assertEquals(2, it.player1Score)
         }
     }

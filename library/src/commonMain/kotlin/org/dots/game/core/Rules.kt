@@ -230,6 +230,7 @@ fun recognizeInitPosType(initialMoves: List<MoveInfo>, width: Int, height: Int):
 
             for (initialMove in initialMoves) {
                 val (x, y) = initialMove.positionXY ?: break
+                if (x >= width || y >= height) break
                 movesArray[x - 1][y - 1] = initialMove
             }
 
@@ -237,12 +238,12 @@ fun recognizeInitPosType(initialMoves: List<MoveInfo>, width: Int, height: Int):
                 val (x, y) = xyMoveInfo.positionXY?.let { it.x - 1 to it.y - 1 } ?: break
                 val firstPlayer = xyMoveInfo.player
 
-                val x1yMoveInfo = movesArray.elementAtOrNull(x + 1)?.elementAt(y) ?: continue
+                val x1yMoveInfo = movesArray.elementAtOrNull(x + 1)?.elementAtOrNull(y) ?: continue
                 val secondPlayer = x1yMoveInfo.player
 
                 if (firstPlayer == secondPlayer) continue
 
-                val x1y1MoveInfo = movesArray[x + 1].elementAt(y + 1) ?: continue
+                val x1y1MoveInfo = movesArray[x + 1].elementAtOrNull(y + 1) ?: continue
                 if (x1y1MoveInfo.player != firstPlayer) continue
 
                 val xy1MoveInfo = movesArray[x][y + 1] ?: continue

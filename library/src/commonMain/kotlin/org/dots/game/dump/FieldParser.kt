@@ -5,6 +5,7 @@ import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Field
 import org.dots.game.core.InitPosType
+import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
@@ -50,13 +51,14 @@ object FieldParser {
             diagnosticReporter(Diagnostic("Can't make initial move #$moveNumber at ${moveInfo.positionXY} (${moveInfo.player})", textSpan = null))
         }).apply {
             for ((number, move) in allMoves) {
-                val position = getPositionIfWithinBounds(move.positionXY)
+                val (x, y) = move.positionXY
+                val position = getPositionIfWithinBounds(x, y)
                 if (position == null) {
                     diagnosticReporter(Diagnostic("The position ${move.positionXY} at number #$number is out of bound ($width, $height)", move.textSpan))
                     continue
                 }
 
-                if (makeMoveUnsafe(position, move.player) == null) {
+                if (makeMoveUnsafe(position, move.player) !is LegalMove) {
                     diagnosticReporter(Diagnostic("Can't make move #$number to ${move.positionXY}", move.textSpan))
                 }
             }

@@ -5,6 +5,7 @@ import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Game
 import org.dots.game.core.GameTree
 import org.dots.game.core.Games
+import org.dots.game.core.MoveInfo
 import org.dots.game.core.Rules
 import org.dots.game.core.SECOND_PLAYER_MARKER
 import org.dots.game.dump.FieldParser
@@ -41,9 +42,9 @@ object GameLoader {
                             ).first
                         }, diagnosticReporter
                     )
-                    val gameTree = GameTree(field).apply {
+                    val gameTree = GameTree(field, parsedNode = null).apply {
                         for (move in field.moveSequence) {
-                            add(move)
+                            addChild(MoveInfo(move.position.toXY(field.realWidth), move.player))
                         }
                     }
                     return LoadResult(inputType, content = pathOrContent, Games(Game(gameTree)))

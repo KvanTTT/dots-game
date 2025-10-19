@@ -16,25 +16,24 @@ class Field {
         fun create(rules: Rules, onIncorrectInitialMove: (moveInfo: MoveInfo, incorrectMove: Boolean, moveNumber: Int) -> Unit = { _, _, _ -> }): Field {
             return Field(rules).apply {
                 for (moveInfo in rules.initialMoves) {
-                    if (moveInfo.positionXY == null) {
-                        if (finishGame(ExternalFinishReason.Grounding, moveInfo.player) == null) {
-                            onIncorrectInitialMove(moveInfo, true, currentMoveNumber);
-                        }
+                    val position = if (moveInfo.positionXY != null) {
+                        val (x, y) = moveInfo.positionXY
+                        getPositionIfWithinBounds(x, y)
                     } else {
-                        val position = getPositionIfWithinBounds(moveInfo.positionXY)
+                        Position.GAME_OVER
+                    }
 
-                        if (position == null) {
-                            onIncorrectInitialMove(moveInfo, false, currentMoveNumber)
-                            continue
-                        }
+                    if (position == null) {
+                        onIncorrectInitialMove(moveInfo, false, currentMoveNumber)
+                        continue
+                    }
 
-                        if (makeMoveUnsafe(position, moveInfo.player) == null) {
-                            onIncorrectInitialMove(moveInfo, true, currentMoveNumber)
-                        }
+                    if (makeMoveUnsafe(position, moveInfo.player, moveInfo.externalFinishReason) !is LegalMove) {
+                        onIncorrectInitialMove(moveInfo, true, currentMoveNumber)
                     }
                 }
 
-                initialMovesCount = moveResults.size
+                initialMovesCount = legalMoves.size
             }
         }
     }
@@ -80,7 +79,7 @@ class Field {
     // Use primitive int array with expanded borders to get rid of extra range checks and boxing
     private val dots: ByteArray
 
-    private val moveResults = mutableListOf<MoveResult>()
+    private val legalMoves = mutableListOf<LegalMove>()
 
     /**
      * The field is being updated iteratively.
@@ -89,8 +88,8 @@ class Field {
     var numberOfLegalMovesIfSuicideAllowed: Int
         private set
 
-    var gameResult: GameResult? = null
-        private set
+    val gameResult: GameResult?
+        get() = lastMove as? GameResult
 
     var player1Score: Int = 0
         private set
@@ -112,10 +111,9 @@ class Field {
         val new = Field(rules)
         new.initialMovesCount = initialMovesCount
         dots.copyInto(new.dots)
-        new.moveResults.clear()
-        new.moveResults.addAll(moveResults)
+        new.legalMoves.clear()
+        new.legalMoves.addAll(legalMoves)
         new.numberOfLegalMovesIfSuicideAllowed = numberOfLegalMovesIfSuicideAllowed
-        new.gameResult = gameResult
         new.player1Score = player1Score
         new.player2Score = player2Score
         new.positionHash = positionHash
@@ -152,7 +150,7 @@ class Field {
             baseMode = rules.baseMode,
             suicideAllowed = rules.suicideAllowed,
             initialMoves = rules.initialMoves.map {
-                MoveInfo(it.positionXY?.transform(transformType, width, height), it.player, it.extraInfo)
+                MoveInfo(it.positionXY?.transform(transformType, width, height), it.player, it.externalFinishReason, parsedNode = it.parsedNode)
             },
             komi = rules.komi,
         ).first)
@@ -171,10 +169,10 @@ class Field {
             }
         }
 
-        for (moveResult in moveResults) {
+        for (moveResult in legalMoves) {
             val position = moveResult.position
 
-            newField.moveResults.add(MoveResult(
+            newField.legalMoves.add(LegalMove(
                 position.transform(),
                 moveResult.player,
                 moveResult.previousState,
@@ -191,7 +189,6 @@ class Field {
             ))
         }
         newField.numberOfLegalMovesIfSuicideAllowed = numberOfLegalMovesIfSuicideAllowed
-        newField.gameResult = gameResult
         newField.player1Score = player1Score
         newField.player2Score = player2Score
         return newField
@@ -199,15 +196,15 @@ class Field {
 
     fun isGameOver(): Boolean = gameResult != null
 
-    val moveSequence: List<MoveResult> = moveResults
+    val moveSequence: List<LegalMove> = legalMoves
 
     val currentMoveNumber: Int
-        get() = moveResults.size - initialMovesCount
+        get() = legalMoves.size - initialMovesCount
 
-    val lastMove: MoveResult?
-        get() = moveResults.lastOrNull()
+    val lastMove: LegalMove?
+        get() = legalMoves.lastOrNull()
 
-    fun getCurrentPlayer(): Player = moveResults.lastOrNull()?.player?.opposite() ?: Player.First
+    fun getCurrentPlayer(): Player = legalMoves.lastOrNull()?.player?.opposite() ?: Player.First
 
     fun getScoreDiff(player: Player? = null): Double {
         return if ((player ?: getCurrentPlayer()) == Player.First) {
@@ -217,63 +214,30 @@ class Field {
         }
     }
 
-    fun makeMove(positionXY: PositionXY, player: Player? = null): MoveResult? {
-        val (x, y) = positionXY
-        return makeMove(x, y, player)
+    fun makeMove(moveInfo: MoveInfo): MoveResult {
+        return makeMove(moveInfo.positionXY, moveInfo.player, moveInfo.externalFinishReason)
+    }
+
+    fun makeMove(positionXY: PositionXY?, player: Player? = null, externalFinishReason: ExternalFinishReason? = null): MoveResult {
+        val position = if (positionXY == null) {
+            Position.GAME_OVER
+        } else {
+            getPositionIfWithinBounds(positionXY.x, positionXY.y) ?: return PosOutOfBoundsIllegalMove(positionXY, player ?: getCurrentPlayer())
+        }
+        return makeMoveUnsafe(position, player, externalFinishReason)
     }
 
     /**
      * Valid real positions starts from `1`, but not from `0`.
      * `0` is reserved for the initial position (cross, empty or other).
      */
-    fun makeMove(x: Int, y: Int, player: Player? = null): MoveResult? {
+    fun makeMove(x: Int, y: Int, player: Player? = null, externalFinishReason: ExternalFinishReason? = null): MoveResult {
         val position = getPositionIfWithinBounds(x, y)
-        return if (position != null) makeMoveUnsafe(position, player) else null
-    }
-
-    fun finishGame(externalFinishReason: ExternalFinishReason, player: Player?): GameResult? {
-        if (gameResult != null) return null
-
-        val currentPlayer = player ?: getCurrentPlayer()
-
-        var resultBases: List<Base> = emptyList()
-        var emptyBaseInvalidatePositions: PositionsList = PositionsList.EMPTY
-
-        gameResult = when (externalFinishReason) {
-            ExternalFinishReason.Grounding -> {
-                require(rules.baseMode != BaseMode.AllOpponentDots) {
-                    "${BaseMode.AllOpponentDots::class.simpleName} is not yet supported (it requires handling of immortal groups that have two or more eyes)"
-                }
-                require(!rules.captureByBorder) {
-                    "${rules.captureByBorder::class.simpleName} is not yet supported"
-                }
-
-                val (localResultBases, localEmptyBaseInvalidatePositions) = ground(currentPlayer)
-                resultBases = localResultBases
-                emptyBaseInvalidatePositions = localEmptyBaseInvalidatePositions
-
-                finishGame(EndGameKind.Grounding, currentPlayer)
-            }
-            ExternalFinishReason.Draw -> GameResult.Draw(endGameKind = null, currentPlayer)
-            ExternalFinishReason.Resign -> GameResult.ResignWin(currentPlayer.opposite())
-            ExternalFinishReason.Time -> GameResult.TimeWin(currentPlayer.opposite())
-            ExternalFinishReason.Interrupt -> GameResult.InterruptWin(currentPlayer.opposite())
-            ExternalFinishReason.Unknown -> GameResult.UnknownWin(currentPlayer.opposite())
+        return if (position != null) {
+            makeMoveUnsafe(position, player, externalFinishReason)
+        } else {
+            PosOutOfBoundsIllegalMove(PositionXY(x, y), player ?: getCurrentPlayer())
         }
-
-        moveResults.add(MoveResult(
-            Position.GAME_OVER,
-            currentPlayer,
-            Position.GAME_OVER.getState(),
-            emptyBaseInvalidatePositions,
-            resultBases,
-        ))
-
-        return gameResult
-    }
-
-    fun getPositionIfWithinBounds(positionXY: PositionXY): Position? {
-        return getPositionIfWithinBounds(positionXY.x, positionXY.y)
     }
 
     fun getPositionIfWithinBounds(x: Int, y: Int): Position? {
@@ -290,10 +254,10 @@ class Field {
         }
     }
 
-    fun unmakeMove(): MoveResult? {
-        if (currentMoveNumber == 0) return null
+    fun unmakeMove(): MoveResult {
+        if (currentMoveNumber == 0) return NoLegalMoves
 
-        val moveResult = moveResults.removeLast()
+        val moveResult = legalMoves.removeLast()
 
         for (base in moveResult.bases.reversed()) {
             val basePlayer = base.player
@@ -314,26 +278,20 @@ class Field {
             }
         }
 
-        val isRealMove = when (val gameResult = gameResult) {
-            is GameResult.Draw -> gameResult.endGameKind == EndGameKind.NoLegalMoves
-            is GameResult.ScoreWin -> gameResult.endGameKind == EndGameKind.NoLegalMoves
-            is GameResult -> false
-            else -> true
-        }
-        if (isRealMove) {
+        if (moveResult.position != Position.GAME_OVER) {
             moveResult.position.setState(moveResult.previousState)
             updatePositionHash(moveResult.position, moveResult.player)
             if (rules.suicideAllowed) {
                 numberOfLegalMovesIfSuicideAllowed++
             }
         }
-        gameResult = null
 
         return moveResult
     }
 
     fun getPositionIfValid(x: Int, y: Int, player: Player?): Position? {
-         val position = getPositionIfWithinBounds(x, y) ?: return null
+        if (gameResult != null) return null
+        val position = getPositionIfWithinBounds(x, y) ?: return null
 
         val state = position.getState()
         val currentPlayer = player ?: getCurrentPlayer()
@@ -353,7 +311,7 @@ class Field {
 
         // Otherwise we have to check the validity by emulating move placing and rollback afterward
         return makeMoveUnsafe(position, player).let { moveResult ->
-            if (moveResult != null) {
+            if (moveResult is LegalMove) {
                 unmakeMove()
                 position
             } else {
@@ -362,13 +320,19 @@ class Field {
         }
     }
 
-    fun makeMoveUnsafe(position: Position, player: Player? = null): MoveResult? {
-        if (isGameOver()) return null
+    fun makeMoveUnsafe(position: Position, player: Player? = null, externalFinishReason: ExternalFinishReason? = null): MoveResult {
+        val currentPlayer = player ?: getCurrentPlayer()
+
+        if (isGameOver()) return GameIsAlreadyOverIllegalMove(position, currentPlayer)
+
+        if (position == Position.GAME_OVER) {
+            require(externalFinishReason != null)
+            return finishGame(externalFinishReason, currentPlayer)
+        }
 
         val originalState: DotState = position.getState()
-        if (originalState.getActivePlayer() != Player.None) return null
+        if (originalState.getActivePlayer() != Player.None) return PosIsOccupiedIllegalMove(position, currentPlayer)
 
-        val currentPlayer = player ?: getCurrentPlayer()
         val resultBases: List<Base>
         val emptyBaseInvalidatePositions: PositionsList
 
@@ -398,7 +362,7 @@ class Field {
                         if (rules.suicideAllowed) {
                             numberOfLegalMovesIfSuicideAllowed++
                         }
-                        return null
+                        return SuicidalIllegalMove(position, currentPlayer)
                     }
                 } else {
                     bases
@@ -416,7 +380,7 @@ class Field {
                         if (rules.suicideAllowed) {
                             numberOfLegalMovesIfSuicideAllowed++
                         }
-                        return null
+                        return SuicidalIllegalMove(position, currentPlayer)
                     } else {
                         base?.let { listOf(it) } ?: bases
                     }
@@ -437,23 +401,76 @@ class Field {
             }
         }
 
-        if (rules.suicideAllowed && numberOfLegalMovesIfSuicideAllowed == 0) {
-            gameResult = finishGame(EndGameKind.NoLegalMoves, currentPlayer)
+        val result = if (rules.suicideAllowed && numberOfLegalMovesIfSuicideAllowed == 0) {
+            calculateGameResult(
+                EndGameKind.NoLegalMoves,
+                currentPlayer,
+                position,
+                originalState,
+                emptyBaseInvalidatePositions,
+                resultBases
+            )
+        } else {
+            LegalMove(
+                position,
+                currentPlayer,
+                originalState,
+                emptyBaseInvalidatePositions,
+                resultBases,
+            )
         }
-
-        return MoveResult(
-            position,
-            currentPlayer,
-            originalState,
-            emptyBaseInvalidatePositions,
-            resultBases,
-        ).also { moveResults.add(it) }
+        legalMoves.add(result)
+        return result
     }
 
-    private fun finishGame(endGameKind: EndGameKind, player: Player): GameResult {
+    private fun finishGame(externalFinishReason: ExternalFinishReason, player: Player?): MoveResult {
+        val currentPlayer = player ?: getCurrentPlayer()
+
+        if (gameResult != null) return GameIsAlreadyOverIllegalMove(Position.GAME_OVER, currentPlayer)
+
+        val gameResult = when (externalFinishReason) {
+            ExternalFinishReason.Grounding -> {
+                require(rules.baseMode != BaseMode.AllOpponentDots) {
+                    "${BaseMode.AllOpponentDots::class.simpleName} is not yet supported (it requires handling of immortal groups that have two or more eyes)"
+                }
+                require(!rules.captureByBorder) {
+                    "${rules.captureByBorder::class.simpleName} is not yet supported"
+                }
+
+                val (localResultBases, localEmptyBaseInvalidatePositions) = ground(currentPlayer)
+
+                calculateGameResult(
+                    EndGameKind.Grounding,
+                    currentPlayer,
+                    Position.GAME_OVER,
+                    Position.GAME_OVER.getState(),
+                    localEmptyBaseInvalidatePositions,
+                    localResultBases
+                )
+            }
+            ExternalFinishReason.Draw -> GameResult.Draw(endGameKind = null, currentPlayer)
+            ExternalFinishReason.Resign -> GameResult.ResignWin(currentPlayer.opposite())
+            ExternalFinishReason.Time -> GameResult.TimeWin(currentPlayer.opposite())
+            ExternalFinishReason.Interrupt -> GameResult.InterruptWin(currentPlayer.opposite())
+            ExternalFinishReason.Unknown -> GameResult.UnknownWin(currentPlayer.opposite())
+        }
+
+        legalMoves.add(gameResult)
+
+        return gameResult
+    }
+
+    private fun calculateGameResult(
+        endGameKind: EndGameKind,
+        player: Player,
+        position: Position,
+        originalState: DotState,
+        emptyBaseInvalidatePositions: PositionsList,
+        resultBases: List<Base>
+    ): GameResult {
         val scoreForFirstPlayer = getScoreDiff(Player.First)
         return if (scoreForFirstPlayer == 0.0) {
-            GameResult.Draw(endGameKind, player)
+            GameResult.Draw(endGameKind, player, position,originalState, emptyBaseInvalidatePositions, resultBases)
         } else {
             val winner: Player
             val score: Double
@@ -464,7 +481,7 @@ class Field {
                 winner = Player.Second
                 score = -scoreForFirstPlayer
             }
-            GameResult.ScoreWin(score, endGameKind, winner, player)
+            GameResult.ScoreWin(score, endGameKind, winner, player, position, originalState, emptyBaseInvalidatePositions, resultBases)
         }
     }
 
@@ -475,7 +492,7 @@ class Field {
 
         val bases = mutableListOf<Base>()
 
-        for (move in moveResults) {
+        for (move in legalMoves) {
             val position = move.position
 
             if (position.getState().let { !it.isVisited() && it.isActive(player) }) {
@@ -1072,13 +1089,27 @@ class Field {
     override fun toString(): String = render()
 }
 
-class MoveResult(
+sealed class MoveResult
+
+sealed class IllegalMove(val position: Position?, val player: Player) : MoveResult()
+
+class GameIsAlreadyOverIllegalMove(position: Position, player: Player) : IllegalMove(position, player)
+
+class PosIsOccupiedIllegalMove(position: Position, player: Player) : IllegalMove(position, player)
+
+class SuicidalIllegalMove(position: Position, player: Player) : IllegalMove(position, player)
+
+class PosOutOfBoundsIllegalMove(val positionXY: PositionXY, player: Player) : IllegalMove(null, player)
+
+object NoLegalMoves : IllegalMove(position = null, Player.None)
+
+open class LegalMove(
     val position: Position,
     val player: Player,
     val previousState: DotState,
     val emptyBaseInvalidatePositions: PositionsList,
     val bases: List<Base>,
-) {
+) : MoveResult() {
     val positionPlayer: PositionPlayer
         get() = PositionPlayer(position, player)
 }
@@ -1103,4 +1134,134 @@ enum class ExternalFinishReason {
     Time,
     Interrupt,
     Unknown,
+}
+
+enum class EndGameKind {
+    Grounding,
+    NoLegalMoves,
+}
+
+sealed class GameResult(
+    player: Player?,
+    position: Position,
+    previousState: DotState,
+    emptyBaseInvalidatePositions: PositionsList,
+    bases: List<Base> = emptyList(),
+) : LegalMove(position, player ?: Player.None, previousState, emptyBaseInvalidatePositions, bases) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        return other != null && this::class == other::class && player == (other as GameResult).player
+    }
+
+    override fun hashCode(): Int {
+        return 31 * this::class.hashCode() + player.hashCode()
+    }
+
+    class Draw(
+        val endGameKind: EndGameKind?,
+        player: Player?,
+        position: Position = Position.GAME_OVER,
+        previousState: DotState = DotState.Empty,
+        emptyBaseInvalidatePositions: PositionsList = PositionsList.EMPTY,
+        bases: List<Base> = emptyList()
+    ) : GameResult(player, position, previousState, emptyBaseInvalidatePositions, bases) {
+        override fun equals(other: Any?): Boolean {
+            if (!super.equals(other)) return false
+            return endGameKind == (other as Draw).endGameKind
+        }
+
+        override fun hashCode(): Int {
+            return 31 * super.hashCode() + endGameKind.hashCode()
+        }
+
+        override fun toString(): String {
+            return this::class.simpleName + endGameKind?.let { " ($it)" }
+        }
+    }
+
+    sealed class WinGameResult(
+        val winner: Player,
+        player: Player?,
+        position: Position = Position.GAME_OVER,
+        previousState: DotState = DotState.Empty,
+        emptyBaseInvalidatePositions: PositionsList = PositionsList.EMPTY,
+        bases: List<Base> = emptyList()
+    ) : GameResult(player, position, previousState, emptyBaseInvalidatePositions, bases) {
+        override fun equals(other: Any?): Boolean {
+            if (!super.equals(other)) return false
+            return winner == (other as WinGameResult).winner
+        }
+
+        override fun hashCode(): Int {
+            return 31 * super.hashCode() + winner.hashCode()
+        }
+
+        override fun toString(): String {
+            return this::class.simpleName + "(${::winner.name} : $winner" +
+                    player.takeIf { it != Player.None }?.let { ", ${::player.name}: $player" } +
+                    ")"
+        }
+    }
+
+    class ScoreWin(
+        val score: Double,
+        val endGameKind: EndGameKind?,
+        winner: Player,
+        player: Player?,
+        position: Position = Position.GAME_OVER,
+        previousState: DotState = DotState.Empty,
+        emptyBaseInvalidatePositions: PositionsList = PositionsList.EMPTY,
+        bases: List<Base> = emptyList()
+    ) : WinGameResult(winner, player, position, previousState, emptyBaseInvalidatePositions, bases) {
+        override fun equals(other: Any?): Boolean {
+            if (!super.equals(other)) return false
+            other as ScoreWin
+            return score == other.score && endGameKind == other.endGameKind
+        }
+
+        override fun hashCode(): Int {
+            var result = super.hashCode()
+            result = 31 * result + score.hashCode()
+            result = 31 * result + endGameKind.hashCode()
+            return result
+        }
+
+        override fun toString(): String {
+            return this::class.simpleName + "(${::winner.name}: $winner, $score" +
+                    endGameKind?.let { ", $endGameKind" } +
+                    player.takeIf { it != winner }?.let { ", ${::player.name}: $player" } +
+                    ")"
+        }
+    }
+
+    class ResignWin(winner: Player) : WinGameResult(winner, winner.opposite())
+
+    class TimeWin(winner: Player) : WinGameResult(winner, winner.opposite())
+
+    class InterruptWin(winner: Player) : WinGameResult(winner, winner.opposite())
+
+    class UnknownWin(winner: Player) : WinGameResult(winner, winner.opposite())
+
+    fun toExternalFinishReason(): ExternalFinishReason? {
+        return when (this) {
+            is Draw -> {
+                when (endGameKind) {
+                    EndGameKind.Grounding -> ExternalFinishReason.Grounding
+                    EndGameKind.NoLegalMoves -> null
+                    null -> ExternalFinishReason.Unknown
+                }
+            }
+            is ResignWin -> ExternalFinishReason.Resign
+            is TimeWin -> ExternalFinishReason.Time
+            is InterruptWin -> ExternalFinishReason.Interrupt
+            is UnknownWin -> ExternalFinishReason.Unknown
+            is ScoreWin -> {
+                when (endGameKind) {
+                    EndGameKind.Grounding -> ExternalFinishReason.Grounding
+                    EndGameKind.NoLegalMoves -> null
+                    null -> ExternalFinishReason.Unknown
+                }
+            }
+        }
+    }
 }

@@ -192,8 +192,8 @@ fun App() {
         }) {
             Column(Modifier.padding(5.dp).width(maxFieldSize.width), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row {
-                    FieldView(currentGameTreeNode, moveMode, getField(), uiSettings) {
-                        getGameTree().add(it)
+                    FieldView(currentGameTreeNode, moveMode, getField(), uiSettings) { position, player ->
+                        getGameTree().addChild(MoveInfo(position.toXY(getField().realWidth), player))
                         updateFieldAndGameTree()
                     }
                 }
@@ -299,19 +299,26 @@ fun App() {
                     fun EndMoveButton(isGrounding: Boolean) {
                         Button(
                             onClick = {
-                                val gameResult = getField().finishGame(
-                                    if (isGrounding) ExternalFinishReason.Grounding else ExternalFinishReason.Resign,
-                                    moveMode.getMovePlayer()
+                                // Check for game over just in case
+                                if (getField().isGameOver()) return@Button
+
+                                getGameTree().addChild(
+                                    MoveInfo.createFinishingMove(
+                                        moveMode.getMovePlayer() ?: getField().getCurrentPlayer(),
+                                        if (isGrounding)
+                                            ExternalFinishReason.Grounding
+                                        else
+                                            ExternalFinishReason.Resign
+                                    )
                                 )
-                                if (gameResult != null) {
-                                    getGameTree().add(move = getField().lastMove, gameResult = gameResult)
-                                    updateFieldAndGameTree()
-                                    focusRequester.requestFocus()
-                                }
+                                updateFieldAndGameTree()
+                                focusRequester.requestFocus()
                             },
                             controlButtonModifier,
+                            enabled = !getField().isGameOver()
                         ) {
-                            Text(if (isGrounding) "⏚" else "\uD83C\uDFF3\uFE0F") // Resign flag emoji in case of resigning
+                            // Resign flag emoji in case of resigning
+                            Text(if (isGrounding) "⏚" else "\uD83C\uDFF3\uFE0F")
                         }
                     }
 
@@ -332,22 +339,6 @@ fun App() {
                         SwitchGame(next = false)
                         SwitchGame(next = true)
                     }
-                }
-
-                Row(rowModifier) {
-                    @Composable
-                    fun TransformButton(transformType: TransformType, text: String) {
-                        Button(onClick = {
-                            resetGame(Game(currentGame.gameTree.transform(transformType)))
-                        }, controlButtonModifier) {
-                            Text(text)
-                        }
-                    }
-
-                    TransformButton(TransformType.RotateCw90, "↻")
-                    TransformButton(TransformType.RotateCw270, "↺")
-                    TransformButton(TransformType.FlipHorizontal, "⇔")
-                    TransformButton(TransformType.FlipVertical, "⇕")
                 }
 
                 GameTreeView(currentGameTreeNode, currentGame.gameTree, gameTreeViewData, uiSettings, focusRequester) {
