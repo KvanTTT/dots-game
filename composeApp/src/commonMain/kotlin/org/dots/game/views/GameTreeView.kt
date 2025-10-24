@@ -274,7 +274,8 @@ private fun ConnectionsAndNodes(
                                 })
                             }
                     ) {
-                        Text(moveNumber.toString(), Modifier.align(Alignment.Center), textColor)
+                        val text = node.moveResults.singleOrNull()?.takeIf { it is GameResult }?.mark ?: moveNumber.toString()
+                        Text(text, Modifier.align(Alignment.Center), textColor)
                     }
                 }
 

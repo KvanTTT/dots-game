@@ -1,5 +1,8 @@
 package org.dots.game.core
 
+import org.dots.game.core.GameResult.ResignWin
+import org.dots.game.core.GameResult.TimeWin
+import org.dots.game.core.GameResult.UnknownWin
 import org.dots.game.core.PositionXY.Companion.COORDINATE_BITS_COUNT
 import render
 
@@ -1089,7 +1092,27 @@ class Field {
     override fun toString(): String = render()
 }
 
-sealed class MoveResult
+sealed class MoveResult {
+    val mark: String
+        get() {
+            return when (this) {
+                is GameResult.Draw,
+                is GameResult.ScoreWin -> {
+                    if (endGameKind == EndGameKind.Grounding) "⏚" else  "🏁"
+                }
+                is ResignWin -> "🏳️"
+                is TimeWin -> "⏲️"
+                is UnknownWin -> "❔"
+                is GameResult.InterruptWin -> "❕"
+                is LegalMove -> {
+                    if (player == Player.First) "1" else "2" // Or use "🔵", "🔴" or "1️⃣", "2️⃣" instead
+                }
+                is IllegalMove -> "🚫"
+            }
+        }
+
+    override fun toString(): String = mark
+}
 
 sealed class IllegalMove(val position: Position?, val player: Player) : MoveResult()
 
@@ -1109,10 +1132,7 @@ open class LegalMove(
     val previousState: DotState,
     val emptyBaseInvalidatePositions: PositionsList,
     val bases: List<Base>,
-) : MoveResult() {
-    val positionPlayer: PositionPlayer
-        get() = PositionPlayer(position, player)
-}
+) : MoveResult()
 
 class Base(
     val player: Player,
@@ -1120,11 +1140,6 @@ class Base(
     val rollbackPositions: PositionsList,
     val rollbackDotStates: DotStatesList,
     val isReal: Boolean,
-)
-
-data class PositionPlayer(
-    val position: Position,
-    val player: Player,
 )
 
 enum class ExternalFinishReason {
@@ -1139,6 +1154,10 @@ enum class ExternalFinishReason {
 enum class EndGameKind {
     Grounding,
     NoLegalMoves,
+}
+
+interface EndGameResult {
+    val endGameKind: EndGameKind?
 }
 
 sealed class GameResult(
@@ -1158,13 +1177,13 @@ sealed class GameResult(
     }
 
     class Draw(
-        val endGameKind: EndGameKind?,
+        override val endGameKind: EndGameKind?,
         player: Player?,
         position: Position = Position.GAME_OVER,
         previousState: DotState = DotState.Empty,
         emptyBaseInvalidatePositions: PositionsList = PositionsList.EMPTY,
-        bases: List<Base> = emptyList()
-    ) : GameResult(player, position, previousState, emptyBaseInvalidatePositions, bases) {
+        bases: List<Base> = emptyList(),
+    ) : GameResult(player, position, previousState, emptyBaseInvalidatePositions, bases), EndGameResult {
         override fun equals(other: Any?): Boolean {
             if (!super.equals(other)) return false
             return endGameKind == (other as Draw).endGameKind
@@ -1185,7 +1204,7 @@ sealed class GameResult(
         position: Position = Position.GAME_OVER,
         previousState: DotState = DotState.Empty,
         emptyBaseInvalidatePositions: PositionsList = PositionsList.EMPTY,
-        bases: List<Base> = emptyList()
+        bases: List<Base> = emptyList(),
     ) : GameResult(player, position, previousState, emptyBaseInvalidatePositions, bases) {
         override fun equals(other: Any?): Boolean {
             if (!super.equals(other)) return false
@@ -1205,14 +1224,14 @@ sealed class GameResult(
 
     class ScoreWin(
         val score: Double,
-        val endGameKind: EndGameKind?,
+        override val endGameKind: EndGameKind?,
         winner: Player,
         player: Player?,
         position: Position = Position.GAME_OVER,
         previousState: DotState = DotState.Empty,
         emptyBaseInvalidatePositions: PositionsList = PositionsList.EMPTY,
         bases: List<Base> = emptyList()
-    ) : WinGameResult(winner, player, position, previousState, emptyBaseInvalidatePositions, bases) {
+    ) : WinGameResult(winner, player, position, previousState, emptyBaseInvalidatePositions, bases), EndGameResult {
         override fun equals(other: Any?): Boolean {
             if (!super.equals(other)) return false
             other as ScoreWin
@@ -1229,7 +1248,7 @@ sealed class GameResult(
         override fun toString(): String {
             return this::class.simpleName + "(${::winner.name}: $winner, $score" +
                     endGameKind?.let { ", $endGameKind" } +
-                    player.takeIf { it != winner }?.let { ", ${::player.name}: $player" } +
+                    (player.takeIf { it != winner }?.let { ", ${::player.name}: $player" } ?: "") +
                     ")"
         }
     }

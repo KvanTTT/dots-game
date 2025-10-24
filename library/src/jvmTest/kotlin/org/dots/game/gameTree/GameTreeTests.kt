@@ -5,6 +5,7 @@ import org.dots.game.core.GameTree
 import org.dots.game.core.GameTree.NodeKind
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.InitPosType
+import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.Position
@@ -28,7 +29,7 @@ class GameTreeTests : FieldTests() {
             assertEquals(NodeKind.New, makeMove(2, 1)) // True, because it's a new node
             assertTrue(back())
             assertTrue(next()) // True, the current node should be (2;1) (the second branch, because the previous path is memorized)
-            assertEquals(Position(2, 1, field.realWidth), field.lastMove!!.positionPlayer.position)
+            assertEquals(Position(2, 1, field.realWidth), (field.lastMove as LegalMove).position)
             assertFalse(next()) // False, there are no more moves
         }
     }
