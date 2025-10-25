@@ -195,7 +195,7 @@ class GameTreeTests : FieldTests() {
         gameTree.makeMove(2, 2)
 
         // Try switching to an unrelated node, no change
-        assertFalse(gameTree.switch(GameTreeNode(null, 0, mutableMapOf())))
+        assertFalse(gameTree.switch(GameTreeNode.createRoot(parsedNode = null)))
     }
 
     @Test

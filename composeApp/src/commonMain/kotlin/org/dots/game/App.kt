@@ -152,6 +152,7 @@ fun App() {
 
         if (showSaveGameDialog) {
             SaveDialog(
+                games,
                 getField(),
                 dumpParameters,
                 onDismiss = {

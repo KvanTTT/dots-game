@@ -1,11 +1,13 @@
 import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.EMPTY_TERRITORY_MARKER
 import org.dots.game.core.Field
+import org.dots.game.core.Games
 import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.core.VISITED_MARKER
 import org.dots.game.core.TERRITORY_EMPTY_MARKER
 import org.dots.game.core.playerMarker
+import org.dots.game.sgf.SgfWriter
 
 data class DumpParameters(
     val printNumbers: Boolean = true,
@@ -13,6 +15,7 @@ data class DumpParameters(
     val printCoordinates: Boolean = true,
     val printBorders: Boolean = false,
     val debugInfo: Boolean = false,
+    val isSgf: Boolean = false,
 ) {
     companion object {
         val DEFAULT = DumpParameters()
@@ -20,7 +23,11 @@ data class DumpParameters(
 }
 
 fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): String {
-    val (printNumbers, padding, printCoordinates, borders, debugInfo) = dumpParameters
+    val (printNumbers, padding, printCoordinates, borders, debugInfo, isSgf) = dumpParameters
+
+    if (isSgf) {
+        return SgfWriter.write(Games.fromField(this))
+    }
 
     var minPositionX = realWidth - 1
     var maxPositionX = 0

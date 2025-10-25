@@ -1,20 +1,9 @@
 package org.dots.game.views
 
 import DumpParameters
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material.Card
-import androidx.compose.material.Checkbox
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
@@ -22,10 +11,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import org.dots.game.core.Field
+import org.dots.game.core.Games
+import org.dots.game.sgf.SgfWriter
 import render
 
 @Composable
 fun SaveDialog(
+    games: Games,
     field: Field,
     dumpParameters: DumpParameters,
     onDismiss: (DumpParameters) -> Unit,
@@ -57,19 +49,38 @@ fun SaveDialog(
     var printCoordinates by remember { mutableStateOf(dumpParameters.printCoordinates) }
     var debugInfo by remember { mutableStateOf(dumpParameters.debugInfo) }
 
+    var isSgf by remember { mutableStateOf(dumpParameters.isSgf) }
     var fieldRepresentation by remember { mutableStateOf("") }
 
     fun updateFieldRepresentation() {
-        fieldRepresentation = field.render(DumpParameters(printNumbers, padding, printCoordinates, debugInfo))
+        fieldRepresentation = if (isSgf) {
+            SgfWriter.write(games)
+        } else {
+            field.render(DumpParameters(printNumbers, padding, printCoordinates, debugInfo, isSgf))
+        }
     }
 
     updateFieldRepresentation()
 
     Dialog(onDismissRequest = {
-        onDismiss(DumpParameters(printNumbers, padding, printCoordinates, debugInfo))
+        onDismiss(DumpParameters(
+            printNumbers = printNumbers,
+            padding = padding,
+            printCoordinates = printCoordinates,
+            debugInfo = debugInfo,
+            isSgf = isSgf
+        ))
     }) {
         Card(modifier = Modifier.wrapContentHeight()) {
             Column(modifier = Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("SGF", Modifier.fillMaxWidth(configKeyTextFraction))
+                    Switch(isSgf, onCheckedChange = {
+                        isSgf = it
+                        updateFieldRepresentation()
+                    })
+                }
+
                 Text("Field Representation")
 
                 TextField(
@@ -78,35 +89,38 @@ fun SaveDialog(
                     modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth(),
                     readOnly = true,
                     textStyle = TextStyle(fontFamily = FontFamily.Monospace),
+                    maxLines = 20,
                 )
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Print numbers", Modifier.fillMaxWidth(configKeyTextFraction))
-                    Checkbox(printNumbers, onCheckedChange = {
-                        printNumbers = it
-                        updateFieldRepresentation()
-                    })
-                }
+                if (!isSgf) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Print numbers", Modifier.fillMaxWidth(configKeyTextFraction))
+                        Checkbox(printNumbers, onCheckedChange = {
+                            printNumbers = it
+                            updateFieldRepresentation()
+                        })
+                    }
 
-                DiscreteSliderConfig("Padding", padding, 0, maxPadding) {
-                    padding = it
-                    updateFieldRepresentation()
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Print coordinates", Modifier.fillMaxWidth(configKeyTextFraction))
-                    Checkbox(printCoordinates, onCheckedChange = {
-                        printCoordinates = it
+                    DiscreteSliderConfig("Padding", padding, 0, maxPadding) {
+                        padding = it
                         updateFieldRepresentation()
-                    })
-                }
+                    }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Debug info", Modifier.fillMaxWidth(configKeyTextFraction))
-                    Checkbox(debugInfo, onCheckedChange = {
-                        debugInfo = it
-                        updateFieldRepresentation()
-                    })
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Print coordinates", Modifier.fillMaxWidth(configKeyTextFraction))
+                        Checkbox(printCoordinates, onCheckedChange = {
+                            printCoordinates = it
+                            updateFieldRepresentation()
+                        })
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Debug info", Modifier.fillMaxWidth(configKeyTextFraction))
+                        Checkbox(debugInfo, onCheckedChange = {
+                            debugInfo = it
+                            updateFieldRepresentation()
+                        })
+                    }
                 }
             }
         }

@@ -59,8 +59,8 @@ class SgfConverter(
     val diagnosticReporter: (Diagnostic) -> Unit,
 ) {
     companion object {
-        private const val LOWER_CHAR_OFFSET = 'a' - Field.OFFSET
-        private const val UPPER_CHAR_OFFSET = 'A' - ('z' - 'a' + 1) - Field.OFFSET
+        internal const val LOWER_CHAR_OFFSET = 'a' - Field.OFFSET
+        internal const val UPPER_CHAR_OFFSET = 'A' - ('z' - 'a' + 1) - Field.OFFSET
         private const val EXTRA_MOVE_INFO_INDEX = 3
         private const val GAME_RESULT_DESCRIPTION_SUFFIX = "is Number, $RESIGN_WIN_GAME_RESULT (Resign), $TIME_WIN_GAME_RESULT (Time) or $UNKNOWN_WIN_GAME_RESULT (Unknown)"
 
@@ -394,9 +394,9 @@ class SgfConverter(
             for (sgfProperty in gameInfoProperties.values) {
                 val gameProperty = this[sgfProperty.info.gameInfoProperty]
                 this[sgfProperty.info.gameInfoProperty] = if (gameProperty == null) {
-                    GameProperty(sgfProperty.value, parsedNodes = listOf(sgfProperty.node))
+                    GameProperty(sgfProperty.value, listOf(sgfProperty.node))
                 } else {
-                    GameProperty(gameProperty.value, parsedNodes = gameProperty.parsedNodes + sgfProperty.node)
+                    GameProperty(gameProperty.value, gameProperty.parsedNodes + sgfProperty.node)
                 }
             }
         }
@@ -561,7 +561,7 @@ class SgfConverter(
                 SgfPropertyType.Size -> propertyValueToken.convertSize(propertyInfo)
                 SgfPropertyType.AppInfo -> propertyValue.convertAppInfo()
                 SgfPropertyType.MovePosition -> {
-                    propertyValueToken.convertPosition<MoveInfo>(propertyInfo)?.also { moveInfo ->
+                    propertyValueToken.convertMoveInfo(propertyInfo)?.also { moveInfo ->
                         if (convertedValues.removeAll { (it as MoveInfo).positionXY == moveInfo.positionXY }) {
                             propertyInfo.reportPropertyDiagnostic(
                                 "value `${propertyValue}` overwrites one the previous position.",
@@ -571,7 +571,7 @@ class SgfConverter(
                         }
                     }
                 }
-                SgfPropertyType.Position -> propertyValueToken.convertPosition<PositionXY>(propertyInfo)
+                SgfPropertyType.Position -> propertyValueToken.convertPositionXY(propertyInfo)
                 SgfPropertyType.Label -> propertyValueToken.convertLabel(propertyInfo)
                 SgfPropertyType.GameResult -> propertyValueToken.convertGameResult(propertyInfo)
             }
@@ -706,67 +706,62 @@ class SgfConverter(
         return width to height
     }
 
-    private inline fun <reified T> PropertyValueToken.convertPosition(propertyInfo: SgfPropertyInfo): T? {
-        val coordinates = if (value.isEmpty()) {
-            // Empty value is treated as grounding
-            null
+    private fun PropertyValueToken.convertMoveInfo(propertyInfo: SgfPropertyInfo): MoveInfo? {
+        val propertyInfoAndTextSpan = PropertyInfoAndTextSpan(propertyInfo, TextSpan(textSpan.start, value.length))
+
+        val externalFinishReason = if (value.isEmpty()) {
+            ExternalFinishReason.Grounding
         } else {
-            convertCoordinates(propertyInfo, 0)
+            ExternalFinishReason.textToValue[value]
         }
 
-        val isMoveInfo = T::class == MoveInfo::class
+        return if (externalFinishReason != null) {
+            MoveInfo.createFinishingMove(propertyInfo.getPlayer(), externalFinishReason, propertyInfoAndTextSpan)
+        } else {
+            val positionXY = convertCoordinates(propertyInfo, 0).toPositionXY()
 
-        if (isMoveInfo && value.elementAtOrNull(EXTRA_MOVE_INFO_INDEX - 1) == '.') {
-            if (!capturingIsCalculatedAutomaticallyIsReported) {
-                val capturingMoveInfos = buildList {
-                    for (internalIndex in EXTRA_MOVE_INFO_INDEX until value.length step 2) {
-                        convertCoordinates(propertyInfo, internalIndex).let { coordinates ->
-                            coordinates.toPositionXY()?.let { add(it) }
+            if (value.elementAtOrNull(EXTRA_MOVE_INFO_INDEX - 1) == '.') {
+                if (!capturingIsCalculatedAutomaticallyIsReported) {
+                    val capturingMoveInfos = buildList {
+                        for (internalIndex in EXTRA_MOVE_INFO_INDEX until value.length step 2) {
+                            convertCoordinates(propertyInfo, internalIndex).let { coordinates ->
+                                coordinates.toPositionXY()?.let { add(it) }
+                            }
                         }
                     }
+                    val textSpan =
+                        TextSpan(textSpan.start + EXTRA_MOVE_INFO_INDEX, value.length - EXTRA_MOVE_INFO_INDEX)
+                    propertyInfo.reportPropertyDiagnostic(
+                        "has capturing positions that are not yet supported: ${capturingMoveInfos.joinToString()} (`${textSpan.getText()}`). " +
+                                "The capturing is calculated automatically according game rules for this and next cases.",
+                        textSpan,
+                        DiagnosticSeverity.Warning,
+                    )
+                    capturingIsCalculatedAutomaticallyIsReported = true
                 }
-                val textSpan = TextSpan(textSpan.start + EXTRA_MOVE_INFO_INDEX, value.length - EXTRA_MOVE_INFO_INDEX)
-                propertyInfo.reportPropertyDiagnostic(
-                    "has capturing positions that are not yet supported: ${capturingMoveInfos.joinToString()} (`${textSpan.getText()}`). " +
-                            "The capturing is calculated automatically according game rules for this and next cases.",
-                    textSpan,
-                    DiagnosticSeverity.Warning,
-                )
-                capturingIsCalculatedAutomaticallyIsReported = true
+            } else if (value.length > 2) {
+                reportCoordinatesExtraCharsIfNeeded(propertyInfo)
             }
-        } else if (value.length > 2) {
+
+            positionXY?.let {
+                MoveInfo(it, propertyInfo.getPlayer(), propertyInfoAndTextSpan)
+            }
+        }
+    }
+
+    private fun PropertyValueToken.convertPositionXY(propertyInfo: SgfPropertyInfo): PositionXY? {
+        reportCoordinatesExtraCharsIfNeeded(propertyInfo)
+        return convertCoordinates(propertyInfo, 0).toPositionXY()
+    }
+
+    private fun PropertyValueToken.reportCoordinatesExtraCharsIfNeeded(propertyInfo: SgfPropertyInfo) {
+        if (value.length > 2) {
             val textSpan = TextSpan(textSpan.start + 2, value.length - 2)
             propertyInfo.reportPropertyDiagnostic(
                 "has incorrect extra chars: `${value.substring(2)}`",
                 textSpan,
                 DiagnosticSeverity.Error,
             )
-        }
-
-        val position: PositionXY?
-        val isPositionCorrect: Boolean
-        if (coordinates == null) {
-            position = null
-            isPositionCorrect = T::class != PositionXY::class
-        } else {
-            position = coordinates.toPositionXY()
-            isPositionCorrect = position != null
-        }
-
-        return if (isPositionCorrect) {
-            val textSpan = TextSpan(textSpan.start, value.length)
-            when {
-                isMoveInfo -> MoveInfo(
-                    position,
-                    propertyInfo.getPlayer(),
-                    if (position == null) ExternalFinishReason.Grounding else null, // TODO: probably support other reasons?
-                    parsedNode = PropertyInfoAndTextSpan(propertyInfo, textSpan)
-                ) as T
-                T::class == PositionXY::class -> position as T
-                else -> error("Unexpected type ${T::class.simpleName}")
-            }
-        } else {
-            null
         }
     }
 

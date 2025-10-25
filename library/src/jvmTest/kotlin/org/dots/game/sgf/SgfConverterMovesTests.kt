@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 class SgfConverterMovesTests {
     @Test
     fun initialPositionsAreCorrect() {
-        val game = parseConvertAndCheck(
+        val game = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]AB[az][mm]AW[AF][])"
         ).single()
         val rules = game.rules
@@ -33,7 +33,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun initialPositionsAreIncorrect() {
-        val rules = parseConvertAndCheck(
+        val rules = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]AB[a!]AW[-Z][1234])", listOf(
                 LineColumnDiagnostic(
                     "Property AB (Player1 initial dots) has incorrect y coordinate `!`.",
@@ -67,7 +67,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun initialPositionsOverwriting() {
-        val game = parseConvertAndCheck(
+        val game = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]AB[ab][mm][ab])", listOf(
                 LineColumnDiagnostic(
                     "Property AB (Player1 initial dots) value `ab` overwrites one the previous position.",
@@ -84,7 +84,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun initialPositionsOfPlayer2OverwritesPlayer1() {
-        val game = parseConvertAndCheck(
+        val game = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]AB[ab]AW[ab])", listOf(
                 LineColumnDiagnostic(
                     "Property AW (Player2 initial dots) value `ab` overwrites one the previous position of first player AB (Player1 initial dots).",
@@ -102,7 +102,7 @@ class SgfConverterMovesTests {
         // . .  *1 *2 .
         // . *0 +6 +7 *3
         // . .  *5 *4 .
-        parseConvertAndCheck(
+        checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]AB[bb][ca][da][eb][dc][cc]AW[cb][db])", listOf(
                 LineColumnDiagnostic(
                     "Property AW (Player2 initial dots) has incorrect value `db`. The dot at position (4;2) is already placed or captured (move number: 8).",
@@ -115,7 +115,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun branches() {
-        val gameTree = parseConvertAndCheck(
+        val gameTree = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32];B[bb](;B[bc];W[bd])(;B[cc];W[cd]))"
         ).single().gameTree
         val rootNode = gameTree.rootNode
@@ -134,7 +134,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun incorrectMovesSequence() {
-        val gameTree = parseConvertAndCheck(
+        val gameTree = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[10:10];B[bb];B[__];W[bb];W[c];W[ml])", listOf(
                 LineColumnDiagnostic(
                     "Property B (Player1 move) has incorrect x coordinate `_`.",
@@ -170,7 +170,7 @@ class SgfConverterMovesTests {
     @Disabled("Currently it's unclear how to handle moves in root scope properly and if it's even needed")
     @Test
     fun movesInRootNode() {
-        val gameTree = parseConvertAndCheck(
+        val gameTree = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]B[cc]W[dd])",
             listOf(
                 LineColumnDiagnostic(
@@ -192,7 +192,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun gameInfoInMoveNode() {
-        val gameTree = parseConvertAndCheck(
+        val gameTree = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32];GN[Game name not in root]B[cc])",
             listOf(
                 LineColumnDiagnostic(
@@ -211,7 +211,7 @@ class SgfConverterMovesTests {
         // .  *2  .
         // *1 +0 *3
         // .  *4  .
-        val gameTree = parseConvertAndCheck(
+        val gameTree = checkParseAndUnparse(
             "(;GM[40]FF[4]AP[zagram.org]SZ[39:32];B[bb];W[ab];W[ba];W[cb];W[bc.bccbbaabbc])", listOf(
                 LineColumnDiagnostic(
                     "Property W (Player2 move) has capturing positions that are not yet supported: (2;3), (3;2), (2;1), (1;2), (2;3) (`bccbbaabbc`). The capturing is calculated automatically according game rules for this and next cases.",
@@ -253,18 +253,18 @@ class SgfConverterMovesTests {
             }
 
             // Player wins by property with its move
-            parseConvertAndCheck("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[$pla+G];$pla[ba];$pla[cb];$pla[bc];$pla[ab];$opp[bb])")
+            checkParseAndUnparse("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[$pla+G];$pla[ba];$pla[cb];$pla[bc];$pla[ab];$opp[bb])")
 
             // Player wins by property with opp move
-            parseConvertAndCheck("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[$pla+G];$opp[bb];$pla[aa])")
+            checkParseAndUnparse("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[$pla+G];$opp[bb];$pla[aa])")
 
             // NotaGo erasures info about grounding in case of Draw
 
             // Draw by property with player's move
-            parseConvertAndCheck("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[Draw];$pla[aa];$opp[ba])")
+            checkParseAndUnparse("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[Draw];$pla[aa];$opp[ba])")
 
             // Draw by property with opp player's move
-            parseConvertAndCheck("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[Draw];$pla[aa])")
+            checkParseAndUnparse("(;GM[40]FF[4]AP[NOTAGO:4.4.0]SZ[10:10]RE[Draw];$pla[aa])")
         }
 
         checkGrounding(Player.First)
@@ -274,7 +274,7 @@ class SgfConverterMovesTests {
     @Test
     fun groundingWithExplicitMove() {
         val game =
-            parseConvertAndCheck("(;FF[4]GM[40]CA[UTF-8]AP[katago]SZ[10:8]RE[B+1]AB[ed][fe]AW[ee][fd];B[ef];W[de];B[df];W[hd];B[ce];W[hf];B[cd];W[ff];B[dc];W[cf];B[hb];W[ic];B[db];W[gg];B[da];W[bg];B[])").single()
+            checkParseAndUnparse("(;FF[4]GM[40]CA[UTF-8]AP[katago]SZ[10:8]RE[B+1]AB[ed][fe]AW[ee][fd];B[ef];W[de];B[df];W[hd];B[ce];W[hf];B[cd];W[ff];B[dc];W[cf];B[hb];W[ic];B[db];W[gg];B[da];W[bg];B[])").single()
 
         game.gameTree.rewindToEnd()
         val gameResult = game.gameTree.field.gameResult as GameResult.ScoreWin
@@ -285,19 +285,19 @@ class SgfConverterMovesTests {
 
     @Test
     fun groundingWithMovesAfterIt() {
-        parseConvertAndCheck("(;FF[4]GM[40]CA[UTF-8]SZ[10];B[bb];W[];B[])",
+        checkParseAndUnparse("(;FF[4]GM[40]CA[UTF-8]SZ[10]RE[0];B[bb];W[];B[])",
             listOf(
                 LineColumnDiagnostic("Property B (Player1 move) is defined (``), however the game is already over with the result: Draw (Grounding)",
-                    LineColumn(1, 42),
+                    LineColumn(1, 47),
                     DiagnosticSeverity.Error
                 )
             )
         )
-        parseConvertAndCheck("(;FF[4]GM[40]CA[UTF-8]SZ[10];B[bb];W[cc];B[];W[cc])",
+        checkParseAndUnparse("(;FF[4]GM[40]CA[UTF-8]SZ[10]RE[W+1];B[bb];W[cc];B[];W[cc])",
             listOf(
                 LineColumnDiagnostic(
                     "Property W (Player2 move) is defined (`cc`), however the game is already over with the result: ScoreWin(winner: Second, 1.0, Grounding, player: First)",
-                    LineColumn(1, 48),
+                    LineColumn(1, 55),
                     DiagnosticSeverity.Error
                 )
             )
@@ -306,20 +306,20 @@ class SgfConverterMovesTests {
 
     @Test
     fun groundingAndNoLegalMoves() {
-        parseConvertAndCheck("(;FF[4]AP[katago]RU[sui1]GM[40]SZ[2];B[aa];W[ab];B[bb];W[ba];B[])", listOf(
+        checkParseAndUnparse("(;FF[4]AP[katago]RU[sui1]GM[40]SZ[2]RE[0];B[aa];W[ab];B[bb];W[ba];B[])", listOf(
             LineColumnDiagnostic("Property B (Player1 move) is defined (``), however the game is already over with the result: Draw (NoLegalMoves)",
-                LineColumn(1, 64), DiagnosticSeverity.Error)
+                LineColumn(1, 69), DiagnosticSeverity.Error)
         ))
 
         // Allow last grounding move because there is no simple way to update the number of legal moves iteratively
         // if suicidal moves are allowed
-        parseConvertAndCheck("(;FF[4]AP[katago]RU[sui0]GM[40]SZ[2];B[aa];W[ab];B[bb];W[ba];B[])")
+        checkParseAndUnparse("(;FF[4]AP[katago]RU[sui0]GM[40]SZ[2]RE[0];B[aa];W[ab];B[bb];W[ba];B[])")
     }
 
     @Test
     fun noLegalMovesAndDefinedGameResult() {
-        parseConvertAndCheck("(;GM[40]FF[4]SZ[2]RE[Draw];B[aa];B[ab];W[ba];W[bb])")
-        parseConvertAndCheck("(;GM[40]FF[4]SZ[3]RE[Draw];W[aa];W[ca];W[bb];W[ac];W[cc];B[ba];B[ab];B[cb];B[bc])",
+        checkParseAndUnparse("(;GM[40]FF[4]SZ[2]RE[0];B[aa];B[ab];W[ba];W[bb])")
+        checkParseAndUnparse("(;GM[40]FF[4]SZ[3]RE[Draw];W[aa];W[ca];W[bb];W[ac];W[cc];B[ba];B[ab];B[cb];B[bc])",
             listOf(
                 LineColumnDiagnostic(
                     "Property RE (Result) has Draw value but the result of the game from field: First wins.",
@@ -329,8 +329,8 @@ class SgfConverterMovesTests {
             )
         )
 
-        parseConvertAndCheck("(;GM[40]FF[4]SZ[3]RE[B+1];W[aa];W[ca];W[bb];W[ac];W[cc];B[ba];B[ab];B[cb];B[bc])")
-        parseConvertAndCheck("(;GM[40]FF[4]SZ[3]RE[W+1];W[aa];W[ca];W[bb];W[ac];W[cc];B[ba];B[ab];B[cb];B[bc])",
+        checkParseAndUnparse("(;GM[40]FF[4]SZ[3]RE[B+1];W[aa];W[ca];W[bb];W[ac];W[cc];B[ba];B[ab];B[cb];B[bc])")
+        checkParseAndUnparse("(;GM[40]FF[4]SZ[3]RE[W+1];W[aa];W[ca];W[bb];W[ac];W[cc];B[ba];B[ab];B[cb];B[bc])",
             listOf(
                 LineColumnDiagnostic(
                     "Property RE (Result) has `Second` player as winner but the result of the game from field: First wins.",
@@ -343,7 +343,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun definedWinGameResultByRePropertyDoesntMatchResultFromField() {
-        parseConvertAndCheck(
+        checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]RE[W+2];B[bb];W[ab];W[ba];W[cb];W[bc])", listOf(
                 LineColumnDiagnostic(
                     "Property RE (Result) has value `2` that doesn't match score from game field `1`.",
@@ -356,6 +356,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun definedWinGameResultByRePropertyDoesntMatchResultFromFieldInSubBranch() {
+        // TODO: the last branch should be preserved
         parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[39:32]RE[W+2];B[bb];W[ab];W[ba];W[cb];W[bc](;B[dd]))", listOf(
                 LineColumnDiagnostic(
@@ -369,7 +370,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun ignoreFieldResultScoreValidationInSecondaryBranches() {
-        parseConvertAndCheck(
+        checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]RE[W+1];B[bb];W[ab];W[ba];W[cb];W[bc](;B[dd])(;B[cc];W[dc];W[cd]))"
         )
     }
@@ -379,7 +380,7 @@ class SgfConverterMovesTests {
         val firstComment = "Player 1 starts the game"
         val secondComment = "Player 2 surrounds a dot"
 
-        val gameTree = parseConvertAndCheck(
+        val gameTree = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32];B[bb]C[$firstComment];W[ab];W[ba];W[cb];W[bc]C[$secondComment])"
         ).single().gameTree
 
@@ -392,11 +393,11 @@ class SgfConverterMovesTests {
 
     @Test
     fun labelsIncorrect() {
-        parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];LB[aa])",
+        checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32];LB[aa])",
             listOf(
                 LineColumnDiagnostic("Property LB (Label) has unexpected separator ``", LineColumn(1, 29))
             )).single().gameTree
-        parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];LB[aa.])",
+        checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32];LB[aa.])",
             listOf(
                 LineColumnDiagnostic("Property LB (Label) has unexpected separator `.`", LineColumn(1, 29))
             )).single().gameTree
@@ -404,13 +405,13 @@ class SgfConverterMovesTests {
 
     @Test
     fun labels() {
-        val gameTree = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];W[aa]LB[aa:])").single().gameTree
+        val gameTree = checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32];W[aa]LB[aa:])").single().gameTree
         gameTree.next()
         val label = gameTree.currentNode.labels!!.single()
         assertEquals(PositionXY(1, 1), label.positionXY)
         assertEquals("", label.text)
 
-        val gameTree2 = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];W[cc]LB[aa:label][bb:label2])").single().gameTree
+        val gameTree2 = checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32];W[cc]LB[aa:label][bb:label2])").single().gameTree
         gameTree2.next()
         val labels = gameTree2.currentNode.labels
         assertEquals(listOf(Label(PositionXY(1, 1), "label"), Label(PositionXY(2, 2), "label2")), labels)
@@ -418,7 +419,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun circles() {
-        val gameTree = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];B[bb]CR[ba][cb][bc][ab])").single().gameTree
+        val gameTree = checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32];B[bb]CR[ba][cb][bc][ab])").single().gameTree
         gameTree.next()
         val circles = gameTree.currentNode.circles
         assertEquals(
@@ -433,7 +434,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun circlesIncorrect() {
-        val gameTree = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];B[bb]CR[ba.cd])", listOf(
+        val gameTree = checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32];B[bb]CR[ba.cd])", listOf(
             LineColumnDiagnostic("Property CR (Circle) has incorrect extra chars: `.cd`", LineColumn(1, 34))
         )).single().gameTree
         gameTree.next()
@@ -443,7 +444,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun squares() {
-        val gameTree = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32];B[bb]SQ[ba][cb][bc][ab])").single().gameTree
+        val gameTree = checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32];B[bb]SQ[ba][cb][bc][ab])").single().gameTree
         gameTree.next()
         val squares = gameTree.currentNode.squares
         assertEquals(
@@ -458,7 +459,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun warnAboutCapturingPositionsThatAreNotYetSupportedOnlyOnce() {
-        parseConvertAndCheck(
+        checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[5];B[cc]W[cb][dc][cd][bc.cbdccdbc];B[ca][db][ec][dd][ce][bd][ac][bb.cadbecddcebdac])",
             listOf(
                 LineColumnDiagnostic(
@@ -472,7 +473,7 @@ class SgfConverterMovesTests {
 
     @Test
     fun timeLeft() {
-        val game = parseConvertAndCheck(
+        val game = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]BL[315]WL[312];B[bc]BL[308.3];W[de]WL[294.23])",
         ).single()
         assertEquals(game.player1TimeLeft, 315.0)

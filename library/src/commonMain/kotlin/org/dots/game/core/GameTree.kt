@@ -7,7 +7,9 @@ import kotlin.collections.mutableMapOf
 import kotlin.reflect.KProperty
 
 class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
-    val rootNode: GameTreeNode = GameTreeNode(null, 0, mutableMapOf(), parsedNode)
+    val rootNode: GameTreeNode = GameTreeNode.createRoot(parsedNode)
+
+    internal var game: Game? = null
 
     private val memoizedNextChild: MutableMap<GameTreeNode, GameTreeNode> = mutableMapOf()
     var currentNode: GameTreeNode = rootNode
@@ -27,13 +29,13 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
                 GameTreeNode::player1Moves
             else
                 GameTreeNode::player2Moves
-            val gameProperty = GameProperty(listOf(moveInfo), changed = true)
+            val gameProperty = GameProperty(listOf(moveInfo))
             this[key] = gameProperty
         }
-        return addChild(properties, parsedNode = null, moveReporter)
+        return addChild(properties, moveReporter = moveReporter)
     }
 
-    fun addChild(properties: PropertiesMap, parsedNode: ParsedNode?, moveReporter: (MoveInfo, MoveResult) -> Unit): NodeKind {
+    fun addChild(properties: PropertiesMap, parsedNode: ParsedNode? = null, moveReporter: (MoveInfo, MoveResult) -> Unit = { _, _ -> }): NodeKind {
         var nodeKind = NodeKind.New
         var existingChild: GameTreeNode? = null
         for (child in currentNode.children) {
@@ -218,6 +220,10 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
                             val moveResult = field.makeMove(moveInfo)
                             moveReporter(moveInfo, moveResult)
                             newMoveResults.add(moveResult)
+
+                            if (mainBranch && moveResult is GameResult && game?.result == null) {
+                                game?.result = moveResult
+                            }
                         }
                     }
                 }
@@ -300,19 +306,27 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
     }
 }
 
-class GameTreeNode internal constructor(
+class GameTreeNode private constructor(
     val previousNode: GameTreeNode?,
     val number: Int,
     properties: PropertiesMap,
-    parsedNode: ParsedNode? = null,
-    val children: MutableList<GameTreeNode> = mutableListOf(),
+    val mainBranch: Boolean,
+    parsedNode: ParsedNode?,
 ) : PropertiesHolder(properties, parsedNode) {
+    val children: MutableList<GameTreeNode> = mutableListOf()
+
     // Used to handle rollback correctly
     var moveResults: List<MoveResult> = listOf()
         internal set
 
-    internal fun createChild(properties: PropertiesMap, parsedNode: ParsedNode? = null): GameTreeNode {
-        return GameTreeNode(this, this.number + 1, properties, parsedNode).also {
+    companion object {
+        internal fun createRoot(parsedNode: ParsedNode?): GameTreeNode {
+            return GameTreeNode(null, 0, mutableMapOf(), mainBranch = true, parsedNode)
+        }
+    }
+
+    internal fun createChild(properties: PropertiesMap, parsedNode: ParsedNode?): GameTreeNode {
+        return GameTreeNode(this, number + 1, properties, mainBranch = mainBranch && children.isEmpty(), parsedNode).also {
             children.add(it)
         }
     }

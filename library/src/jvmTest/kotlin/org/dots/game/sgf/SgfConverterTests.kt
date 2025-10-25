@@ -26,7 +26,7 @@ import kotlin.test.assertNull
 class SgfConverterTests {
     @Test
     fun gameInfo() {
-        val games = parseConvertAndCheck(sgfTestDataWithFullInfo)
+        val games = checkParseAndUnparse(sgfTestDataWithFullInfo)
         val game = games.single()
         with (game) {
             assertEquals(17, rules.width)
@@ -62,7 +62,7 @@ class SgfConverterTests {
 
     @Test
     fun multipleGames() {
-        val games = parseConvertAndCheck(multiGamesSgf)
+        val games = checkParseAndUnparse(multiGamesSgf)
         val game0 = games[0]
         assertEquals(39, game0.rules.width)
         assertEquals(32, game0.rules.height)
@@ -75,7 +75,7 @@ class SgfConverterTests {
 
     @Test
     fun multipleGamesWarning() {
-        parseConvertAndCheck(
+        checkParseAndUnparse(
             multiGamesSgf,
             listOf(
                 LineColumnDiagnostic(
@@ -90,7 +90,7 @@ class SgfConverterTests {
     @Test
     fun emptyFile() {
         assertTrue(
-            parseConvertAndCheck(
+            checkParseAndUnparse(
                 "", listOf(
                     LineColumnDiagnostic(
                         "Empty game trees.",
@@ -150,7 +150,7 @@ class SgfConverterTests {
 
     @Test
     fun zeroSizeDimension() {
-        parseConvertAndCheck(
+        checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[0])", listOf(
                 LineColumnDiagnostic(
                     "Property SZ (Size) has zero value.",
@@ -159,7 +159,7 @@ class SgfConverterTests {
                 )
             )
         )
-        parseConvertAndCheck(
+        checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[0:0])",
             listOf(
                 LineColumnDiagnostic(
@@ -187,7 +187,7 @@ class SgfConverterTests {
                 )
             )
         )
-        parseConvertAndCheck("(;GM[40]FF[4]SZ[20])")
+        checkParseAndUnparse("(;GM[40]FF[4]SZ[20])")
         parseConvertAndCheck(
             "(;GM[40]FF[4]SZ[str])", listOf(
                 LineColumnDiagnostic(
@@ -298,7 +298,7 @@ class SgfConverterTests {
 
     @Test
     fun incorrectFormatWarnings() {
-        val gameInfo = parseConvertAndCheck(
+        val gameInfo = checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]BR[asdf])", listOf(
                 LineColumnDiagnostic(
                     "Property BR (Player1 Rating) has incorrect format: `asdf`. Expected: Real Number.",
@@ -312,7 +312,7 @@ class SgfConverterTests {
 
     @Test
     fun playdotsSgf() {
-        val gameInfo = parseConvertAndCheck(
+        val gameInfo = checkParseAndUnparse(
             "(;AP[Спортивные Точки (playdots.ru)]GM[40]FF[4]SZ[39:32]BR[Нет звания, 1200]WR[Второй разряд, 1300])"
         ).single()
 
@@ -363,7 +363,7 @@ class SgfConverterTests {
         )
 
         for ((value, diagnostic, expectedGameResult) in valuesToErrors) {
-            val actualGameResult = parseConvertAndCheck(
+            val actualGameResult = checkParseAndUnparse(
                 "(;GM[40]FF[4]SZ[39:32]RE[$value])",
                 listOf(diagnostic)
             ).single().result
@@ -398,7 +398,7 @@ class SgfConverterTests {
         )
 
         for ((value, expectedGameResult, diagnostic) in valuesToGameResults) {
-            val actualGameResult = parseConvertAndCheck(
+            val actualGameResult = checkParseAndUnparse(
                 "(;GM[40]FF[4]SZ[39:32]RE[$value])",
                 listOfNotNull(diagnostic)
             ).single().result
@@ -408,9 +408,9 @@ class SgfConverterTests {
 
     @Test
     fun komi() {
-        val game = parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]KM[0.5]RE[W+0.5])").single()
+        val game = checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32]KM[0.5]RE[W+0.5])").single()
         assertEquals(0.5, game.komi)
-        parseConvertAndCheck(
+        checkParseAndUnparse(
             "(;GM[40]FF[4]SZ[39:32]KM[0]RE[W+0.5])",
             listOfNotNull(
                 LineColumnDiagnostic(
@@ -424,34 +424,34 @@ class SgfConverterTests {
 
     @Test
     fun handicap() {
-        val zeroHandicapAndEmpty = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[0];B[on])").single()
+        val zeroHandicapAndEmpty = checkParseAndUnparse("(;GM[40]FF[4]SZ[20]HA[0];B[on])").single()
         assertEquals(0, zeroHandicapAndEmpty.handicap)
-        val doubleHandicapAndEmpty = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[2];B[on];B[pq];W[ss])").single()
+        val doubleHandicapAndEmpty = checkParseAndUnparse("(;GM[40]FF[4]SZ[20]HA[2];B[on];B[pq];W[ss])").single()
         assertEquals(2, doubleHandicapAndEmpty.handicap)
-        val zeroHandicapAndCross = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[0]AB[jj][kk]AW[kj][jk];B[on])").single()
+        val zeroHandicapAndCross = checkParseAndUnparse("(;GM[40]FF[4]SZ[20]HA[0]AB[jj][kk]AW[kj][jk];B[on])").single()
         assertEquals(0, zeroHandicapAndCross.handicap)
-        val doubleHandicapAndCross = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[2]AB[oi][jj][kk]AW[kj][jk];B[on])").single()
+        val doubleHandicapAndCross = checkParseAndUnparse("(;GM[40]FF[4]SZ[20]HA[2]AB[oi][jj][kk]AW[kj][jk];B[on])").single()
         assertEquals(2, doubleHandicapAndCross.handicap)
     }
 
     @Test
     fun handicapIncorrect() {
-        parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[x]AB[jj][kk]AW[kj][jk])", listOf(
+        checkParseAndUnparse("(;GM[40]FF[4]SZ[20]HA[x]AB[jj][kk]AW[kj][jk])", listOf(
             LineColumnDiagnostic("Property HA (Handicap) has incorrect format: `x`. Expected: Number.", LineColumn(1, 23), DiagnosticSeverity.Warning),
         )).single()
 
         // Handicap always starts with 2 dots (as for Go Game)
-        val zeroHandicapAndEmpty = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[0];B[on];B[pq];W[ss])", listOf(
+        val zeroHandicapAndEmpty = checkParseAndUnparse("(;GM[40]FF[4]SZ[20]HA[0];B[on];B[pq];W[ss])", listOf(
             LineColumnDiagnostic("Property HA (Handicap) has `0` value but expected value from field is `2`", LineColumn(1, 22), DiagnosticSeverity.Warning),
         )).single()
 
         assertEquals(0, zeroHandicapAndEmpty.handicap) // Preserve the value from game info
-        val singleHandicapAndEmpty = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[1];B[on];B[pq];W[ss])", listOf(
+        val singleHandicapAndEmpty = checkParseAndUnparse("(;GM[40]FF[4]SZ[20]HA[1];B[on];B[pq];W[ss])", listOf(
             LineColumnDiagnostic("Property HA (Handicap) has `1` value but expected value from field is `2`", LineColumn(1, 22), DiagnosticSeverity.Warning),
         )).single()
         assertEquals(1, singleHandicapAndEmpty.handicap)
 
-        val tripleFromPropertyButDoubleFromField = parseConvertAndCheck("(;GM[40]FF[4]SZ[20]HA[3]AB[jj][kk][on]AW[kj][jk];B[mo];W[ck])", listOf(
+        val tripleFromPropertyButDoubleFromField = checkParseAndUnparse("(;GM[40]FF[4]SZ[20]HA[3]AB[jj][kk][on]AW[kj][jk];B[mo];W[ck])", listOf(
             LineColumnDiagnostic("Property HA (Handicap) has `3` value but expected value from field is `2`", LineColumn(1, 22), DiagnosticSeverity.Warning),
         )).single()
         assertEquals(3, tripleFromPropertyButDoubleFromField.handicap)
@@ -459,48 +459,48 @@ class SgfConverterTests {
 
     @Test
     fun kataGoRules() {
-        val configuredRules = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1sui1])").single().rules
+        val configuredRules = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1sui1])").single().rules
         assertEquals(BaseMode.AnySurrounding, configuredRules.baseMode)
         assertTrue(configuredRules.suicideAllowed)
 
-        val configuredRulesReversed = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[sui1dotsCaptureEmptyBase1])").single().rules
+        val configuredRulesReversed = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[sui1dotsCaptureEmptyBase1])").single().rules
         assertEquals(BaseMode.AnySurrounding, configuredRulesReversed.baseMode)
         assertTrue(configuredRulesReversed.suicideAllowed)
 
-        val nonConfiguredRules = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase0sui0])").single().rules
+        val nonConfiguredRules = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase0sui0])").single().rules
         assertEquals(BaseMode.AtLeastOneOpponentDot, nonConfiguredRules.baseMode)
         assertFalse(nonConfiguredRules.suicideAllowed)
 
-        val singleExtraRule = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1])").single().rules
+        val singleExtraRule = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1])").single().rules
         assertEquals(BaseMode.AnySurrounding, singleExtraRule.baseMode)
         assertEquals(Rules.Standard.suicideAllowed, singleExtraRule.suicideAllowed)
 
-        val detectInitPosRules = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[4]RU[startPosIsRandom0]AB[bb][cc]AW[cb][bc])").single().rules
+        val detectInitPosRules = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[4]RU[startPosIsRandom0]AB[bb][cc]AW[cb][bc])").single().rules
         assertEquals(InitPosType.Cross, detectInitPosRules.initPosType)
         assertFalse(detectInitPosRules.initPosIsRandom)
     }
 
     @Test
     fun kataGoRulesIncorrect() {
-        val rulesWithIncorrectValues = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBaseXsuiX])", listOf(
+        val rulesWithIncorrectValues = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBaseXsuiX])", listOf(
             LineColumnDiagnostic("Property RU (Rules) Invalid value `X`. Expected: `0` or `1`.", LineColumn(1, 56), DiagnosticSeverity.Error),
         )).single().rules
         assertEquals(Rules.Standard.baseMode, rulesWithIncorrectValues.baseMode)
         assertEquals(Rules.Standard.suicideAllowed, rulesWithIncorrectValues.suicideAllowed)
 
-        val rulesWithIncorrectKeys = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[error0error1])", listOf(
+        val rulesWithIncorrectKeys = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[error0error1])", listOf(
             LineColumnDiagnostic("Property RU (Rules) Unrecognized KataGo key `error0error1`.", LineColumn(1, 36), DiagnosticSeverity.Error),
         )).single().rules
         assertEquals(Rules.Standard.baseMode, rulesWithIncorrectKeys.baseMode)
         assertEquals(Rules.Standard.suicideAllowed, rulesWithIncorrectValues.suicideAllowed)
 
-        val rulesPartiallyCorrect = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1suiX])", listOf(
+        val rulesPartiallyCorrect = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1suiX])", listOf(
             LineColumnDiagnostic("Property RU (Rules) Invalid value `X`. Expected: `0` or `1`.", LineColumn(1, 60), DiagnosticSeverity.Error),
         )).single().rules
         assertEquals(BaseMode.AnySurrounding, rulesPartiallyCorrect.baseMode)
         assertEquals(Rules.Standard.suicideAllowed, rulesWithIncorrectValues.suicideAllowed)
 
-        val randomInitPosFromMovesButNotRandomFromRules = parseConvertAndCheck("(;GM[40]FF[4]AP[katago]SZ[4]RU[startPosIsRandom0]AB[cb][bc]AW[bb][cc])", listOf(
+        val randomInitPosFromMovesButNotRandomFromRules = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[4]RU[startPosIsRandom0]AB[cb][bc]AW[bb][cc])", listOf(
             LineColumnDiagnostic(
                 "Property RU (Rules) Random `Cross` is detected but strict is expected according to extra rules.",
                 LineColumn(1, 29),
@@ -510,6 +510,12 @@ class SgfConverterTests {
         assertEquals(InitPosType.Cross, randomInitPosFromMovesButNotRandomFromRules.initPosType)
         assertTrue(randomInitPosFromMovesButNotRandomFromRules.initPosIsRandom)
     }
+}
+
+internal fun checkParseAndUnparse(input: String, expectedDiagnostics: List<LineColumnDiagnostic> = emptyList(), warnOnMultipleGames: Boolean = false): Games {
+    val games = parseConvertAndCheck(input, expectedDiagnostics, warnOnMultipleGames)
+    assertEquals(input, SgfWriter.write(games))
+    return games
 }
 
 internal fun parseConvertAndCheck(input: String, expectedDiagnostics: List<LineColumnDiagnostic> = emptyList(), warnOnMultipleGames: Boolean = false): Games {

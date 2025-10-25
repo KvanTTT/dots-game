@@ -2,7 +2,9 @@ package org.dots.game.sgf
 
 import org.dots.game.ParsedNode
 
-abstract class SgfParsedNode(textSpan: TextSpan) : ParsedNode(textSpan)
+abstract class SgfParsedNode(textSpan: TextSpan) : ParsedNode(textSpan) {
+    override fun toString(): String = textSpan.toString()
+}
 
 sealed class SgfToken(textSpan: TextSpan, val value: String, val leadingWs: WhitespaceToken?) : SgfParsedNode(textSpan) {
     open val isError: Boolean

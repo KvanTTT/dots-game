@@ -45,7 +45,8 @@ fun loadDumpParameters(): DumpParameters {
             printNumbers = getSetting(DumpParameters::printNumbers, DumpParameters.DEFAULT.printNumbers),
             padding = getSetting(DumpParameters::padding, DumpParameters.DEFAULT.padding),
             printCoordinates = getSetting(DumpParameters::printCoordinates, DumpParameters.DEFAULT.printCoordinates),
-            debugInfo = getSetting(DumpParameters::debugInfo, DumpParameters.DEFAULT.debugInfo)
+            debugInfo = getSetting(DumpParameters::debugInfo, DumpParameters.DEFAULT.debugInfo),
+            isSgf = getSetting(DumpParameters::isSgf, DumpParameters.DEFAULT.isSgf),
         )
     }
 }
@@ -58,6 +59,7 @@ fun saveDumpParameters(dumpParameters: DumpParameters) {
         setSetting(DumpParameters::padding, dumpParameters.padding)
         setSetting(DumpParameters::printCoordinates, dumpParameters.printCoordinates)
         setSetting(DumpParameters::debugInfo, dumpParameters.debugInfo)
+        setSetting(DumpParameters::isSgf, dumpParameters.isSgf)
     }
 }
 

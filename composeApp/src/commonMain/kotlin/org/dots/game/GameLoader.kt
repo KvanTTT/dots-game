@@ -42,12 +42,7 @@ object GameLoader {
                             ).first
                         }, diagnosticReporter
                     )
-                    val gameTree = GameTree(field, parsedNode = null).apply {
-                        for (move in field.moveSequence) {
-                            addChild(MoveInfo(move.position.toXY(field.realWidth), move.player))
-                        }
-                    }
-                    return LoadResult(inputType, content = pathOrContent, Games(Game(gameTree)))
+                    return LoadResult(inputType, content = pathOrContent, Games.fromField(field))
                 }
 
                 InputType.SgfContent -> {

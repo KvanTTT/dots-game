@@ -12,7 +12,10 @@ sealed class PropertiesHolder(val properties: PropertiesMap, val parsedNode: Par
     var unknownProperties: List<String> by PropertyDelegate()
 }
 
-data class GameProperty<T>(val value: T?, val changed: Boolean = false, val parsedNodes: List<ParsedNode> = emptyList())
+data class GameProperty<T>(val value: T?, val changed: Boolean = false, val parsedNodes: List<ParsedNode> = emptyList()) {
+    constructor(value: T?) : this(value, changed = true, parsedNodes = emptyList())
+    constructor(value: T?, parsedNodes: List<ParsedNode>) : this(value, changed = false, parsedNodes = parsedNodes)
+}
 
 class PropertyDelegate {
     operator fun <T> getValue(thisRef: PropertiesHolder, property: KProperty<*>): T {
@@ -21,12 +24,25 @@ class PropertyDelegate {
     }
 
     operator fun <T> setValue(thisRef: PropertiesHolder, property: KProperty<*>, value: T) {
+        val previousProperty = thisRef.properties[property]
         thisRef.properties[property] =
-            GameProperty(value, changed = true, thisRef.properties[property]?.parsedNodes ?: emptyList())
+            GameProperty(value, changed = previousProperty?.value != value, previousProperty?.parsedNodes ?: emptyList())
     }
 }
 
 class Games(games: List<Game>, val parsedNode: ParsedNode? = null) : MutableList<Game> by mutableListOf() {
+    companion object {
+        fun fromField(field: Field): Games {
+            return Games(Game(GameTree(field).apply {
+                for ((index, move) in field.moveSequence.withIndex()) {
+                    if (index >= field.initialMovesCount) {
+                        addChild(MoveInfo(move.position.toXY(field.realWidth), move.player))
+                    }
+                }
+            }))
+        }
+    }
+
     init {
         addAll(games)
     }
@@ -43,6 +59,14 @@ class Game(
     val remainingInitMoves: List<MoveInfo> = emptyList(),
 ) : PropertiesHolder(properties, parsedNode) {
     init {
+        gameTree.game = this
+
+        val appInfo = properties[Game::appInfo]
+        if (appInfo == null && parsedNode == null) {
+            // Set up this app property if the game doesn't have a binding to a parsedNode
+            properties[Game::appInfo] = GameProperty(AppInfo(AppType.DotsGame.value, version = null))
+        }
+
         val sizeProperty = properties[Game::size]
         val rules = gameTree.field.rules
         @Suppress("UNCHECKED_CAST")
@@ -51,8 +75,24 @@ class Game(
             require(width == rules.width)
             require(height == rules.height)
         } else {
-            properties[Game::size] = GameProperty(rules.width to rules.height, true)
+            properties[Game::size] = GameProperty(rules.width to rules.height)
         }
+
+        fun initAddDots(first: Boolean) {
+            val propertyKey = if (first) Game::player1AddDots else Game::player2AddDots
+            val addDots = properties[propertyKey]
+            if (addDots == null) {
+                val initialMoves = gameTree.field.rules.initialMoves.filter {
+                    it.player == if (first) Player.First else Player.Second
+                }
+                if (initialMoves.isNotEmpty()) {
+                    properties[propertyKey] = GameProperty(initialMoves)
+                }
+            }
+        }
+
+        initAddDots(first = true)
+        initAddDots(first = false)
     }
 
     val rules = gameTree.field.rules
@@ -129,5 +169,6 @@ enum class AppType(val value: String) {
     Notago("NOTAGO"),
     Playdots("Спортивные Точки (playdots.ru)"),
     Katago("katago"),
+    DotsGame("DotsGame"), // This app
     Unknown(""),
 }

@@ -1148,7 +1148,11 @@ enum class ExternalFinishReason {
     Resign,
     Time,
     Interrupt,
-    Unknown,
+    Unknown;
+
+    companion object {
+        val textToValue: Map<String, ExternalFinishReason> = entries.associateBy { it.name.lowercase() }
+    }
 }
 
 enum class EndGameKind {
@@ -1194,7 +1198,7 @@ sealed class GameResult(
         }
 
         override fun toString(): String {
-            return this::class.simpleName + endGameKind?.let { " ($it)" }
+            return this::class.simpleName + (endGameKind?.let { " ($it)" } ?: "")
         }
     }
 
