@@ -227,10 +227,9 @@ private fun ConnectionsAndNodes(
                     val node = element.node
 
                     val color: Color
-                    val moveNumber: Int
+                    val moveNumber: Int = node.number
                     if (node.isRoot) {
                         color = rootNodeColor
-                        moveNumber = 0
                     } else {
                         // TODO: make more understandable colors
                         color = if (node.moveResults.isEmpty() || node.moveResults.any { it is IllegalMove }) {
@@ -238,8 +237,6 @@ private fun ConnectionsAndNodes(
                         } else {
                             uiSettings.toColor((node.moveResults.first() as LegalMove).player)
                         }
-
-                        moveNumber = node.number
 
                         val lineXOffset: Dp
                         val lineYOffset: Dp
@@ -316,7 +313,7 @@ private fun handleKeyEvent(
             Key.DirectionRight -> gameTree.next()
             Key.DirectionUp -> gameTree.prevSibling()
             Key.DirectionDown -> gameTree.nextSibling()
-            Key.MoveHome -> gameTree.rewindBack()
+            Key.MoveHome -> gameTree.rewindToBegin()
             Key.MoveEnd -> gameTree.rewindToEnd()
             Key.PageUp -> gameTree.back(gameTreeViewData.getElementsCountOnViewport(viewportDpSize.width))
             Key.PageDown -> gameTree.next(gameTreeViewData.getElementsCountOnViewport(viewportDpSize.width))

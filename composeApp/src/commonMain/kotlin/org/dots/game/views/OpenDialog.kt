@@ -45,16 +45,41 @@ fun OpenDialog(
     rules: Rules?,
     openGameSettings: OpenGameSettings,
     onDismiss: () -> Unit,
-    onConfirmation: (games: Games, newOpenGameSettings: OpenGameSettings) -> Unit,
+    onConfirmation: (games: Games, newOpenGameSettings: OpenGameSettings, refinedPath: String?, content: String) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var pathOrContentTextFieldValue by remember { mutableStateOf(TextFieldValue(openGameSettings.path ?: openGameSettings.content ?: "")) }
+    var pathOrContentTextFieldValue by remember { mutableStateOf(TextFieldValue(openGameSettings.pathOrContent ?: "")) }
     var contentTextFieldValue by remember { mutableStateOf(TextFieldValue("")) }
-    var previousInput: String? = null
+    var previousInput: String by remember { mutableStateOf("") }
     var diagnostics by remember { mutableStateOf<List<Diagnostic>>(listOf()) }
     var loadResult by remember { mutableStateOf<LoadResult?>(null) }
     var rewindToEnd by remember { mutableStateOf(openGameSettings.rewindToEnd) }
     var addFinishingMove by remember { mutableStateOf(openGameSettings.addFinishingMove) }
+
+    var initialization by remember { mutableStateOf(true) }
+
+    fun openOrLoad() {
+        val text = pathOrContentTextFieldValue.text
+        if (text != previousInput) {
+            previousInput = text
+
+            coroutineScope.launch {
+                diagnostics = buildList {
+                    loadResult = GameLoader.openOrLoad(text, rules, addFinishingMove = addFinishingMove) { diagnostic ->
+                        add(diagnostic)
+                    }
+                    if (loadResult?.inputType is InputType.InputTypeWithPath) {
+                        contentTextFieldValue = TextFieldValue(loadResult?.content ?: "")
+                    }
+                }
+            }
+        }
+    }
+
+    if (initialization) {
+        openOrLoad()
+        initialization = false
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(500.dp).wrapContentHeight()) {
@@ -65,26 +90,13 @@ fun OpenDialog(
                         pathOrContentTextFieldValue,
                         {
                             pathOrContentTextFieldValue = it
-                            val text = it.text
-                            if (text != previousInput) {
-                                previousInput = text
-
-                                coroutineScope.launch {
-                                    diagnostics = buildList {
-                                        loadResult = GameLoader.openOrLoad(text, rules, addFinishingMove = addFinishingMove) { diagnostic ->
-                                            add(diagnostic)
-                                        }
-                                        if (loadResult?.inputType is InputType.InputTypeWithPath) {
-                                            contentTextFieldValue = TextFieldValue(loadResult?.content ?: "")
-                                        }
-                                    }
-                                }
-                            }
+                            openOrLoad()
                         },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = loadResult?.inputType is InputType.InputTypeWithPath,
                         maxLines = if (loadResult?.inputType is InputType.InputTypeWithPath) 1 else 5,
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace),
+                        placeholder = { Text("Enter path to .sgf(s) file of its content") }
                     )
                 }
 
@@ -174,11 +186,12 @@ fun OpenDialog(
                                 onConfirmation(
                                     it.games,
                                     OpenGameSettings(
-                                        (it.inputType as? InputType.InputTypeWithPath)?.refinedPath,
-                                        it.content ?: "",
-                                        rewindToEnd,
-                                        addFinishingMove,
-                                    )
+                                        pathOrContent = pathOrContentTextFieldValue.text,
+                                        addFinishingMove = addFinishingMove,
+                                        rewindToEnd = rewindToEnd,
+                                    ),
+                                    (it.inputType as? InputType.InputTypeWithPath)?.refinedPath,
+                                    it.content ?: "",
                                 )
                             }
                         }
@@ -194,12 +207,11 @@ fun OpenDialog(
 }
 
 data class OpenGameSettings(
-    val path: String?,
-    val content: String?,
-    val rewindToEnd: Boolean,
-    val addFinishingMove: Boolean,
+    var pathOrContent: String?,
+    var addFinishingMove: Boolean,
+    var rewindToEnd: Boolean,
 ) {
     companion object {
-        val Default = OpenGameSettings(path = null, content = null, rewindToEnd = true, addFinishingMove = false)
+        val Default = OpenGameSettings(pathOrContent = null, addFinishingMove = false, rewindToEnd = true)
     }
 }

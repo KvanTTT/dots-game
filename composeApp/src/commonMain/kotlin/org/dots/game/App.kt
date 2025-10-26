@@ -28,11 +28,11 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 @Preview
-fun App(onGamesChange: (Games) -> Unit = { _ -> }) {
+fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), onGamesChange: (games: Games?) -> Unit = { }) {
     MaterialTheme {
         var uiSettings by remember { mutableStateOf(loadUiSettings()) }
-        var openGameSettings by remember { mutableStateOf(loadOpenGameSettings()) }
         var newGameDialogRules by remember { mutableStateOf(loadRules()) }
+        var openGameSettings by remember { mutableStateOf(loadOpenGameSettings()) }
 
         val coroutineScope = rememberCoroutineScope()
 
@@ -74,9 +74,15 @@ fun App(onGamesChange: (Games) -> Unit = { _ -> }) {
         }
 
         fun switchGame(gameNumber: Int) {
-            currentGame = games[gameNumber]
-            if (openGameSettings.rewindToEnd && currentGame.initialization) {
-                currentGame.gameTree.rewindToEnd()
+            currentGameSettings.currentGameNumber = gameNumber
+            currentGame = games.elementAtOrNull(gameNumber) ?: games[0]
+
+            if (currentGame.initialization && currentGameSettings.currentNodeNumber == -1) {
+                if (openGameSettings.rewindToEnd) {
+                    currentGame.gameTree.rewindToEnd()
+                }
+            } else {
+                currentGame.gameTree.switchToDepthFirstIndex(currentGameSettings.currentNodeNumber)
             }
             currentGame.initialization = false
             currentGame.gameTree.memoizePaths = true
@@ -85,8 +91,11 @@ fun App(onGamesChange: (Games) -> Unit = { _ -> }) {
         }
 
         fun reset(newGame: Boolean) {
-            openGameSettings = openGameSettings.copy(path = openGameSettings.path.takeIf { !newGame }, content = null)
-            saveOpenGameSettings(openGameSettings)
+            if (newGame)
+                currentGameSettings.path = null
+            currentGameSettings.content = null
+            currentGameSettings.currentGameNumber = 0
+            currentGameSettings.currentNodeNumber = -1
             startOrReset = true
         }
 
@@ -107,7 +116,7 @@ fun App(onGamesChange: (Games) -> Unit = { _ -> }) {
         }
 
         if (startOrReset) {
-            val contentOrPath = openGameSettings.content ?: openGameSettings.path
+            val contentOrPath = currentGameSettings.content ?: currentGameSettings.path
 
             if (contentOrPath == null) {
                 games = Games.fromField(Field.create(newGameDialogRules))
@@ -124,7 +133,7 @@ fun App(onGamesChange: (Games) -> Unit = { _ -> }) {
                     if (loadResult.games.isNotEmpty()) {
                         games = loadResult.games
                         onGamesChange(games)
-                        switchGame(0)
+                        switchGame(currentGameSettings.currentGameNumber)
                     }
                 }
             }
@@ -140,15 +149,17 @@ fun App(onGamesChange: (Games) -> Unit = { _ -> }) {
                     openGameDialog = false
                     focusRequester.requestFocus()
                 },
-                onConfirmation = { newGames, newOpenGameSettings ->
+                onConfirmation = { newGames, newOpenGameSettings, path, content ->
                     openGameDialog = false
                     openGameSettings = newOpenGameSettings
                     saveOpenGameSettings(openGameSettings)
-                    if (games.isNotEmpty()) {
-                        games = newGames
-                        onGamesChange(games)
-                        switchGame(0)
-                    }
+                    currentGameSettings.path = path
+                    currentGameSettings.content = content
+                    currentGameSettings.currentGameNumber = 0
+                    currentGameSettings.currentNodeNumber = -1
+                    games = newGames
+                    onGamesChange(games)
+                    switchGame(currentGameSettings.currentGameNumber)
                 }
             )
         }
@@ -343,6 +354,7 @@ fun App(onGamesChange: (Games) -> Unit = { _ -> }) {
                             Button(onClick = {
                                 var currentGameIndex = games.indexOf(currentGame)
                                 currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
+                                currentGameSettings.currentNodeNumber = -1
                                 switchGame(currentGameIndex)
                             }, controlButtonModifier) {
                                 Text(if (next) ">>" else "<<")

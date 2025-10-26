@@ -152,7 +152,10 @@ object SgfAnalyser {
                 games = sgfConverter.convert()
                 movesCount = games.sumOf {
                     var counter = 0
-                    it.gameTree.forEachNode { counter++ }
+                    it.gameTree.forEachDepthFirst {
+                        counter++
+                        true
+                    }
                     counter
                 }
             }

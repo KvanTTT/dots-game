@@ -49,7 +49,7 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
         return nodeKind
     }
 
-    fun rewindBack(): Boolean = switch(rootNode)
+    fun rewindToBegin(): Boolean = switch(rootNode)
 
     fun rewindToEnd(): Boolean {
         var result = false
@@ -198,13 +198,46 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
         return true
     }
 
-    fun forEachNode(action: (GameTreeNode) -> Unit) {
-        fun forEachNodeRecursively(node: GameTreeNode) {
-            action(node)
-            node.children.forEach { forEachNodeRecursively(it) }
+    fun switchToDepthFirstIndex(index: Int): Boolean {
+        var counter = 0
+        forEachDepthFirst {
+            if (counter == index) {
+                return switch(it)
+            }
+            counter++
+            true
         }
+        return false
+    }
 
-        forEachNodeRecursively(rootNode)
+    fun getCurrentNodeDepthFirstIndex(): Int {
+        var counter = 0
+        forEachDepthFirst {
+            if (it == currentNode) {
+                return counter
+            }
+            counter++
+            true
+        }
+        return -1
+    }
+
+    inline fun forEachDepthFirst(action: (GameTreeNode) -> Boolean) {
+        // Use stack for traversing to prevent stack overflow on very long games
+        val stack = mutableListOf<GameTreeNode>()
+        stack.add(rootNode)
+
+        while (stack.isNotEmpty()) {
+            val element = stack.removeLast()
+
+            if (!action(element)) {
+                return
+            }
+
+            for (child in element.children.reversed()) {
+                stack.add(child)
+            }
+        }
     }
 
     @Suppress("UNCHECKED_CAST")

@@ -102,10 +102,9 @@ fun loadOpenGameSettings(): OpenGameSettings {
     val openGameSettingsClass = OpenGameSettings::class // TODO: inline after KT-80853
     context (settings, openGameSettingsClass, OpenGameSettings.Default) {
         return OpenGameSettings(
-            path = getSetting(OpenGameSettings::path),
-            content = getSetting(OpenGameSettings::content),
-            rewindToEnd = getSetting(OpenGameSettings::rewindToEnd),
+            pathOrContent = getSetting(OpenGameSettings::pathOrContent),
             addFinishingMove = getSetting(OpenGameSettings::addFinishingMove),
+            rewindToEnd = getSetting(OpenGameSettings::rewindToEnd),
         )
     }
 }
@@ -114,19 +113,39 @@ fun saveOpenGameSettings(openGameSettings: OpenGameSettings) {
     val settings = appSettings ?: return
     val openGameSettingsClass = OpenGameSettings::class // TODO: inline after KT-80853
     context (settings, openGameSettingsClass, openGameSettings) {
-        setSetting(OpenGameSettings::path)
-        setSetting(OpenGameSettings::content)
+        setSetting(OpenGameSettings::pathOrContent)
         setSetting(OpenGameSettings::rewindToEnd)
         setSetting(OpenGameSettings::addFinishingMove)
     }
 }
 
-fun saveGamesIfNeeded(games: Games?) {
+fun loadCurrentGameSettings(): CurrentGameSettings {
+    val settings = appSettings ?: return CurrentGameSettings.Default
+    val currentGameSettingsClass = CurrentGameSettings::class // TODO: inline after KT-80853
+    context (settings, currentGameSettingsClass, CurrentGameSettings.Default) {
+        return CurrentGameSettings(
+            path = getSetting(CurrentGameSettings::path),
+            content = getSetting(CurrentGameSettings::content),
+            currentGameNumber = getSetting(CurrentGameSettings::currentGameNumber),
+            currentNodeNumber = getSetting(CurrentGameSettings::currentNodeNumber),
+        )
+    }
+}
+
+fun saveCurrentGameSettings(currentGameSettings: CurrentGameSettings, games: Games?) {
+    val settings = appSettings ?: return
     if (games != null) {
-        val openGameSettings = loadOpenGameSettings()
-        val newContent = SgfWriter.write(games)
-        if (openGameSettings.content != newContent) {
-            saveOpenGameSettings(openGameSettings.copy(content = newContent))
+        currentGameSettings.content = SgfWriter.write(games)
+        val currentGame = games.elementAtOrNull(currentGameSettings.currentGameNumber)
+        if (currentGame != null) {
+            currentGameSettings.currentNodeNumber = currentGame.gameTree.getCurrentNodeDepthFirstIndex()
         }
+    }
+    val currentGameSettingsClass = CurrentGameSettings::class // TODO: inline after KT-80853
+    context (settings, currentGameSettingsClass, currentGameSettings) {
+        setSetting(CurrentGameSettings::path)
+        setSetting(CurrentGameSettings::content)
+        setSetting(CurrentGameSettings::currentGameNumber)
+        setSetting(CurrentGameSettings::currentNodeNumber)
     }
 }
