@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import org.dots.game.Diagnostic
 import org.dots.game.GameLoader
 import org.dots.game.InputType
+import org.dots.game.LoadResult
 import org.dots.game.buildLineOffsets
 import org.dots.game.core.Games
 import org.dots.game.core.Rules
@@ -42,19 +43,18 @@ import org.dots.game.toLineColumnDiagnostic
 @Composable
 fun OpenDialog(
     rules: Rules?,
-    pathOrContent: String?,
     openGameSettings: OpenGameSettings,
     onDismiss: () -> Unit,
-    onConfirmation: (games: Games, newPathOrContent: String, newOpenGameSettings: OpenGameSettings) -> Unit,
+    onConfirmation: (games: Games, newOpenGameSettings: OpenGameSettings) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var pathOrContentTextFieldValue by remember { mutableStateOf(TextFieldValue(pathOrContent ?: "")) }
+    var pathOrContentTextFieldValue by remember { mutableStateOf(TextFieldValue(openGameSettings.path ?: openGameSettings.content ?: "")) }
     var contentTextFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     var previousInput: String? = null
     var diagnostics by remember { mutableStateOf<List<Diagnostic>>(listOf()) }
-    var inputType by remember { mutableStateOf<InputType>(InputType.Other) }
-    var games by remember { mutableStateOf(Games()) }
-    var newOpenGameSettings by remember { mutableStateOf(openGameSettings)}
+    var loadResult by remember { mutableStateOf<LoadResult?>(null) }
+    var rewindToEnd by remember { mutableStateOf(openGameSettings.rewindToEnd) }
+    var addFinishingMove by remember { mutableStateOf(openGameSettings.addFinishingMove) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(500.dp).wrapContentHeight()) {
@@ -71,40 +71,38 @@ fun OpenDialog(
 
                                 coroutineScope.launch {
                                     diagnostics = buildList {
-                                        val result = GameLoader.openOrLoad(text, rules, addFinishingMove = newOpenGameSettings.addFinishingMove) { diagnostic ->
+                                        loadResult = GameLoader.openOrLoad(text, rules, addFinishingMove = addFinishingMove) { diagnostic ->
                                             add(diagnostic)
                                         }
-                                        inputType = result.inputType
-                                        if (inputType !is InputType.Content) {
-                                            contentTextFieldValue = TextFieldValue(result.content ?: "")
+                                        if (loadResult?.inputType is InputType.InputTypeWithPath) {
+                                            contentTextFieldValue = TextFieldValue(loadResult?.content ?: "")
                                         }
-                                        games = result.games
                                     }
                                 }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = inputType !is InputType.Content,
-                        maxLines = if (inputType is InputType.Content) 5 else 1,
+                        singleLine = loadResult?.inputType is InputType.InputTypeWithPath,
+                        maxLines = if (loadResult?.inputType is InputType.InputTypeWithPath) 1 else 5,
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace),
                     )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(newOpenGameSettings.rewindToEnd, onCheckedChange = {
-                        newOpenGameSettings = newOpenGameSettings.copy(rewindToEnd = it)
+                    Checkbox(rewindToEnd, onCheckedChange = {
+                        rewindToEnd = it
                     })
                     Text("Rewind to End")
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(newOpenGameSettings.addFinishingMove, onCheckedChange = {
-                        newOpenGameSettings = newOpenGameSettings.copy(addFinishingMove = it)
+                    Checkbox(addFinishingMove, onCheckedChange = {
+                        addFinishingMove = it
                     })
                     Text("Add Finishing Move")
                 }
 
-                if (inputType is InputType.InputTypeWithName && diagnostics.isNotEmpty()) {
+                if (loadResult?.inputType is InputType.InputTypeWithPath && diagnostics.isNotEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextField(
                             contentTextFieldValue,
@@ -117,14 +115,14 @@ fun OpenDialog(
                     }
                 }
 
-                fun getContextTextFieldValue() = if (inputType is InputType.Content) pathOrContentTextFieldValue else contentTextFieldValue
+                fun getContentTextFieldValue() = if (loadResult?.inputType is InputType.InputTypeWithPath) contentTextFieldValue else pathOrContentTextFieldValue
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp).padding(vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val lineOffsets by lazy(LazyThreadSafetyMode.NONE) { getContextTextFieldValue().text.buildLineOffsets() }
+                        val lineOffsets by lazy(LazyThreadSafetyMode.NONE) { getContentTextFieldValue().text.buildLineOffsets() }
                         items(diagnostics.size) { index ->
                             val diagnostic = diagnostics[index]
                             var cardModifier = Modifier.fillMaxWidth()
@@ -133,7 +131,7 @@ fun OpenDialog(
                                 cardModifier = cardModifier.then(Modifier.clickable(onClick = {
                                     val start = textSpan.start
                                     val end = textSpan.end
-                                    val textFieldValue = getContextTextFieldValue()
+                                    val textFieldValue = getContentTextFieldValue()
                                     val newTextFieldValue = textFieldValue.copy(selection = TextRange(start,
                                         if (end == start) {
                                             if (end < textFieldValue.text.length - 1)
@@ -146,10 +144,10 @@ fun OpenDialog(
                                             end
                                         }
                                     ))
-                                    if (inputType is InputType.Content) {
-                                        pathOrContentTextFieldValue = newTextFieldValue
-                                    } else {
+                                    if (loadResult?.inputType is InputType.InputTypeWithPath) {
                                         contentTextFieldValue = newTextFieldValue
+                                    } else {
+                                        pathOrContentTextFieldValue = newTextFieldValue
                                     }
                                 }))
                             }
@@ -170,9 +168,23 @@ fun OpenDialog(
                 }
 
                 Button(
-                    onClick = { games.takeIf { it.isNotEmpty() }?.let { onConfirmation(it, previousInput!!, newOpenGameSettings) } },
+                    onClick = {
+                        loadResult?.let {
+                            if (it.games.isNotEmpty()) {
+                                onConfirmation(
+                                    it.games,
+                                    OpenGameSettings(
+                                        (it.inputType as? InputType.InputTypeWithPath)?.refinedPath,
+                                        it.content ?: "",
+                                        rewindToEnd,
+                                        addFinishingMove,
+                                    )
+                                )
+                            }
+                        }
+                    },
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 10.dp),
-                    enabled = games.isNotEmpty()
+                    enabled = loadResult?.games?.isNotEmpty() == true
                 ) {
                     Text("Open")
                 }
@@ -182,10 +194,12 @@ fun OpenDialog(
 }
 
 data class OpenGameSettings(
+    val path: String?,
+    val content: String?,
     val rewindToEnd: Boolean,
     val addFinishingMove: Boolean,
 ) {
     companion object {
-        val Default = OpenGameSettings(rewindToEnd = true, addFinishingMove = false)
+        val Default = OpenGameSettings(path = null, content = null, rewindToEnd = true, addFinishingMove = false)
     }
 }

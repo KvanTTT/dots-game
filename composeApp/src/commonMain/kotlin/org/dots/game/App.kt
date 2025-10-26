@@ -28,17 +28,16 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 @Preview
-fun App() {
+fun App(onGamesChange: (Games) -> Unit = { _ -> }) {
     MaterialTheme {
         var uiSettings by remember { mutableStateOf(loadUiSettings()) }
         var openGameSettings by remember { mutableStateOf(loadOpenGameSettings()) }
         var newGameDialogRules by remember { mutableStateOf(loadRules()) }
 
         val coroutineScope = rememberCoroutineScope()
-        var pathOrContent = appSettings?.getStringOrNull(PATH_OR_CONTENT_KEY)
 
-        var start by remember { mutableStateOf(true) }
-        var games by remember { mutableStateOf(Games(Game(GameTree(Field.create(newGameDialogRules))))) }
+        var startOrReset by remember { mutableStateOf(true) }
+        var games by remember { mutableStateOf(Games.fromField(Field.create(newGameDialogRules))) }
         var currentGame by remember { mutableStateOf(games.first()) }
 
         fun getField(): Field = currentGame.gameTree.field
@@ -85,18 +84,10 @@ fun App() {
             updateFieldAndGameTree()
         }
 
-        fun resetGame(newGame: Game) {
-            games[games.indexOf(currentGame)] = newGame
-            currentGame = newGame
-            currentGame.gameTree.memoizePaths = true
-
-            updateFieldAndGameTree()
-        }
-
-        fun resetFieldAndGameTree(rules: Rules) {
-            resetGame(Game(GameTree(Field.create(rules))))
-            pathOrContent = null
-            appSettings?.putString(PATH_OR_CONTENT_KEY, "")
+        fun reset(newGame: Boolean) {
+            openGameSettings = openGameSettings.copy(path = openGameSettings.path.takeIf { !newGame }, content = null)
+            saveOpenGameSettings(openGameSettings)
+            startOrReset = true
         }
 
         if (showNewGameDialog) {
@@ -111,39 +102,51 @@ fun App() {
                 showNewGameDialog = false
                 newGameDialogRules = it
                 saveRules(newGameDialogRules)
-                resetFieldAndGameTree(newGameDialogRules)
+                reset(newGame = true)
             }
-        } else if (start) {
-            if (pathOrContent != null) {
+        }
+
+        if (startOrReset) {
+            val contentOrPath = openGameSettings.content ?: openGameSettings.path
+
+            if (contentOrPath == null) {
+                games = Games.fromField(Field.create(newGameDialogRules))
+                onGamesChange(games)
+                switchGame(0)
+            } else {
                 coroutineScope.launch {
                     val loadResult =
-                        GameLoader.openOrLoad(pathOrContent!!, rules = null, addFinishingMove = openGameSettings.addFinishingMove)
+                        GameLoader.openOrLoad(
+                            contentOrPath,
+                            rules = null,
+                            addFinishingMove = openGameSettings.addFinishingMove
+                        )
                     if (loadResult.games.isNotEmpty()) {
                         games = loadResult.games
+                        onGamesChange(games)
                         switchGame(0)
                     }
                 }
             }
-            start = false
+
+            startOrReset = false
         }
 
         if (openGameDialog) {
             OpenDialog(
                 newGameDialogRules,
-                pathOrContent,
                 openGameSettings,
                 onDismiss = {
                     openGameDialog = false
                     focusRequester.requestFocus()
                 },
-                onConfirmation = { newGames, newPathOrContent, newOpenGameSettings ->
+                onConfirmation = { newGames, newOpenGameSettings ->
                     openGameDialog = false
                     openGameSettings = newOpenGameSettings
-                    pathOrContent = newPathOrContent
-                    appSettings?.putString(PATH_OR_CONTENT_KEY, newPathOrContent)
                     saveOpenGameSettings(openGameSettings)
                     if (games.isNotEmpty()) {
                         games = newGames
+                        onGamesChange(games)
                         switchGame(0)
                     }
                 }
@@ -172,6 +175,14 @@ fun App() {
                 focusRequester.requestFocus()
             })
         }
+
+       /* TODO: implement saving if needed in the loop
+       LaunchedEffect(Unit) {
+            while (true) {
+                saveGamesIfNeeded(games)
+                delay(3000)
+            }
+        }*/
 
         Row(Modifier.pointerInput(Unit) {
             awaitPointerEventScope {
@@ -239,7 +250,7 @@ fun App() {
                     Button(onClick = { showNewGameDialog = true }, controlButtonModifier) {
                         Text("New")
                     }
-                    Button(onClick = { resetFieldAndGameTree(getField().rules) }, controlButtonModifier) {
+                    Button(onClick = { reset(newGame = false) }, controlButtonModifier) {
                         Text("Reset")
                     }
                     Button(onClick = { openGameDialog = true }, controlButtonModifier) {

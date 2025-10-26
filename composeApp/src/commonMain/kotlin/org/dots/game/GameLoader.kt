@@ -2,10 +2,7 @@ package org.dots.game
 
 import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.FIRST_PLAYER_MARKER
-import org.dots.game.core.Game
-import org.dots.game.core.GameTree
 import org.dots.game.core.Games
-import org.dots.game.core.MoveInfo
 import org.dots.game.core.Rules
 import org.dots.game.core.SECOND_PLAYER_MARKER
 import org.dots.game.dump.FieldParser
@@ -181,10 +178,10 @@ sealed class InputType {
     object SgfContent : Content()
     object FieldContent : Content()
 
-    sealed class InputTypeWithName(val refinedPath: String, val name: String, val isIncorrect: Boolean) : InputType() {
+    sealed class InputTypeWithPath(val refinedPath: String, val name: String, val isIncorrect: Boolean) : InputType() {
         override fun equals(other: Any?): Boolean {
             if (!super.equals(other)) return false
-            other as InputTypeWithName
+            other as InputTypeWithPath
             return isIncorrect == other.isIncorrect && refinedPath == other.refinedPath && name == other.name
         }
 
@@ -197,8 +194,8 @@ sealed class InputType {
         }
     }
 
-    class SgfFile(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithName(refinedPath, name, isIncorrect)
-    class SgfUrl(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithName(refinedPath, name, isIncorrect)
+    class SgfFile(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
+    class SgfUrl(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
 
     object Empty : InputType()
     object Other : InputType()

@@ -6,6 +6,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowPlacement
@@ -41,43 +42,57 @@ actual suspend fun downloadFileText(fileUrl: String): String = URI.create(fileUr
 }
 
 fun loadWindowsState(): WindowState {
-    val windowStateClass = WindowState::class // TODO: inline after KT-80853
-    context(preferencesSettings, windowStateClass) {
+    val windowStateClass = WindowSettings::class // TODO: inline after KT-80853
+    context(preferencesSettings, windowStateClass, WindowSettings.DEFAULT) {
         val hasWindowPositionKey = preferencesSettings.hasKey(windowStateClass.getSettingName(WindowPosition::x))
 
         return WindowState(
-            placement = getEnumSetting(WindowState::placement, WindowPlacement.Floating),
+            placement = getEnumSetting(WindowSettings::placement),
 
             position = if (hasWindowPositionKey) {
                 WindowPosition.Absolute(
-                    getSetting(WindowPosition::x, 0.dp),
-                    getSetting(WindowPosition::y, 0.dp),
+                    getSetting(WindowSettings::x),
+                    getSetting(WindowSettings::y),
                 )
             } else {
                 WindowPosition.PlatformDefault
             },
 
             size = DpSize(
-                getSetting(DpSize::width, 1280.dp),
-                getSetting(DpSize::height, 1024.dp)
+                getSetting(WindowSettings::width),
+                getSetting(WindowSettings::height)
             )
         )
     }
 }
 
 fun saveWindowsState(windowState: WindowState) {
-    val windowStateClass = WindowState::class // TODO: inline after KT-80853
-    context(preferencesSettings, windowStateClass) {
+    val windowStateClass = WindowSettings::class // TODO: inline after KT-80853
+    context(preferencesSettings, windowStateClass,
+        WindowSettings(windowState.position.x, windowState.position.y, windowState.size.width, windowState.size.height, windowState.placement))
+    {
         // Ignore `isMinimized` to prevent loading the Window in a minimized state
 
-        setEnumSetting(WindowState::placement, windowState.placement)
+        setSetting(WindowSettings::placement)
 
         if (windowState.position is WindowPosition.Absolute) {
-            setSetting(WindowPosition::x, windowState.position.x)
-            setSetting(WindowPosition::y, windowState.position.y)
+            setSetting(WindowSettings::x)
+            setSetting(WindowSettings::y)
         }
 
-        setSetting(DpSize::width, windowState.size.width)
-        setSetting(DpSize::height, windowState.size.height)
+        setSetting(WindowSettings::width)
+        setSetting(WindowSettings::height)
+    }
+}
+
+data class WindowSettings(
+    val x: Dp,
+    val y: Dp,
+    val width: Dp,
+    val height: Dp,
+    val placement: WindowPlacement,
+) {
+    companion object {
+        val DEFAULT = WindowSettings(0.dp, 0.dp, 1280.dp, 1024.dp, WindowPlacement.Floating)
     }
 }

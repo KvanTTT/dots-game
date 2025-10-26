@@ -7,43 +7,63 @@ import com.russhwolf.settings.get
 import com.russhwolf.settings.set
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 
-context(settings: Settings, klass: KClass<*>)
-inline fun <reified E : Enum<E>> getEnumSetting(property: KProperty<*>, default: E): E {
-    return settings.getStringOrNull(klass.getSettingName(property))?.let { enumValueOf<E>(it)} ?: default
+context(settings: Settings, klass: KClass<K>, defaultObject: K)
+inline fun <reified E : Enum<E>, reified K : Any> getEnumSetting(property: KProperty1<K, E>): E {
+    return settings.getStringOrNull(klass.getSettingName(property))?.let { enumValueOf<E>(it)} ?: property.get(defaultObject)
 }
 
-context(settings: Settings, klass: KClass<*>)
-inline fun <reified E : Enum<E>> setEnumSetting(property: KProperty<*>, value: E) {
-    settings.putString(klass.getSettingName(property), value.name)
-}
-
-context(settings: Settings, klass: KClass<*>)
-inline fun <reified T> getSetting(property: KProperty<*>, default: T): T {
+context(settings: Settings, klass: KClass<K>, defaultObject: K)
+inline fun <reified V, reified K : Any> getSetting(property: KProperty1<K, V>): V {
     val settingName = klass.getSettingName(property)
-    return (when {
-        T::class == Color::class -> {
-            settings.getLongOrNull(settingName)?.let { Color(it.toULong()) } as? T
+    val loadedValue: V? = try {
+        when {
+            V::class == Color::class -> {
+                settings.getLongOrNull(settingName)?.let { Color(it.toULong()) } as? V
+            }
+            V::class == Dp::class -> {
+                settings.getFloatOrNull(settingName)?.let { Dp(it) } as? V
+            }
+            else -> {
+                settings[settingName]
+            }
         }
-        T::class == Dp::class -> {
-            settings.getFloatOrNull(settingName)?.let { Dp(it) } as? T
-        }
-        else -> {
-            settings[settingName]
-        }
-    }) ?: default
+    } catch (e: Exception) {
+        println(getErrorMessage(settingName, e, reading = true))
+        null
+    }
+    return loadedValue ?: property.get(defaultObject)
 }
 
-context(settings: Settings, klass: KClass<*>)
-inline fun <reified T> setSetting(property: KProperty<*>, value: T) {
+context(settings: Settings, klass: KClass<K>, obj: K)
+inline fun <reified V, reified K : Any> setSetting(property: KProperty1<K, V>) {
     val settingName = klass.getSettingName(property)
-    when {
-        T::class == Color::class -> settings.putLong(settingName, (value as Color).value.toLong())
-        T::class == Dp::class -> settings.putFloat(settingName, (value as Dp).value)
-        else -> settings[settingName] = value
+    val value = property.get(obj)
+    try {
+        when {
+            V::class == Color::class -> settings.putLong(settingName, (value as Color).value.toLong())
+            V::class == Dp::class -> settings.putFloat(settingName, (value as Dp).value)
+            value is Enum<*> -> settings.putString(settingName, (value as Enum<*>).name)
+            else -> settings[settingName] = value
+        }
+    } catch (e: Exception) {
+        println(getErrorMessage(settingName, e, reading = false))
     }
 }
 
+private const val MAX_MESSAGE_LENGTH = 400
+
+fun getErrorMessage(settingName: String, ex: Exception, reading: Boolean): String {
+    val exMessage = ex.message
+    val trimmedExMessage = if (exMessage != null && exMessage.length > MAX_MESSAGE_LENGTH)
+        exMessage.substring(0, MAX_MESSAGE_LENGTH) + "..."
+    else
+        exMessage
+    return "Unable to ${if (reading) "get" else "set"} setting $settingName" +
+            if (trimmedExMessage != null) ": $trimmedExMessage" else ""
+}
+
 fun KClass<*>.getSettingName(property: KProperty<*>): String {
-    return "${this.simpleName!!}.${property.name}"
+    return "${simpleName!!}.${property.name}"
 }
