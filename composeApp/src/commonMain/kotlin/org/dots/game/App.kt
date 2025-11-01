@@ -1,3 +1,5 @@
+@file:OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
+
 package org.dots.game
 
 import androidx.compose.foundation.background
@@ -7,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +31,10 @@ import org.dots.game.localization.LocalStrings
 import org.dots.game.localization.LocalizationManager
 import org.dots.game.views.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.jetbrains.compose.resources.painterResource
+import dotsgame.composeapp.generated.resources.Res
+import dotsgame.composeapp.generated.resources.ic_grounding
+import dotsgame.composeapp.generated.resources.ic_resign
 
 @Composable
 @Preview
@@ -376,8 +383,11 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                             controlButtonModifier,
                             enabled = !getField().isGameOver()
                         ) {
-                            // Resign flag emoji in case of resigning
-                            Text(if (isGrounding) "⏚" else "\uD83C\uDFF3\uFE0F")
+                            Icon(
+                                painter = painterResource(if (isGrounding) Res.drawable.ic_grounding else Res.drawable.ic_resign),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
 

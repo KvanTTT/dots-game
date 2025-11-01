@@ -1,3 +1,5 @@
+@file:OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
+
 package org.dots.game.views
 
 import androidx.compose.foundation.*
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Text
+import androidx.compose.material.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,6 +33,10 @@ import org.dots.game.HorizontalScrollbar
 import org.dots.game.UiSettings
 import org.dots.game.VerticalScrollbar
 import org.dots.game.core.*
+import org.jetbrains.compose.resources.painterResource
+import dotsgame.composeapp.generated.resources.Res
+import dotsgame.composeapp.generated.resources.ic_grounding
+import dotsgame.composeapp.generated.resources.ic_resign
 import kotlin.math.round
 import kotlin.math.sqrt
 
@@ -282,8 +289,33 @@ private fun ConnectionsAndNodes(
                                 })
                             }
                     ) {
-                        val text = node.moveResults.singleOrNull()?.takeIf { it is GameResult }?.mark ?: moveNumber.toString()
-                        Text(text, Modifier.align(Alignment.Center), textColor)
+                        val singleResult = node.moveResults.singleOrNull()
+                        val isGrounding = (singleResult is GameResult.Draw && singleResult.endGameKind == EndGameKind.Grounding) ||
+                                (singleResult is GameResult.ScoreWin && singleResult.endGameKind == EndGameKind.Grounding)
+                        val isResign = singleResult is GameResult.ResignWin
+
+                        when {
+                            isGrounding -> {
+                                Icon(
+                                    painter = painterResource(Res.drawable.ic_grounding),
+                                    contentDescription = null,
+                                    tint = textColor,
+                                    modifier = Modifier.align(Alignment.Center).size(14.dp)
+                                )
+                            }
+                            isResign -> {
+                                Icon(
+                                    painter = painterResource(Res.drawable.ic_resign),
+                                    contentDescription = null,
+                                    tint = textColor,
+                                    modifier = Modifier.align(Alignment.Center).size(14.dp)
+                                )
+                            }
+                            else -> {
+                                val text = (singleResult as? GameResult)?.mark ?: moveNumber.toString()
+                                Text(text, Modifier.align(Alignment.Center), textColor)
+                            }
+                        }
                     }
                 }
 
