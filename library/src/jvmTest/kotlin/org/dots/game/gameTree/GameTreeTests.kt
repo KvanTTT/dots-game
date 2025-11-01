@@ -200,7 +200,7 @@ class GameTreeTests : FieldTests() {
 
     @Test
     fun removeRootNode() {
-        assertFalse(initializeGameTree().remove())
+        assertFalse(initializeGameTree().removeCurrentBranch())
     }
 
     @Test
@@ -217,11 +217,11 @@ class GameTreeTests : FieldTests() {
 
             val nodeBackToRemoving = rootNode
             assertEquals(1, nodeBackToRemoving.children.size)
-            assertTrue(remove())
+            assertTrue(removeCurrentBranch())
             assertEquals(nodeBackToRemoving, currentNode)
             assertEquals(0, nodeBackToRemoving.children.size)
 
-            assertFalse(remove()) // Not possible to remove twice
+            assertFalse(removeCurrentBranch()) // Not possible to remove twice
 
             // The move doesn't exist after removing, adding should be successful
             assertEquals(NodeKind.New,makeMove(1, 1))

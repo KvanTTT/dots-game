@@ -178,22 +178,19 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
      * @return `false` if the @property[currentNode] is root,
      * otherwise removes the passed node with related branches and returns `true`
      */
-    fun remove(): Boolean {
+    fun removeCurrentBranch(): Boolean {
         if (currentNode == rootNode) return false
 
-        fun removeRecursively(node: GameTreeNode) {
-            memoizedNextChild.remove(node)
-            for (nextNode in node.children) {
-                removeRecursively(nextNode)
-            }
-            node.children.clear()
-        }
+        val nodeToRemove = currentNode
 
-        val previousNode = currentNode
-        removeRecursively(currentNode)
         require(back())
 
-        requireNotNull(currentNode.children.remove(previousNode))
+        requireNotNull(currentNode.children.remove(nodeToRemove))
+
+        forEachDepthFirst(currentNode) {
+            memoizedNextChild.remove(it)
+            true
+        }
 
         return true
     }
@@ -222,10 +219,10 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
         return -1
     }
 
-    inline fun forEachDepthFirst(action: (GameTreeNode) -> Boolean) {
+    inline fun forEachDepthFirst(startNode: GameTreeNode = rootNode, action: (GameTreeNode) -> Boolean) {
         // Use stack for traversing to prevent stack overflow on very long games
         val stack = mutableListOf<GameTreeNode>()
-        stack.add(rootNode)
+        stack.add(startNode)
 
         while (stack.isNotEmpty()) {
             val element = stack.removeLast()

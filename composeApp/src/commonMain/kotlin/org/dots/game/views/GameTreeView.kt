@@ -83,6 +83,7 @@ fun GameTreeView(
     gameTreeViewData: GameTreeViewData,
     uiSettings: UiSettings,
     focusRequester: FocusRequester,
+    onChangeGameTree: () -> Unit,
     onChangeCurrentNode: () -> Unit
 ) {
     val horizontalScrollState = rememberScrollState()
@@ -101,9 +102,19 @@ fun GameTreeView(
             .focusRequester(focusRequester)
             .focusable()
             .onKeyEvent { keyEvent ->
-                handleKeyEvent(keyEvent, gameTree, gameTreeViewData, viewportDpSize).also {
-                    if (it) {
-                        onChangeCurrentNode()
+                handleKeyEvent(keyEvent, gameTree, gameTreeViewData, viewportDpSize).let {
+                     when (it) {
+                        ChangeType.Node -> {
+                            onChangeCurrentNode()
+                            true
+                        }
+                        ChangeType.GameTree -> {
+                            onChangeGameTree()
+                            true
+                        }
+                        else -> {
+                            false
+                        }
                     }
                 }
             }
@@ -263,7 +274,7 @@ private fun ConnectionsAndNodes(
                             .offset(offsetX, offsetY)
                             .then(nodeModifier)
                             .background(color, CircleShape)
-                            .pointerInput(gameTree) {
+                            .pointerInput(gameTreeViewData) {
                                 detectTapGestures(onPress = {
                                     if (gameTree.switch(node)) {
                                         onChangeCurrentNode()
@@ -301,25 +312,31 @@ private fun CurrentNode(currentNode: GameTreeNode?, gameTreeViewData: GameTreeVi
     )
 }
 
+private enum class ChangeType {
+    Node,
+    GameTree,
+}
+
 private fun handleKeyEvent(
     keyEvent: KeyEvent,
     gameTree: GameTree,
     gameTreeViewData: GameTreeViewData,
     viewportDpSize: DpSize,
-): Boolean {
+): ChangeType? {
     if (keyEvent.type == KeyEventType.KeyDown) {
         return when (keyEvent.key) {
-            Key.DirectionLeft -> gameTree.back()
-            Key.DirectionRight -> gameTree.next()
-            Key.DirectionUp -> gameTree.prevSibling()
-            Key.DirectionDown -> gameTree.nextSibling()
-            Key.MoveHome -> gameTree.rewindToBegin()
-            Key.MoveEnd -> gameTree.rewindToEnd()
-            Key.PageUp -> gameTree.back(gameTreeViewData.getElementsCountOnViewport(viewportDpSize.width))
-            Key.PageDown -> gameTree.next(gameTreeViewData.getElementsCountOnViewport(viewportDpSize.width))
-            else -> false
+            Key.DirectionLeft -> ChangeType.Node.takeIf { gameTree.back() }
+            Key.DirectionRight -> ChangeType.Node.takeIf { gameTree.next() }
+            Key.DirectionUp -> ChangeType.Node.takeIf { gameTree.prevSibling() }
+            Key.DirectionDown -> ChangeType.Node.takeIf { gameTree.nextSibling() }
+            Key.MoveHome -> ChangeType.Node.takeIf { gameTree.rewindToBegin() }
+            Key.MoveEnd -> ChangeType.Node.takeIf { gameTree.rewindToEnd() }
+            Key.PageUp -> ChangeType.Node.takeIf { gameTree.back(gameTreeViewData.getElementsCountOnViewport(viewportDpSize.width)) }
+            Key.PageDown -> ChangeType.Node.takeIf { gameTree.next(gameTreeViewData.getElementsCountOnViewport(viewportDpSize.width)) }
+            Key.Delete -> ChangeType.GameTree.takeIf { gameTree.removeCurrentBranch() }
+            else -> null
         }
     }
 
-    return false
+    return null
 }

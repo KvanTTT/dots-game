@@ -401,7 +401,9 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                     }
                 }
 
-                GameTreeView(currentGameTreeNode, currentGame.gameTree, gameTreeViewData, uiSettings, focusRequester) {
+                GameTreeView(currentGameTreeNode, currentGame.gameTree, gameTreeViewData, uiSettings, focusRequester, onChangeGameTree = {
+                    updateFieldAndGameTree()
+                }) {
                     updateCurrentNode()
                 }
             }
