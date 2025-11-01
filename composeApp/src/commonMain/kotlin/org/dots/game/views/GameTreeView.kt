@@ -37,6 +37,11 @@ import org.jetbrains.compose.resources.painterResource
 import dotsgame.composeapp.generated.resources.Res
 import dotsgame.composeapp.generated.resources.ic_grounding
 import dotsgame.composeapp.generated.resources.ic_resign
+import dotsgame.composeapp.generated.resources.ic_finish
+import dotsgame.composeapp.generated.resources.ic_timer
+import dotsgame.composeapp.generated.resources.ic_unknown
+import dotsgame.composeapp.generated.resources.ic_interrupt
+import dotsgame.composeapp.generated.resources.ic_illegal
 import kotlin.math.round
 import kotlin.math.sqrt
 
@@ -295,9 +300,13 @@ private fun ConnectionsAndNodes(
                                 if ((singleResult as EndGameResult).endGameKind == EndGameKind.Grounding)
                                     Res.drawable.ic_grounding
                                 else
-                                    null
+                                    Res.drawable.ic_finish
                             }
                             is GameResult.ResignWin -> Res.drawable.ic_resign
+                            is GameResult.TimeWin -> Res.drawable.ic_timer
+                            is GameResult.UnknownWin -> Res.drawable.ic_unknown
+                            is GameResult.InterruptWin -> Res.drawable.ic_interrupt
+                            is IllegalMove -> Res.drawable.ic_illegal
                             else -> null
                         }
 
