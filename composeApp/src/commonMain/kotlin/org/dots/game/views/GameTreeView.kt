@@ -290,31 +290,27 @@ private fun ConnectionsAndNodes(
                             }
                     ) {
                         val singleResult = node.moveResults.singleOrNull()
-                        val isGrounding = (singleResult is GameResult.Draw && singleResult.endGameKind == EndGameKind.Grounding) ||
-                                (singleResult is GameResult.ScoreWin && singleResult.endGameKind == EndGameKind.Grounding)
-                        val isResign = singleResult is GameResult.ResignWin
+                        val iconResource = when (singleResult) {
+                            is GameResult.Draw, is GameResult.ScoreWin -> {
+                                if ((singleResult as EndGameResult).endGameKind == EndGameKind.Grounding)
+                                    Res.drawable.ic_grounding
+                                else
+                                    null
+                            }
+                            is GameResult.ResignWin -> Res.drawable.ic_resign
+                            else -> null
+                        }
 
-                        when {
-                            isGrounding -> {
-                                Icon(
-                                    painter = painterResource(Res.drawable.ic_grounding),
-                                    contentDescription = null,
-                                    tint = textColor,
-                                    modifier = Modifier.align(Alignment.Center).size(14.dp)
-                                )
-                            }
-                            isResign -> {
-                                Icon(
-                                    painter = painterResource(Res.drawable.ic_resign),
-                                    contentDescription = null,
-                                    tint = textColor,
-                                    modifier = Modifier.align(Alignment.Center).size(14.dp)
-                                )
-                            }
-                            else -> {
-                                val text = (singleResult as? GameResult)?.mark ?: moveNumber.toString()
-                                Text(text, Modifier.align(Alignment.Center), textColor)
-                            }
+                        if (iconResource != null) {
+                            Icon(
+                                painter = painterResource(iconResource),
+                                contentDescription = null,
+                                tint = textColor,
+                                modifier = Modifier.align(Alignment.Center).size(14.dp)
+                            )
+                        } else {
+                            val text = (singleResult as? GameResult)?.mark ?: moveNumber.toString()
+                            Text(text, Modifier.align(Alignment.Center), textColor)
                         }
                     }
                 }
