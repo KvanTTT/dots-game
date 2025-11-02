@@ -120,8 +120,9 @@ val maxFieldSize = getFieldSizeSize(maxFieldDimension, maxFieldDimension)
 
 @Composable
 fun FieldView(
-    updateObject: Any?,
-    moveMode: MoveMode, field: Field,
+    updateFieldObject: Any?,
+    moveMode: MoveMode,
+    field: Field,
     uiSettings: UiSettings,
     onMovePlaced: (Position, Player) -> Unit = { pos, player -> field.makeMoveUnsafe(pos, player) }
 ) {
@@ -159,14 +160,14 @@ fun FieldView(
             }
     ) {
         Grid(field, uiSettings)
-        Moves(updateObject, field, uiSettings)
+        Moves(updateFieldObject, field, uiSettings)
         if (!field.isGameOver()) {
             if (uiSettings.showDiagonalConnections) {
-                AllConnections(updateObject, field, uiSettings)
+                AllConnections(updateFieldObject, field, uiSettings)
             }
 
             if (uiSettings.showThreats || uiSettings.showSurroundings) {
-                ThreatsAndSurroundings(updateObject, field, uiSettings)
+                ThreatsAndSurroundings(updateFieldObject, field, uiSettings)
             }
         }
         Pointer(pointerFieldPosition, moveMode, field, uiSettings)
@@ -556,6 +557,8 @@ private fun Pointer(position: Position?, moveMode: MoveMode, field: Field, uiSet
 }
 
 private fun PointerEvent.toFieldPositionIfValid(field: Field, currentPlayer: Player, currentDensity: Density): Position? {
+    if (field.disabled) return null
+
     val offset = changes.first().position
 
     with (currentDensity) {

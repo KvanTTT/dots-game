@@ -18,6 +18,12 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
     var memoizePaths: Boolean = true
     var loopedSiblingNavigation: Boolean = true
 
+    var disabled: Boolean = false
+        set(value) {
+            this.field.disabled = value
+            field = value
+        }
+
     enum class NodeKind {
         New,
         ExistingChild,
@@ -114,6 +120,8 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
      * otherwise perform switching to the passed node and returns `true`
      */
     fun switch(targetNode: GameTreeNode?, moveReporter: (MoveInfo, MoveResult) -> Unit = { _, _ -> }): Boolean {
+        if (disabled) return false
+
         if (targetNode == null || targetNode == currentNode) return false
 
         var currentRollbackNode: GameTreeNode? = currentNode

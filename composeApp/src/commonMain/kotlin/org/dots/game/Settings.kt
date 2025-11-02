@@ -149,3 +149,26 @@ fun saveCurrentGameSettings(currentGameSettings: CurrentGameSettings, games: Gam
         setSetting(CurrentGameSettings::currentNodeNumber)
     }
 }
+
+fun loadKataGoDotsSettings(): KataGoDotsSettings {
+    val settings = appSettings ?: return KataGoDotsSettings.Default
+    val kataGoDotsSettingsClass = KataGoDotsSettings::class // TODO: inline after KT-80853
+    context (settings, kataGoDotsSettingsClass,  KataGoDotsSettings.Default) {
+        return KataGoDotsSettings(
+            exePath = getSetting(KataGoDotsSettings::exePath),
+            modelPath = getSetting(KataGoDotsSettings::modelPath),
+            configPath = getSetting(KataGoDotsSettings::configPath)
+        )
+    }
+}
+
+fun saveKataGoDotsSettings(kataGoDotsSettings: KataGoDotsSettings) {
+    val settings = appSettings ?: return
+    val kataGoDotsSettingsClass = KataGoDotsSettings::class // TODO: inline after KT-80853
+    context (settings, kataGoDotsSettingsClass, kataGoDotsSettings) {
+        setSetting(KataGoDotsSettings::exePath)
+        setSetting(KataGoDotsSettings::modelPath)
+        setSetting(KataGoDotsSettings::configPath)
+    }
+}
+

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Checkbox
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
@@ -46,24 +47,45 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                 override val keys: Set<String> get() = map.keys
                 override val size: Int get() = map.size
                 override fun clear() = map.clear()
-                override fun remove(key: String) { map.remove(key) }
+                override fun remove(key: String) {
+                    map.remove(key)
+                }
+
                 override fun hasKey(key: String) = map.containsKey(key)
-                override fun putInt(key: String, value: Int) { map[key] = value }
+                override fun putInt(key: String, value: Int) {
+                    map[key] = value
+                }
+
                 override fun getInt(key: String, defaultValue: Int) = map[key] as? Int ?: defaultValue
                 override fun getIntOrNull(key: String) = map[key] as? Int
-                override fun putLong(key: String, value: Long) { map[key] = value }
+                override fun putLong(key: String, value: Long) {
+                    map[key] = value
+                }
+
                 override fun getLong(key: String, defaultValue: Long) = map[key] as? Long ?: defaultValue
                 override fun getLongOrNull(key: String) = map[key] as? Long
-                override fun putString(key: String, value: String) { map[key] = value }
+                override fun putString(key: String, value: String) {
+                    map[key] = value
+                }
+
                 override fun getString(key: String, defaultValue: String) = map[key] as? String ?: defaultValue
                 override fun getStringOrNull(key: String) = map[key] as? String
-                override fun putFloat(key: String, value: Float) { map[key] = value }
+                override fun putFloat(key: String, value: Float) {
+                    map[key] = value
+                }
+
                 override fun getFloat(key: String, defaultValue: Float) = map[key] as? Float ?: defaultValue
                 override fun getFloatOrNull(key: String) = map[key] as? Float
-                override fun putDouble(key: String, value: Double) { map[key] = value }
+                override fun putDouble(key: String, value: Double) {
+                    map[key] = value
+                }
+
                 override fun getDouble(key: String, defaultValue: Double) = map[key] as? Double ?: defaultValue
                 override fun getDoubleOrNull(key: String) = map[key] as? Double
-                override fun putBoolean(key: String, value: Boolean) { map[key] = value }
+                override fun putBoolean(key: String, value: Boolean) {
+                    map[key] = value
+                }
+
                 override fun getBoolean(key: String, defaultValue: Boolean) = map[key] as? Boolean ?: defaultValue
                 override fun getBooleanOrNull(key: String) = map[key] as? Boolean
             }
@@ -76,10 +98,11 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
             var uiSettings by remember { mutableStateOf(loadUiSettings()) }
             var newGameDialogRules by remember { mutableStateOf(loadRules()) }
             var openGameSettings by remember { mutableStateOf(loadOpenGameSettings()) }
-
+            var kataGoDotsSettings by remember { mutableStateOf(loadKataGoDotsSettings()) }
             val coroutineScope = rememberCoroutineScope()
 
-            var startOrReset by remember { mutableStateOf(true) }
+            var start by remember { mutableStateOf(true) }
+            var reset by remember { mutableStateOf(true) }
             var games by remember { mutableStateOf(Games.fromField(Field.create(newGameDialogRules))) }
             var currentGame by remember { mutableStateOf(games.first()) }
 
@@ -97,9 +120,14 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
             var dumpParameters by remember { mutableStateOf(loadDumpParameters()) }
             var showSaveGameDialog by remember { mutableStateOf(false) }
             var showUiSettingsForm by remember { mutableStateOf(false) }
+            var showKataGoDotsSettingsForm by remember { mutableStateOf(false) }
             var moveMode by remember { mutableStateOf(MoveMode.Next) }
 
             val focusRequester = remember { FocusRequester() }
+
+            var kataGoDotsEngine by remember { mutableStateOf<KataGoDotsEngine?>(null) }
+            var automove by remember { mutableStateOf(false) }
+            var changeIsDisabled by remember { mutableStateOf(false) }
 
             fun updateCurrentNode() {
                 player1Score = getField().player1Score
@@ -139,7 +167,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                 currentGameSettings.content = null
                 currentGameSettings.currentGameNumber = 0
                 currentGameSettings.currentNodeNumber = -1
-                startOrReset = true
+                reset = true
             }
 
             if (showNewGameDialog) {
@@ -158,7 +186,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                 }
             }
 
-            if (startOrReset) {
+            if (start || reset) {
                 val contentOrPath = currentGameSettings.content ?: currentGameSettings.path
 
                 if (contentOrPath == null) {
@@ -181,7 +209,16 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                     }
                 }
 
-                startOrReset = false
+                if (start) {
+                    coroutineScope.launch {
+                        kataGoDotsEngine = KataGoDotsEngine.initialize(kataGoDotsSettings) {
+                            println(it)
+                        }
+                    }
+                }
+
+                start = false
+                reset = false
             }
 
             if (openGameDialog) {
@@ -230,6 +267,37 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                 })
             }
 
+            if (showKataGoDotsSettingsForm) {
+                KataGoDotsSettingsForm(kataGoDotsSettings, onSettingsChange = {
+                    showKataGoDotsSettingsForm = false
+                    focusRequester.requestFocus()
+                    kataGoDotsSettings = it.settings
+                    kataGoDotsEngine = it
+                    saveKataGoDotsSettings(it.settings)
+                }, onDismiss = {
+                    showKataGoDotsSettingsForm = false
+                    focusRequester.requestFocus()
+                })
+            }
+
+            fun makeAIMove() {
+                if (kataGoDotsEngine != null) {
+                    coroutineScope.launch {
+                        val gameTree = getGameTree()
+                        changeIsDisabled = true
+                        gameTree.disabled = true
+                        val moveInfo =
+                            kataGoDotsEngine!!.generateMove(getField().getCurrentPlayer(), getField())
+                        changeIsDisabled = false
+                        gameTree.disabled = false
+                        if (moveInfo != null) {
+                            getGameTree().addChild(moveInfo)
+                            updateFieldAndGameTree()
+                        }
+                    }
+                }
+            }
+
             Row(Modifier.pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -256,6 +324,10 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                         FieldView(currentGameTreeNode, moveMode, getField(), uiSettings) { position, player ->
                             getGameTree().addChild(MoveInfo(position.toXY(getField().realWidth), player))
                             updateFieldAndGameTree()
+
+                            if (automove) {
+                                makeAIMove()
+                            }
                         }
                     }
                     Row(Modifier.padding(bottom = 10.dp)) {
@@ -315,6 +387,9 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                         }
                         Button(onClick = { showUiSettingsForm = true }, controlButtonModifier) {
                             Text(strings.settings)
+                        }
+                        Button(onClick = { showKataGoDotsSettingsForm = true }, controlButtonModifier) {
+                            Text("Bot Settings")
                         }
                     }
 
@@ -396,6 +471,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                             }
                         }
 
+
                         EndMoveButton(isGrounding = true)
                         EndMoveButton(isGrounding = false)
 
@@ -414,6 +490,16 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                             SwitchGame(next = false)
                             SwitchGame(next = true)
                         }
+                    }
+
+                    Row(rowModifier) {
+                        Button(onClick = { makeAIMove() }, controlButtonModifier, enabled = kataGoDotsEngine != null && !getField().isGameOver()) {
+                            Text("AI move")
+                        }
+                        Text("Automove", Modifier.align(Alignment.CenterVertically))
+                        Checkbox(automove, onCheckedChange = {
+                            automove = it
+                        })
                     }
 
                     GameTreeView(
