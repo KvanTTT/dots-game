@@ -79,345 +79,356 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
 
             val coroutineScope = rememberCoroutineScope()
 
-        var startOrReset by remember { mutableStateOf(true) }
-        var games by remember { mutableStateOf(Games.fromField(Field.create(newGameDialogRules))) }
-        var currentGame by remember { mutableStateOf(games.first()) }
+            var startOrReset by remember { mutableStateOf(true) }
+            var games by remember { mutableStateOf(Games.fromField(Field.create(newGameDialogRules))) }
+            var currentGame by remember { mutableStateOf(games.first()) }
 
-        fun getField(): Field = currentGame.gameTree.field
-        fun getGameTree(): GameTree = currentGame.gameTree
+            fun getField(): Field = currentGame.gameTree.field
+            fun getGameTree(): GameTree = currentGame.gameTree
 
-        var gameTreeViewData: GameTreeViewData by remember { mutableStateOf(GameTreeViewData(currentGame.gameTree)) }
+            var gameTreeViewData: GameTreeViewData by remember { mutableStateOf(GameTreeViewData(currentGame.gameTree)) }
 
-        var currentGameTreeNode by remember { mutableStateOf<GameTreeNode?>(null) }
-        var player1Score by remember { mutableStateOf(0) }
-        var player2Score by remember { mutableStateOf(0) }
-        var moveNumber by remember { mutableStateOf(0) }
-        var showNewGameDialog by remember { mutableStateOf(false) }
-        var openGameDialog by remember { mutableStateOf(false) }
-        var dumpParameters by remember { mutableStateOf(loadDumpParameters())}
-        var showSaveGameDialog by remember { mutableStateOf(false) }
-        var showUiSettingsForm by remember { mutableStateOf(false) }
-        var moveMode by remember { mutableStateOf(MoveMode.Next) }
+            var currentGameTreeNode by remember { mutableStateOf<GameTreeNode?>(null) }
+            var player1Score by remember { mutableStateOf(0) }
+            var player2Score by remember { mutableStateOf(0) }
+            var moveNumber by remember { mutableStateOf(0) }
+            var showNewGameDialog by remember { mutableStateOf(false) }
+            var openGameDialog by remember { mutableStateOf(false) }
+            var dumpParameters by remember { mutableStateOf(loadDumpParameters()) }
+            var showSaveGameDialog by remember { mutableStateOf(false) }
+            var showUiSettingsForm by remember { mutableStateOf(false) }
+            var moveMode by remember { mutableStateOf(MoveMode.Next) }
 
-        val focusRequester = remember { FocusRequester() }
+            val focusRequester = remember { FocusRequester() }
 
-        fun updateCurrentNode() {
-            player1Score = getField().player1Score
-            player2Score = getField().player2Score
+            fun updateCurrentNode() {
+                player1Score = getField().player1Score
+                player2Score = getField().player2Score
 
-            val currentNode = getGameTree().currentNode
-            currentGameTreeNode = currentNode
-            moveNumber = currentNode.number
-        }
+                val currentNode = getGameTree().currentNode
+                currentGameTreeNode = currentNode
+                moveNumber = currentNode.number
+            }
 
-        fun updateFieldAndGameTree() {
-            updateCurrentNode()
+            fun updateFieldAndGameTree() {
+                updateCurrentNode()
 
-            gameTreeViewData = GameTreeViewData(getGameTree())
-        }
+                gameTreeViewData = GameTreeViewData(getGameTree())
+            }
 
-        fun switchGame(gameNumber: Int) {
-            currentGameSettings.currentGameNumber = gameNumber
-            currentGame = games.elementAtOrNull(gameNumber) ?: games[0]
+            fun switchGame(gameNumber: Int) {
+                currentGameSettings.currentGameNumber = gameNumber
+                currentGame = games.elementAtOrNull(gameNumber) ?: games[0]
 
-            if (currentGame.initialization && currentGameSettings.currentNodeNumber == -1) {
-                if (openGameSettings.rewindToEnd) {
-                    currentGame.gameTree.rewindToEnd()
+                if (currentGame.initialization && currentGameSettings.currentNodeNumber == -1) {
+                    if (openGameSettings.rewindToEnd) {
+                        currentGame.gameTree.rewindToEnd()
+                    }
+                } else {
+                    currentGame.gameTree.switchToDepthFirstIndex(currentGameSettings.currentNodeNumber)
                 }
-            } else {
-                currentGame.gameTree.switchToDepthFirstIndex(currentGameSettings.currentNodeNumber)
+                currentGame.initialization = false
+                currentGame.gameTree.memoizePaths = true
+
+                updateFieldAndGameTree()
             }
-            currentGame.initialization = false
-            currentGame.gameTree.memoizePaths = true
 
-            updateFieldAndGameTree()
-        }
+            fun reset(newGame: Boolean) {
+                if (newGame)
+                    currentGameSettings.path = null
+                currentGameSettings.content = null
+                currentGameSettings.currentGameNumber = 0
+                currentGameSettings.currentNodeNumber = -1
+                startOrReset = true
+            }
 
-        fun reset(newGame: Boolean) {
-            if (newGame)
-                currentGameSettings.path = null
-            currentGameSettings.content = null
-            currentGameSettings.currentGameNumber = 0
-            currentGameSettings.currentNodeNumber = -1
-            startOrReset = true
-        }
-
-        if (showNewGameDialog) {
-            NewGameDialog(
-                newGameDialogRules,
-                uiSettings,
-                onDismiss = {
+            if (showNewGameDialog) {
+                NewGameDialog(
+                    newGameDialogRules,
+                    uiSettings,
+                    onDismiss = {
+                        showNewGameDialog = false
+                        focusRequester.requestFocus()
+                    },
+                ) {
                     showNewGameDialog = false
-                    focusRequester.requestFocus()
-                },
-            ) {
-                showNewGameDialog = false
-                newGameDialogRules = it
-                saveRules(newGameDialogRules)
-                reset(newGame = true)
+                    newGameDialogRules = it
+                    saveRules(newGameDialogRules)
+                    reset(newGame = true)
+                }
             }
-        }
 
-        if (startOrReset) {
-            val contentOrPath = currentGameSettings.content ?: currentGameSettings.path
+            if (startOrReset) {
+                val contentOrPath = currentGameSettings.content ?: currentGameSettings.path
 
-            if (contentOrPath == null) {
-                games = Games.fromField(Field.create(newGameDialogRules))
-                onGamesChange(games)
-                switchGame(0)
-            } else {
-                coroutineScope.launch {
-                    val loadResult =
-                        GameLoader.openOrLoad(
-                            contentOrPath,
-                            rules = null,
-                            addFinishingMove = openGameSettings.addFinishingMove
-                        )
-                    if (loadResult.games.isNotEmpty()) {
-                        games = loadResult.games
+                if (contentOrPath == null) {
+                    games = Games.fromField(Field.create(newGameDialogRules))
+                    onGamesChange(games)
+                    switchGame(0)
+                } else {
+                    coroutineScope.launch {
+                        val loadResult =
+                            GameLoader.openOrLoad(
+                                contentOrPath,
+                                rules = null,
+                                addFinishingMove = openGameSettings.addFinishingMove
+                            )
+                        if (loadResult.games.isNotEmpty()) {
+                            games = loadResult.games
+                            onGamesChange(games)
+                            switchGame(currentGameSettings.currentGameNumber)
+                        }
+                    }
+                }
+
+                startOrReset = false
+            }
+
+            if (openGameDialog) {
+                OpenDialog(
+                    newGameDialogRules,
+                    openGameSettings,
+                    onDismiss = {
+                        openGameDialog = false
+                        focusRequester.requestFocus()
+                    },
+                    onConfirmation = { newGames, newOpenGameSettings, path, content ->
+                        openGameDialog = false
+                        openGameSettings = newOpenGameSettings
+                        saveOpenGameSettings(openGameSettings)
+                        currentGameSettings.path = path
+                        currentGameSettings.content = content
+                        currentGameSettings.currentGameNumber = 0
+                        currentGameSettings.currentNodeNumber = -1
+                        games = newGames
                         onGamesChange(games)
                         switchGame(currentGameSettings.currentGameNumber)
                     }
-                }
+                )
             }
 
-            startOrReset = false
-        }
+            if (showSaveGameDialog) {
+                SaveDialog(
+                    games,
+                    getField(),
+                    dumpParameters,
+                    onDismiss = {
+                        showSaveGameDialog = false
+                        focusRequester.requestFocus()
+                        dumpParameters = it
+                        saveDumpParameters(it)
+                    })
+            }
 
-        if (openGameDialog) {
-            OpenDialog(
-                newGameDialogRules,
-                openGameSettings,
-                onDismiss = {
-                    openGameDialog = false
+            if (showUiSettingsForm) {
+                UiSettingsForm(uiSettings, onUiSettingsChange = {
+                    uiSettings = it
+                    saveUiSettings(it)
+                }, onDismiss = {
+                    showUiSettingsForm = false
                     focusRequester.requestFocus()
-                },
-                onConfirmation = { newGames, newOpenGameSettings, path, content ->
-                    openGameDialog = false
-                    openGameSettings = newOpenGameSettings
-                    saveOpenGameSettings(openGameSettings)
-                    currentGameSettings.path = path
-                    currentGameSettings.content = content
-                    currentGameSettings.currentGameNumber = 0
-                    currentGameSettings.currentNodeNumber = -1
-                    games = newGames
-                    onGamesChange(games)
-                    switchGame(currentGameSettings.currentGameNumber)
-                }
-            )
-        }
-
-        if (showSaveGameDialog) {
-            SaveDialog(
-                games,
-                getField(),
-                dumpParameters,
-                onDismiss = {
-                    showSaveGameDialog = false
-                    focusRequester.requestFocus()
-                    dumpParameters = it
-                    saveDumpParameters(it)
                 })
-        }
-
-        if (showUiSettingsForm) {
-            UiSettingsForm(uiSettings, onUiSettingsChange = {
-                uiSettings = it
-                saveUiSettings(it)
-            }, onDismiss = {
-                showUiSettingsForm = false
-                focusRequester.requestFocus()
-            })
-        }
-
-       /* TODO: implement saving if needed in the loop
-       LaunchedEffect(Unit) {
-            while (true) {
-                saveGamesIfNeeded(games)
-                delay(3000)
             }
-        }*/
 
-        Row(Modifier.pointerInput(Unit) {
-            awaitPointerEventScope {
-                while (true) {
-                    val event = awaitPointerEvent(PointerEventPass.Main)
-                    if (event.type == PointerEventType.Press) {
-                        if (event.buttons.isBackPressed) {
-                            if (getGameTree().back()) {
-                                updateCurrentNode()
-                            }
-                        } else if (event.buttons.isForwardPressed) {
-                            if (getGameTree().next()) {
-                                updateCurrentNode()
+            Row(Modifier.pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Main)
+                        if (event.type == PointerEventType.Press) {
+                            if (event.buttons.isBackPressed) {
+                                if (getGameTree().back()) {
+                                    updateCurrentNode()
+                                }
+                            } else if (event.buttons.isForwardPressed) {
+                                if (getGameTree().next()) {
+                                    updateCurrentNode()
+                                }
                             }
                         }
                     }
                 }
-            }
-        }) {
-            Column(Modifier.padding(5.dp).width(maxFieldSize.width), horizontalAlignment = Alignment.CenterHorizontally) {
-                Row {
-                    FieldView(currentGameTreeNode, moveMode, getField(), uiSettings) { position, player ->
-                        getGameTree().addChild(MoveInfo(position.toXY(getField().realWidth), player))
-                        updateFieldAndGameTree()
-                    }
-                }
-                Row(Modifier.padding(bottom = 10.dp)) {
-                    val player1Name = currentGame.player1Name ?: Player.First.toString()
-                    val player2Name = currentGame.player2Name ?: Player.Second.toString()
-
-                    Text("$player1Name   ", color = uiSettings.playerFirstColor)
-                    Text(player1Score.toString(), color = uiSettings.playerFirstColor, fontWeight = FontWeight.Bold)
-
-                    Text(" : ")
-
-                    Text(player2Score.toString(), color = uiSettings.playerSecondColor, fontWeight = FontWeight.Bold)
-                    Text("   $player2Name", color = uiSettings.playerSecondColor)
-
-                    if (uiSettings.developerMode) {
-                        val winnerColor: Color = if (player2Score > 0.0f) {
-                            uiSettings.playerSecondColor
-                        } else if (player2Score < 0.0f) {
-                            uiSettings.playerFirstColor
-                        } else {
-                            Color.Black
-                        }
-                        Text("  ($player2Score)", color = winnerColor)
-                    }
-                }
-                Row {
-                    val gameNumberText = if (games.size > 1)
-                        "${strings.game}: ${games.indexOf(currentGame)}; "
-                    else
-                        ""
-                    Text(gameNumberText + "${strings.move}: $moveNumber")
-                }
-            }
-            Column(Modifier.padding(start = 5.dp)) {
-                val controlButtonModifier = Modifier.padding(end = 5.dp)
-                val rowModifier = Modifier.padding(bottom = 5.dp)
-                val playerColorIconModifier = Modifier.size(16.dp).border(1.dp, Color.White, CircleShape).clip(CircleShape)
-                val selectedModeButtonColor = Color.Magenta
-
-                Row(rowModifier) {
-                    Button(onClick = { showNewGameDialog = true }, controlButtonModifier) {
-                        Text(strings.new)
-                    }
-                    Button(onClick = { reset(newGame = false) }, controlButtonModifier) {
-                        Text(strings.reset)
-                    }
-                    Button(onClick = { openGameDialog = true }, controlButtonModifier) {
-                        Text(strings.load)
-                    }
-                    Button(onClick = { showSaveGameDialog = true }, controlButtonModifier) {
-                        Text(strings.save)
-                    }
-                    Button(onClick = { showUiSettingsForm = true }, controlButtonModifier) {
-                        Text(strings.settings)
-                    }
-                }
-
-                Row(rowModifier) {
-                    Button(
-                        onClick = {
-                            moveMode = MoveMode.Next
-                            focusRequester.requestFocus()
-                        },
-                        controlButtonModifier,
-                        colors = if (moveMode == MoveMode.Next) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
-                    ) {
-                        Box {
-                            Box(
-                                modifier = Modifier.offset((-5).dp).size(16.dp).border(1.dp, Color.White, CircleShape).clip(CircleShape).background(uiSettings.playerFirstColor)
-                            )
-                            Box(
-                                modifier = Modifier.offset(5.dp).size(16.dp).border(1.dp, Color.White, CircleShape).clip(CircleShape).background(uiSettings.playerSecondColor)
-                            )
+            }) {
+                Column(
+                    Modifier.padding(5.dp).width(maxFieldSize.width),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row {
+                        FieldView(currentGameTreeNode, moveMode, getField(), uiSettings) { position, player ->
+                            getGameTree().addChild(MoveInfo(position.toXY(getField().realWidth), player))
+                            updateFieldAndGameTree()
                         }
                     }
-                    Button(
-                        onClick = {
-                            moveMode = MoveMode.First
-                            focusRequester.requestFocus()
-                        },
-                        controlButtonModifier,
-                        colors = if (moveMode == MoveMode.First) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
-                    ) {
-                        Box(
-                            modifier = playerColorIconModifier.background(uiSettings.playerFirstColor)
+                    Row(Modifier.padding(bottom = 10.dp)) {
+                        val player1Name = currentGame.player1Name ?: Player.First.toString()
+                        val player2Name = currentGame.player2Name ?: Player.Second.toString()
+
+                        Text("$player1Name   ", color = uiSettings.playerFirstColor)
+                        Text(player1Score.toString(), color = uiSettings.playerFirstColor, fontWeight = FontWeight.Bold)
+
+                        Text(" : ")
+
+                        Text(
+                            player2Score.toString(),
+                            color = uiSettings.playerSecondColor,
+                            fontWeight = FontWeight.Bold
                         )
+                        Text("   $player2Name", color = uiSettings.playerSecondColor)
+
+                        if (uiSettings.developerMode) {
+                            val winnerColor: Color = if (player2Score > 0.0f) {
+                                uiSettings.playerSecondColor
+                            } else if (player2Score < 0.0f) {
+                                uiSettings.playerFirstColor
+                            } else {
+                                Color.Black
+                            }
+                            Text("  ($player2Score)", color = winnerColor)
+                        }
                     }
-                    Button(
-                        onClick = {
-                            moveMode = MoveMode.Second
-                            focusRequester.requestFocus()
-                        },
-                        controlButtonModifier,
-                        colors = if (moveMode == MoveMode.Second) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
-                    ) {
-                        Box(
-                            modifier = playerColorIconModifier.background(uiSettings.playerSecondColor)
-                        )
+                    Row {
+                        val gameNumberText = if (games.size > 1)
+                            "${strings.game}: ${games.indexOf(currentGame)}; "
+                        else
+                            ""
+                        Text(gameNumberText + "${strings.move}: $moveNumber")
+                    }
+                }
+                Column(Modifier.padding(start = 5.dp)) {
+                    val controlButtonModifier = Modifier.padding(end = 5.dp)
+                    val rowModifier = Modifier.padding(bottom = 5.dp)
+                    val playerColorIconModifier =
+                        Modifier.size(16.dp).border(1.dp, Color.White, CircleShape).clip(CircleShape)
+                    val selectedModeButtonColor = Color.Magenta
+
+                    Row(rowModifier) {
+                        Button(onClick = { showNewGameDialog = true }, controlButtonModifier) {
+                            Text(strings.new)
+                        }
+                        Button(onClick = { reset(newGame = false) }, controlButtonModifier) {
+                            Text(strings.reset)
+                        }
+                        Button(onClick = { openGameDialog = true }, controlButtonModifier) {
+                            Text(strings.load)
+                        }
+                        Button(onClick = { showSaveGameDialog = true }, controlButtonModifier) {
+                            Text(strings.save)
+                        }
+                        Button(onClick = { showUiSettingsForm = true }, controlButtonModifier) {
+                            Text(strings.settings)
+                        }
                     }
 
-                    @Composable
-                    fun EndMoveButton(isGrounding: Boolean) {
+                    Row(rowModifier) {
                         Button(
                             onClick = {
-                                // Check for game over just in case
-                                if (getField().isGameOver()) return@Button
-
-                                getGameTree().addChild(
-                                    MoveInfo.createFinishingMove(
-                                        moveMode.getMovePlayer() ?: getField().getCurrentPlayer(),
-                                        if (isGrounding)
-                                            ExternalFinishReason.Grounding
-                                        else
-                                            ExternalFinishReason.Resign
-                                    )
-                                )
-                                updateFieldAndGameTree()
+                                moveMode = MoveMode.Next
                                 focusRequester.requestFocus()
                             },
                             controlButtonModifier,
-                            enabled = !getField().isGameOver()
+                            colors = if (moveMode == MoveMode.Next) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
                         ) {
-                            Icon(
-                                painter = painterResource(if (isGrounding) Res.drawable.ic_grounding else Res.drawable.ic_resign),
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-
-                    EndMoveButton(isGrounding = true)
-                    EndMoveButton(isGrounding = false)
-
-                    if (games.size > 1) {
-                        @Composable
-                        fun SwitchGame(next: Boolean) {
-                            Button(onClick = {
-                                var currentGameIndex = games.indexOf(currentGame)
-                                currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
-                                currentGameSettings.currentNodeNumber = -1
-                                switchGame(currentGameIndex)
-                            }, controlButtonModifier) {
-                                Text(if (next) ">>" else "<<")
+                            Box {
+                                Box(
+                                    modifier = Modifier.offset((-5).dp).size(16.dp)
+                                        .border(1.dp, Color.White, CircleShape).clip(CircleShape)
+                                        .background(uiSettings.playerFirstColor)
+                                )
+                                Box(
+                                    modifier = Modifier.offset(5.dp).size(16.dp).border(1.dp, Color.White, CircleShape)
+                                        .clip(CircleShape).background(uiSettings.playerSecondColor)
+                                )
                             }
                         }
-                        SwitchGame(next = false)
-                        SwitchGame(next = true)
+                        Button(
+                            onClick = {
+                                moveMode = MoveMode.First
+                                focusRequester.requestFocus()
+                            },
+                            controlButtonModifier,
+                            colors = if (moveMode == MoveMode.First) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
+                        ) {
+                            Box(
+                                modifier = playerColorIconModifier.background(uiSettings.playerFirstColor)
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                moveMode = MoveMode.Second
+                                focusRequester.requestFocus()
+                            },
+                            controlButtonModifier,
+                            colors = if (moveMode == MoveMode.Second) ButtonDefaults.buttonColors(
+                                selectedModeButtonColor
+                            ) else ButtonDefaults.buttonColors(),
+                        ) {
+                            Box(
+                                modifier = playerColorIconModifier.background(uiSettings.playerSecondColor)
+                            )
+                        }
+
+                        @Composable
+                        fun EndMoveButton(isGrounding: Boolean) {
+                            Button(
+                                onClick = {
+                                    // Check for game over just in case
+                                    if (getField().isGameOver()) return@Button
+
+                                    getGameTree().addChild(
+                                        MoveInfo.createFinishingMove(
+                                            moveMode.getMovePlayer() ?: getField().getCurrentPlayer(),
+                                            if (isGrounding)
+                                                ExternalFinishReason.Grounding
+                                            else
+                                                ExternalFinishReason.Resign
+                                        )
+                                    )
+                                    updateFieldAndGameTree()
+                                    focusRequester.requestFocus()
+                                },
+                                controlButtonModifier,
+                                enabled = !getField().isGameOver()
+                            ) {
+                                Icon(
+                                    painter = painterResource(if (isGrounding) Res.drawable.ic_grounding else Res.drawable.ic_resign),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        EndMoveButton(isGrounding = true)
+                        EndMoveButton(isGrounding = false)
+
+                        if (games.size > 1) {
+                            @Composable
+                            fun SwitchGame(next: Boolean) {
+                                Button(onClick = {
+                                    var currentGameIndex = games.indexOf(currentGame)
+                                    currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
+                                    currentGameSettings.currentNodeNumber = -1
+                                    switchGame(currentGameIndex)
+                                }, controlButtonModifier) {
+                                    Text(if (next) ">>" else "<<")
+                                }
+                            }
+                            SwitchGame(next = false)
+                            SwitchGame(next = true)
+                        }
+                    }
+
+                    GameTreeView(
+                        currentGameTreeNode,
+                        currentGame.gameTree,
+                        gameTreeViewData,
+                        uiSettings,
+                        focusRequester,
+                        onChangeGameTree = {
+                            updateFieldAndGameTree()
+                        }) {
+                        updateCurrentNode()
                     }
                 }
-
-                GameTreeView(currentGameTreeNode, currentGame.gameTree, gameTreeViewData, uiSettings, focusRequester, onChangeGameTree = {
-                    updateFieldAndGameTree()
-                }) {
-                    updateCurrentNode()
-                }
             }
-        }
         }
     }
 }
