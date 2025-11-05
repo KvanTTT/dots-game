@@ -29,20 +29,21 @@ fun DiscreteSliderConfig(
     currentValue: Int,
     minValue: Int,
     maxValue: Int,
+    step: Int = 1,
     valueRenderer: (Int) -> String = { it.toString() },
     onValueChange: (Int) -> Unit
 ) {
-    val range = maxValue - minValue
+    val range = (maxValue - minValue) / step
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(name, Modifier.fillMaxWidth(configKeyTextFraction))
         Slider(
-            value = (currentValue - minValue).toFloat() / range,
+            value = (currentValue.toFloat() - minValue) / step / range,
             onValueChange = {
-                onValueChange(round(it * range + minValue).toInt())
+                onValueChange(round(it * range).toInt() * step + minValue)
             },
             steps = range - 1,
-            modifier = Modifier.width(150.dp)
+            modifier = Modifier.width(200.dp)
         )
         Text(valueRenderer(currentValue))
     }
