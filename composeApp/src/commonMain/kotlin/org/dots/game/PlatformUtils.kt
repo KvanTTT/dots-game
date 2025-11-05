@@ -15,7 +15,13 @@ expect fun VerticalScrollbar(scrollState: ScrollState, modifier: Modifier)
 
 expect fun readFileText(filePath: String): String
 
+expect fun writeFileText(filePath: String, content: String)
+
 expect fun fileExists(filePath: String): Boolean
+
+expect fun getAppDataDir(): String
+
+expect fun getTempSgfPath(): String
 
 expect suspend fun downloadFileText(fileUrl: String): String
 

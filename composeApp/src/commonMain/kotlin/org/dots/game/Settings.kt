@@ -135,7 +135,12 @@ fun loadCurrentGameSettings(): CurrentGameSettings {
 fun saveCurrentGameSettings(currentGameSettings: CurrentGameSettings, games: Games?) {
     val settings = appSettings ?: return
     if (games != null) {
-        currentGameSettings.content = SgfWriter.write(games)
+        val sgfContent = SgfWriter.write(games)
+
+        // Save large SGF content to temp.sgf file instead of preferences to avoid 8192 char limit on JVM
+        currentGameSettings.path = SgfTempStorage.saveToTempFile(sgfContent)
+        currentGameSettings.content = null  // Don't save content in preferences, only path
+
         val currentGame = games.elementAtOrNull(currentGameSettings.currentGameNumber)
         if (currentGame != null) {
             currentGameSettings.currentNodeNumber = currentGame.gameTree.getCurrentNodeDepthFirstIndex()

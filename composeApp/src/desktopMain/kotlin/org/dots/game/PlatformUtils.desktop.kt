@@ -41,7 +41,26 @@ actual fun VerticalScrollbar(
 
 actual fun readFileText(filePath: String): String = File(filePath).readText()
 
+actual fun writeFileText(filePath: String, content: String) {
+    val file = File(filePath)
+    file.parentFile?.mkdirs()
+    file.writeText(content)
+}
+
 actual fun fileExists(filePath: String): Boolean = File(filePath).exists()
+
+actual fun getAppDataDir(): String {
+    val userHome = System.getProperty("user.home")
+    val appDir = File(userHome, ".dots-game")
+    if (!appDir.exists()) {
+        appDir.mkdirs()
+    }
+    return appDir.absolutePath
+}
+
+actual fun getTempSgfPath(): String {
+    return File(getAppDataDir(), "temp.sgf").absolutePath
+}
 
 actual suspend fun downloadFileText(fileUrl: String): String = URI.create(fileUrl).toURL().openStream().use {
     it.readBytes().decodeToString()

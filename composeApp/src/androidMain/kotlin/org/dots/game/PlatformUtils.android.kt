@@ -51,9 +51,24 @@ actual fun readFileText(filePath: String): String {
     return File(filePath).readText()
 }
 
+actual fun writeFileText(filePath: String, content: String) {
+    val file = File(filePath)
+    file.parentFile?.mkdirs()
+    file.writeText(content)
+}
+
 actual fun fileExists(filePath: String): Boolean {
     // Consider content URIs and previously picked files as existing, or check real FS
     return filePath.startsWith("content://") || AndroidPickedFiles.exists(filePath) || File(filePath).exists()
+}
+
+actual fun getAppDataDir(): String {
+    val dir = AndroidContextHolder.appContext.filesDir
+    return dir.absolutePath
+}
+
+actual fun getTempSgfPath(): String {
+    return File(getAppDataDir(), "temp.sgf").absolutePath
 }
 
 actual suspend fun downloadFileText(fileUrl: String): String = URI.create(fileUrl).toURL().openStream().use {

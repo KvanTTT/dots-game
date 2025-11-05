@@ -33,7 +33,15 @@ actual fun VerticalScrollbar(
 actual fun readFileText(filePath: String): String = WasmVirtualFS.read(filePath)
     ?: error("File loading by path is not supported on Web (not found in virtual FS): $filePath")
 
+actual fun writeFileText(filePath: String, content: String) {
+    WasmVirtualFS.put(filePath, content)
+}
+
 actual fun fileExists(filePath: String): Boolean = WasmVirtualFS.exists(filePath)
+
+actual fun getAppDataDir(): String = ""  // No real file system in WASM
+
+actual fun getTempSgfPath(): String = "temp.sgf"
 
 actual suspend fun downloadFileText(fileUrl: String): String {
     val response = window.fetch(fileUrl).await() as Response

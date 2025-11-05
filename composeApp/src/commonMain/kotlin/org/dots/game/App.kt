@@ -193,6 +193,13 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                     games = Games.fromField(Field.create(newGameDialogRules))
                     onGamesChange(games)
                     switchGame(0)
+
+                    // Save new game to temp.sgf immediately
+                    saveCurrentGameSettings(currentGameSettings, games)
+
+                    // Update openGameSettings to show temp.sgf path
+                    openGameSettings.pathOrContent = currentGameSettings.path
+                    saveOpenGameSettings(openGameSettings)
                 } else {
                     coroutineScope.launch {
                         val loadResult =
@@ -205,6 +212,13 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                             games = loadResult.games
                             onGamesChange(games)
                             switchGame(currentGameSettings.currentGameNumber)
+
+                            // Save loaded game to temp.sgf immediately
+                            saveCurrentGameSettings(currentGameSettings, games)
+
+                            // Update openGameSettings to show temp.sgf path
+                            openGameSettings.pathOrContent = currentGameSettings.path
+                            saveOpenGameSettings(openGameSettings)
                         }
                     }
                 }
@@ -232,7 +246,6 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                     onConfirmation = { newGames, newOpenGameSettings, path, content ->
                         openGameDialog = false
                         openGameSettings = newOpenGameSettings
-                        saveOpenGameSettings(openGameSettings)
                         currentGameSettings.path = path
                         currentGameSettings.content = content
                         currentGameSettings.currentGameNumber = 0
@@ -240,6 +253,13 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                         games = newGames
                         onGamesChange(games)
                         switchGame(currentGameSettings.currentGameNumber)
+
+                        // Save to temp.sgf immediately after opening
+                        saveCurrentGameSettings(currentGameSettings, games)
+
+                        // Update openGameSettings to show temp.sgf path next time
+                        openGameSettings.pathOrContent = currentGameSettings.path
+                        saveOpenGameSettings(openGameSettings)
                     }
                 )
             }
