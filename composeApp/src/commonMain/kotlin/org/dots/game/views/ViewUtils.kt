@@ -30,6 +30,7 @@ fun DiscreteSliderConfig(
     minValue: Int,
     maxValue: Int,
     step: Int = 1,
+    enabled: Boolean = true,
     valueRenderer: (Int) -> String = { it.toString() },
     onValueChange: (Int) -> Unit
 ) {
@@ -43,7 +44,8 @@ fun DiscreteSliderConfig(
                 onValueChange(round(it * range).toInt() * step + minValue)
             },
             steps = range - 1,
-            modifier = Modifier.width(200.dp)
+            modifier = Modifier.width(200.dp),
+            enabled = enabled,
         )
         Text(valueRenderer(currentValue))
     }

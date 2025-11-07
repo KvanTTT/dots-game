@@ -15,6 +15,7 @@ object EnglishStrings : Strings {
     override val open = "Open"
     override val browse = "Browse"
     override val create = "Create"
+    override val aiSettings = "AI Settings"
 
     // Game info
     override val width = "Width"

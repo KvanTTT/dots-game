@@ -19,6 +19,7 @@ interface Strings {
     val open: String
     val browse: String
     val create: String
+    val aiSettings: String
 
     // Game info
     val width: String

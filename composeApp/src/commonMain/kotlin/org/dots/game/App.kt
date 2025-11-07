@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Checkbox
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
@@ -76,10 +77,11 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
             var uiSettings by remember { mutableStateOf(loadUiSettings()) }
             var newGameDialogRules by remember { mutableStateOf(loadRules()) }
             var openGameSettings by remember { mutableStateOf(loadOpenGameSettings()) }
-
+            var kataGoDotsSettings by remember { mutableStateOf(loadKataGoDotsSettings()) }
             val coroutineScope = rememberCoroutineScope()
 
-            var startOrReset by remember { mutableStateOf(true) }
+            var start by remember { mutableStateOf(true) }
+            var reset by remember { mutableStateOf(true) }
             var games by remember { mutableStateOf(Games.fromField(Field.create(newGameDialogRules))) }
             var currentGame by remember { mutableStateOf(games.first()) }
 
@@ -97,9 +99,14 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
             var dumpParameters by remember { mutableStateOf(loadDumpParameters()) }
             var showSaveGameDialog by remember { mutableStateOf(false) }
             var showUiSettingsForm by remember { mutableStateOf(false) }
+            var showKataGoDotsSettingsForm by remember { mutableStateOf(false) }
             var moveMode by remember { mutableStateOf(MoveMode.Next) }
 
             val focusRequester = remember { FocusRequester() }
+
+            var kataGoDotsEngine by remember { mutableStateOf<KataGoDotsEngine?>(null) }
+            var automove by remember { mutableStateOf(kataGoDotsSettings.autoMove) }
+            var engineIsCalculating by remember { mutableStateOf(false) }
 
             fun updateCurrentNode() {
                 player1Score = getField().player1Score
@@ -139,7 +146,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                 currentGameSettings.content = null
                 currentGameSettings.currentGameNumber = 0
                 currentGameSettings.currentNodeNumber = -1
-                startOrReset = true
+                reset = true
             }
 
             if (showNewGameDialog) {
@@ -158,7 +165,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                 }
             }
 
-            if (startOrReset) {
+            if (start || reset) {
                 val contentOrPath = currentGameSettings.content ?: currentGameSettings.path
 
                 if (contentOrPath == null) {
@@ -181,7 +188,16 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                     }
                 }
 
-                startOrReset = false
+                if (start) {
+                    coroutineScope.launch {
+                        kataGoDotsEngine = KataGoDotsEngine.initialize(kataGoDotsSettings) {
+                            println(it)
+                        }
+                    }
+                }
+
+                start = false
+                reset = false
             }
 
             if (openGameDialog) {
@@ -230,6 +246,37 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                 })
             }
 
+            if (showKataGoDotsSettingsForm) {
+                KataGoDotsSettingsForm(kataGoDotsSettings, onSettingsChange = {
+                    showKataGoDotsSettingsForm = false
+                    focusRequester.requestFocus()
+                    kataGoDotsSettings = it.settings
+                    kataGoDotsEngine = it
+                    saveKataGoDotsSettings(it.settings)
+                }, onDismiss = {
+                    showKataGoDotsSettingsForm = false
+                    focusRequester.requestFocus()
+                })
+            }
+
+            fun makeAIMove() {
+                kataGoDotsEngine?.let {
+                    coroutineScope.launch {
+                        val gameTree = getGameTree()
+                        engineIsCalculating = true
+                        gameTree.disabled = true
+                        val moveInfo = it.generateMove(getField(), getField().getCurrentPlayer())
+                        engineIsCalculating = false
+                        gameTree.disabled = false
+                        if (moveInfo != null) {
+                            getGameTree().addChild(moveInfo)
+                            updateFieldAndGameTree()
+                        }
+                        focusRequester.requestFocus()
+                    }
+                }
+            }
+
             Row(Modifier.pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -256,6 +303,10 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                         FieldView(currentGameTreeNode, moveMode, getField(), uiSettings) { position, player ->
                             getGameTree().addChild(MoveInfo(position.toXY(getField().realWidth), player))
                             updateFieldAndGameTree()
+
+                            if (automove) {
+                                makeAIMove()
+                            }
                         }
                     }
                     Row(Modifier.padding(bottom = 10.dp)) {
@@ -316,6 +367,11 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                         Button(onClick = { showUiSettingsForm = true }, controlButtonModifier) {
                             Text(strings.settings)
                         }
+                        if (KataGoDotsEngine.IS_SUPPORTED) {
+                            Button(onClick = { showKataGoDotsSettingsForm = true }, controlButtonModifier) {
+                                Text(strings.aiSettings)
+                            }
+                        }
                     }
 
                     Row(rowModifier) {
@@ -375,7 +431,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
 
                                     getGameTree().addChild(
                                         MoveInfo.createFinishingMove(
-                                            moveMode.getMovePlayer() ?: getField().getCurrentPlayer(),
+                                            moveMode.getMovePlayer(getField()),
                                             if (isGrounding)
                                                 ExternalFinishReason.Grounding
                                             else
@@ -386,7 +442,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                                     focusRequester.requestFocus()
                                 },
                                 controlButtonModifier,
-                                enabled = !getField().isGameOver()
+                                enabled = !getField().isGameOver() && !engineIsCalculating
                             ) {
                                 Icon(
                                     painter = painterResource(if (isGrounding) Res.drawable.ic_grounding else Res.drawable.ic_resign),
@@ -407,12 +463,30 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                                     currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
                                     currentGameSettings.currentNodeNumber = -1
                                     switchGame(currentGameIndex)
-                                }, controlButtonModifier) {
+                                }, controlButtonModifier, enabled = !engineIsCalculating) {
                                     Text(if (next) ">>" else "<<")
                                 }
                             }
                             SwitchGame(next = false)
                             SwitchGame(next = true)
+                        }
+                    }
+
+                    kataGoDotsEngine?.let {
+                        Row(rowModifier) {
+                            Button(
+                                onClick = { makeAIMove() },
+                                controlButtonModifier,
+                                enabled = !getField().isGameOver() && !engineIsCalculating && doesKataSupportRules(getField().rules)
+                            ) {
+                                Text(if (engineIsCalculating) "Thinking..." else "AI move")
+                            }
+                            Text("Auto", Modifier.align(Alignment.CenterVertically))
+                            Checkbox(automove, onCheckedChange = { value ->
+                                automove = value
+                                kataGoDotsSettings = kataGoDotsSettings.copy(autoMove = automove)
+                                saveKataGoDotsSettings(kataGoDotsSettings)
+                            })
                         }
                     }
 

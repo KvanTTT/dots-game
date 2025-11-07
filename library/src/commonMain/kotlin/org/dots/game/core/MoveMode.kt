@@ -5,9 +5,9 @@ enum class MoveMode {
     First,
     Second;
 
-    fun getMovePlayer(): Player? {
+    fun getMovePlayer(field: Field): Player {
         return when (this) {
-            Next -> null
+            Next -> field.getCurrentPlayer()
             First -> Player.First
             Second -> Player.Second
         }

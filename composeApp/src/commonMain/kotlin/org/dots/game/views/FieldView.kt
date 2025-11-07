@@ -120,8 +120,9 @@ val maxFieldSize = getFieldSizeSize(maxFieldDimension, maxFieldDimension)
 
 @Composable
 fun FieldView(
-    updateObject: Any?,
-    moveMode: MoveMode, field: Field,
+    updateFieldObject: Any?,
+    moveMode: MoveMode,
+    field: Field,
     uiSettings: UiSettings,
     onMovePlaced: (Position, Player) -> Unit = { pos, player -> field.makeMoveUnsafe(pos, player) }
 ) {
@@ -135,7 +136,7 @@ fun FieldView(
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Main)
-                        val currentPlayer = moveMode.getMovePlayer() ?: field.getCurrentPlayer()
+                        val currentPlayer = moveMode.getMovePlayer(field)
                         when (event.type) {
                             PointerEventType.Move -> {
                                 pointerFieldPosition = event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
@@ -159,14 +160,14 @@ fun FieldView(
             }
     ) {
         Grid(field, uiSettings)
-        Moves(updateObject, field, uiSettings)
+        Moves(updateFieldObject, field, uiSettings)
         if (!field.isGameOver()) {
             if (uiSettings.showDiagonalConnections) {
-                AllConnections(updateObject, field, uiSettings)
+                AllConnections(updateFieldObject, field, uiSettings)
             }
 
             if (uiSettings.showThreats || uiSettings.showSurroundings) {
-                ThreatsAndSurroundings(updateObject, field, uiSettings)
+                ThreatsAndSurroundings(updateFieldObject, field, uiSettings)
             }
         }
         Pointer(pointerFieldPosition, moveMode, field, uiSettings)
@@ -548,7 +549,7 @@ private fun Pointer(position: Position?, moveMode: MoveMode, field: Field, uiSet
 
     Canvas(Modifier) {
         drawCircle(
-            uiSettings.toColor(moveMode.getMovePlayer() ?: field.getCurrentPlayer()).copy(alpha = 0.5f),
+            uiSettings.toColor(moveMode.getMovePlayer(field)).copy(alpha = 0.5f),
             dotRadius.toPx(),
             position.toPxOffset(field,this)
         )

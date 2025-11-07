@@ -15,6 +15,7 @@ object RussianStrings : Strings {
     override val open = "Открыть"
     override val browse = "Обзор"
     override val create = "Создать"
+    override val aiSettings = "Настройки ИИ"
 
     // Game info
     override val width = "Ширина"

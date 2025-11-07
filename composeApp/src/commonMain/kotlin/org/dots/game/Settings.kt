@@ -149,3 +149,34 @@ fun saveCurrentGameSettings(currentGameSettings: CurrentGameSettings, games: Gam
         setSetting(CurrentGameSettings::currentNodeNumber)
     }
 }
+
+fun loadKataGoDotsSettings(): KataGoDotsSettings {
+    val settings = appSettings ?: return KataGoDotsSettings.Default
+    val kataGoDotsSettingsClass = KataGoDotsSettings::class // TODO: inline after KT-80853
+    context (settings, kataGoDotsSettingsClass,  KataGoDotsSettings.Default) {
+        return KataGoDotsSettings(
+            exePath = getSetting(KataGoDotsSettings::exePath),
+            modelPath = getSetting(KataGoDotsSettings::modelPath),
+            configPath = getSetting(KataGoDotsSettings::configPath),
+            maxTime = getSetting(KataGoDotsSettings::maxTime),
+            maxPlayouts = getSetting(KataGoDotsSettings::maxPlayouts),
+            maxVisits = getSetting(KataGoDotsSettings::maxVisits),
+            autoMove = getSetting(KataGoDotsSettings::autoMove),
+        )
+    }
+}
+
+fun saveKataGoDotsSettings(kataGoDotsSettings: KataGoDotsSettings) {
+    val settings = appSettings ?: return
+    val kataGoDotsSettingsClass = KataGoDotsSettings::class // TODO: inline after KT-80853
+    context (settings, kataGoDotsSettingsClass, kataGoDotsSettings) {
+        setSetting(KataGoDotsSettings::exePath)
+        setSetting(KataGoDotsSettings::modelPath)
+        setSetting(KataGoDotsSettings::configPath)
+        setSetting(KataGoDotsSettings::maxTime)
+        setSetting(KataGoDotsSettings::maxPlayouts)
+        setSetting(KataGoDotsSettings::maxVisits)
+        setSetting(KataGoDotsSettings::autoMove)
+    }
+}
+
