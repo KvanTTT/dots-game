@@ -110,6 +110,8 @@ class Field {
     var positionHash: Long
         private set
 
+    var disabled: Boolean = false
+
     fun clone(): Field {
         val new = Field(rules)
         new.initialMovesCount = initialMovesCount

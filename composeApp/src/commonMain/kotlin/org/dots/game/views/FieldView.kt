@@ -556,6 +556,8 @@ private fun Pointer(position: Position?, moveMode: MoveMode, field: Field, uiSet
 }
 
 private fun PointerEvent.toFieldPositionIfValid(field: Field, currentPlayer: Player, currentDensity: Density): Position? {
+    if (field.disabled) return null
+
     val offset = changes.first().position
 
     with (currentDensity) {
