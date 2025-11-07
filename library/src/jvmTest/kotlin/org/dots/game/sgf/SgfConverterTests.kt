@@ -12,6 +12,7 @@ import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Games
 import org.dots.game.core.InitPosType
 import org.dots.game.core.MoveInfo
+import org.dots.game.core.MoveInfo.Companion.IgnoreParseNodeComparator
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
@@ -536,14 +537,9 @@ internal fun checkMoveDisregardExtraInfo(x: Int, y: Int, expectedPlayer: Player,
 internal fun GameTreeNode.getNextNode(x: Int, y: Int, player: Player): GameTreeNode? {
     val moveInfo = MoveInfo(PositionXY(x, y), player)
 
-    fun MoveInfo.compareIgnoringParsedNode(other: MoveInfo?): Boolean {
-        if (other == null) return false
-        return positionXY == other.positionXY && player == other.player && externalFinishReason == other.externalFinishReason
-    }
-
     for (child in children) {
-        if (player == Player.First && moveInfo.compareIgnoringParsedNode(child.player1Moves?.singleOrNull()) ||
-            player == Player.Second && moveInfo.compareIgnoringParsedNode(child.player2Moves?.singleOrNull())
+        if (player == Player.First && child.player1Moves?.singleOrNull()?.let { IgnoreParseNodeComparator.compare(moveInfo, it) == 0 } == true ||
+            player == Player.Second && child.player2Moves?.singleOrNull()?.let { IgnoreParseNodeComparator.compare(moveInfo, it) == 0 } == true
         ) {
             return child
         }

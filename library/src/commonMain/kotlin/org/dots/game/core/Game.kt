@@ -1,6 +1,7 @@
 package org.dots.game.core
 
 import org.dots.game.ParsedNode
+import kotlin.Comparator
 import kotlin.reflect.KProperty
 
 typealias PropertiesMap = MutableMap<KProperty<*>, GameProperty<*>>
@@ -36,7 +37,7 @@ class Games(games: List<Game>, val parsedNode: ParsedNode? = null) : MutableList
             return Games(Game(GameTree(field).apply {
                 for ((index, move) in field.moveSequence.withIndex()) {
                     if (index >= field.initialMovesCount) {
-                        addChild(MoveInfo(move.position.toXY(field.realWidth), move.player))
+                        addChild(MoveInfo.fromLegalMove(move, field))
                     }
                 }
             }))
@@ -147,8 +148,35 @@ data class MoveInfo internal constructor(
     val parsedNode: ParsedNode? = null,
 ) {
     companion object {
+        val IgnoreParseNodeComparator = object : Comparator<MoveInfo> {
+            override fun compare(a: MoveInfo, b: MoveInfo): Int {
+                ((a.positionXY?.position ?: 0) - (b.positionXY?.position ?: 0)).let {
+                    if (it != 0) return it
+                }
+
+                (a.player.value - b.player.value).let {
+                    if (it != 0) return it
+                }
+
+                ((a.externalFinishReason?.ordinal ?: 0) - (b.externalFinishReason?.ordinal ?: 0)).let {
+                    if (it != 0) return it
+                }
+
+                return 0
+            }
+        }
+
         fun createFinishingMove(player: Player, externalFinishReason: ExternalFinishReason, parsedNode: ParsedNode? = null): MoveInfo {
             return MoveInfo(positionXY = null, player, externalFinishReason, parsedNode)
+        }
+
+        fun fromLegalMove(legalMove: LegalMove, field: Field): MoveInfo {
+            val externalFinishReason = (legalMove as? GameResult)?.toExternalFinishReason()
+            return if (externalFinishReason != null) {
+                createFinishingMove(legalMove.player, externalFinishReason)
+            } else {
+                MoveInfo(legalMove.position.toXY(field.realWidth), legalMove.player)
+            }
         }
     }
 
@@ -156,9 +184,7 @@ data class MoveInfo internal constructor(
             this(positionXY, player, null, parsedNode)
 
     init {
-        if (positionXY == null) {
-            require(externalFinishReason != null)
-        }
+        require(positionXY == null && externalFinishReason != null || positionXY != null && externalFinishReason == null)
     }
 }
 
