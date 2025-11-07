@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -85,8 +86,13 @@ kotlin {
         }
         all {
             languageSettings.enableLanguageFeature("ContextParameters")
+            languageSettings.enableLanguageFeature("ExpectActualClasses")
         }
     }
+}
+
+tasks.named<Test>("desktopTest") {
+    useJUnitPlatform() // Ensure JUnit 5 tests run for desktop testing
 }
 
 android {
@@ -130,4 +136,21 @@ compose.desktop {
             packageVersion = "1.0.0"
         }
     }
+}
+
+val localProperties = Properties().apply {
+    val file = rootDir.resolve("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+val kataGoDotsEngineKey = "KataGoDotsEngine"
+val kataGoDotsModelKey = "KataGoDotsModel"
+val kataGoDotsConfigKey = "KataGoDotsConfig"
+
+tasks.withType<Test> {
+    localProperties.getProperty(kataGoDotsEngineKey)?.let { environment(kataGoDotsEngineKey, it) }
+    localProperties.getProperty(kataGoDotsModelKey)?.let { environment(kataGoDotsModelKey, it) }
+    localProperties.getProperty(kataGoDotsConfigKey)?.let { environment(kataGoDotsConfigKey, it) }
 }

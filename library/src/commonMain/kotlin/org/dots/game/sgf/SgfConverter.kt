@@ -16,6 +16,7 @@ import org.dots.game.core.GameResult
 import org.dots.game.core.GameTree
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Games
+import org.dots.game.core.KataGoDotsRules
 import org.dots.game.core.Label
 import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
@@ -875,9 +876,8 @@ class SgfConverter(
         }
     }
 
-    private data class KataGoExtraRules(val dotsCaptureEmptyBase: Boolean, val sui: Boolean, val startPosIsRandom: Boolean)
 
-    private fun tryParseKataGoExtraRules(sgfRulesProperty: SgfProperty<*>): KataGoExtraRules? {
+    private fun tryParseKataGoExtraRules(sgfRulesProperty: SgfProperty<*>): KataGoDotsRules? {
         val propertyInfo = sgfRulesProperty.info
         val sgfPropertyNode = sgfRulesProperty.node
 
@@ -922,7 +922,7 @@ class SgfConverter(
 
         while (currentIndex < propertyValue.length) {
             when {
-                tryParseKey(KataGoExtraRules::dotsCaptureEmptyBase) -> {
+                tryParseKey(KataGoDotsRules::dotsCaptureEmptyBase) -> {
                     val value = tryParseBooleanValue()
                     if (value != null) {
                         dotsCaptureEmptyBase = value
@@ -930,7 +930,7 @@ class SgfConverter(
                         break
                     }
                 }
-                tryParseKey(KataGoExtraRules::sui) -> {
+                tryParseKey(KataGoDotsRules::sui) -> {
                     val value = tryParseBooleanValue()
                     if (value != null) {
                         suicideAllowed = value
@@ -938,7 +938,7 @@ class SgfConverter(
                         break
                     }
                 }
-                tryParseKey(KataGoExtraRules::startPosIsRandom) -> {
+                tryParseKey(KataGoDotsRules::startPosIsRandom) -> {
                     val value = tryParseBooleanValue()
                     if (value != null) {
                         startPosIsRandom = value
@@ -958,7 +958,7 @@ class SgfConverter(
             }
         }
 
-        return KataGoExtraRules(dotsCaptureEmptyBase, suicideAllowed, startPosIsRandom)
+        return KataGoDotsRules(dotsCaptureEmptyBase, suicideAllowed, startPosIsRandom)
     }
 
     private class PropertyInfoAndTextSpan(val propertyInfo: SgfPropertyInfo, textSpan: TextSpan) : ParsedNode(textSpan) {
