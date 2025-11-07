@@ -4,13 +4,18 @@ import org.dots.game.sgf.TextSpan
 
 data class Diagnostic(
     val message: String,
-    val textSpan: TextSpan?,
+    val textSpan: TextSpan? = null,
     val severity: DiagnosticSeverity = DiagnosticSeverity.Error,
 ) {
+    companion object {
+        fun info(message: String) = Diagnostic(message, severity = DiagnosticSeverity.Info)
+    }
+
     override fun toString(): String = render(message, textSpan, severity)
 }
 
 enum class DiagnosticSeverity {
+    Info,
     Warning,
     Error,
     Critical,
