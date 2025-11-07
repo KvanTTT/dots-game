@@ -61,8 +61,9 @@ actual suspend fun downloadFileText(fileUrl: String): String = URI.create(fileUr
 }
 
 @Composable
-actual fun openFileDialog(
+actual fun OpenFileDialog(
     title: String,
+    selectedFile: String?,
     allowedExtensions: List<String>,
     onFileSelected: (String?) -> Unit
 ) {

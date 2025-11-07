@@ -35,15 +35,18 @@ actual fun readFileText(filePath: String): String = WasmVirtualFS.read(filePath)
 
 actual fun fileExists(filePath: String): Boolean = WasmVirtualFS.exists(filePath)
 
+@OptIn(ExperimentalWasmJsInterop::class)
 actual suspend fun downloadFileText(fileUrl: String): String {
     val response = window.fetch(fileUrl).await() as Response
-    if (!response.ok) error("HTTP ${'$'}{response.status}: ${'$'}{response.statusText}")
+    if (!response.ok) error("HTTP ${response.status}: ${response.statusText}")
     return response.text().await()
 }
 
+@OptIn(ExperimentalWasmJsInterop::class)
 @Composable
-actual fun openFileDialog(
+actual fun OpenFileDialog(
     title: String,
+    selectedFile: String?,
     allowedExtensions: List<String>,
     onFileSelected: (String?) -> Unit
 ) {

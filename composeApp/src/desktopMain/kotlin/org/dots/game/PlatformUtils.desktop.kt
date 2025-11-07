@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import java.io.FilenameFilter
 import java.net.URI
 import java.util.prefs.Preferences
 
@@ -104,29 +105,30 @@ data class WindowSettings(
 }
 
 @Composable
-actual fun openFileDialog(
+actual fun OpenFileDialog(
     title: String,
+    selectedFile: String?,
     allowedExtensions: List<String>,
     onFileSelected: (String?) -> Unit
 ) {
     val fileDialog = remember {
         FileDialog(null as Frame?, title, FileDialog.LOAD).apply {
             if (allowedExtensions.isNotEmpty()) {
-                // FileDialog on different platforms handles this differently
-                // On Windows, we can set file filter
-                val extensionsString = allowedExtensions.joinToString(";") { "*.$it" }
-                file = extensionsString
+                // TODO: figure out why it doesn't work on Windows and fix
+                filenameFilter = FilenameFilter { _, name ->
+                    val extension = name.substringAfter('.', "")
+                    allowedExtensions.any { it == extension }
+                }
             }
+            file = selectedFile
             isVisible = true
         }
     }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            val selectedFile = if (fileDialog.file != null) {
-                File(fileDialog.directory, fileDialog.file).absolutePath
-            } else {
-                null
+            val selectedFile = fileDialog.file?.let {
+                File(fileDialog.directory, it).absolutePath
             }
             onFileSelected(selectedFile)
         }

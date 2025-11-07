@@ -39,7 +39,7 @@ import org.dots.game.buildLineOffsets
 import org.dots.game.core.Games
 import org.dots.game.core.Rules
 import org.dots.game.localization.LocalStrings
-import org.dots.game.openFileDialog
+import org.dots.game.OpenFileDialog
 import org.dots.game.toLineColumnDiagnostic
 
 @Composable
@@ -86,8 +86,9 @@ fun OpenDialog(
     }
 
     if (showFileDialog) {
-        openFileDialog(
+        OpenFileDialog(
             title = strings.openSgfFile,
+            selectedFile = (loadResult?.inputType as? InputType.SgfFile)?.refinedPath,
             allowedExtensions = listOf("sgf", "sgfs")
         ) { selectedPath ->
             showFileDialog = false

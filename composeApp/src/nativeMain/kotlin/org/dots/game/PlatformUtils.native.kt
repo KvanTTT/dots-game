@@ -26,8 +26,9 @@ actual fun fileExists(filePath: String): Boolean = false
 actual suspend fun downloadFileText(fileUrl: String): String = error("File downloading by url is not supported")
 
 @Composable
-actual fun openFileDialog(
+actual fun OpenFileDialog(
     title: String,
+    selectedFile: String?,
     allowedExtensions: List<String>,
     onFileSelected: (String?) -> Unit
 ) {
