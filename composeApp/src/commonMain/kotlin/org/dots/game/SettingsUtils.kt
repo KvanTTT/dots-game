@@ -16,8 +16,6 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 
-expect var appSettings: Settings?
-
 expect class SettingsWrapper<T : ClassSettings<T>> {
     companion object {
         fun <T : ClassSettings<T>> initialize(obj: T, directory: String?, loading: Boolean): SettingsWrapper<T>
