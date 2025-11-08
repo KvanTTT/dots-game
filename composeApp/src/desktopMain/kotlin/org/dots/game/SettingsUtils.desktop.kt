@@ -7,9 +7,6 @@ import org.dots.game.core.ThisAppName
 import java.io.File
 import java.nio.file.Paths
 import java.util.Properties
-import java.util.prefs.Preferences
-
-actual var appSettings: Settings? = PreferencesSettings(Preferences.userRoot())
 
 actual class SettingsWrapper<T : ClassSettings<T>> private constructor(
     actual val obj: T,

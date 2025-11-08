@@ -12,9 +12,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val settings = SharedPreferencesSettings(getSharedPreferences(ThisAppName, MODE_PRIVATE))
-        appSettings = settings
-        SettingsWrapper.androidSettings = settings
+        SettingsWrapper.androidSettings = SharedPreferencesSettings(getSharedPreferences(ThisAppName, MODE_PRIVATE))
         AndroidContextHolder.appContext = applicationContext
 
         setContent {
