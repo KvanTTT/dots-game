@@ -30,7 +30,7 @@ class FieldRenderTests : FieldTests() {
             . . * * * . * * * . .
             . . . . . . . . . . .
         """.trimIndent(),
-            sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = false, printBorders = false, debugInfo = false))
+            sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = false, printBorders = false, debugInfo = false, isSgf = false))
         )
     }
 
@@ -48,7 +48,7 @@ class FieldRenderTests : FieldTests() {
             │ . . . . . . . . . . . 
             └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
         """.trimIndent(),
-            sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = false, printBorders = true, debugInfo = false))
+            sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = false, printBorders = true, debugInfo = false, isSgf = false))
         )
     }
 
@@ -67,7 +67,7 @@ class FieldRenderTests : FieldTests() {
             7  │  .  .  .  .  .  .  .  .  .  .  .  
             8  └  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ┘
         """.trimIndent(),
-            sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = true, printBorders = true, debugInfo = false))
+            sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = true, printBorders = true, debugInfo = false, isSgf = false))
         )
     }
 
@@ -84,7 +84,7 @@ class FieldRenderTests : FieldTests() {
             6  .  .  *  *  *  .  *  *  *  .  .
             7  .  .  .  .  .  .  .  .  .  .  .
         """.trimIndent(),
-            sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = true, printBorders = false, debugInfo = false))
+            sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = true, printBorders = false, debugInfo = false, isSgf = false))
         )
     }
 
@@ -98,7 +98,7 @@ class FieldRenderTests : FieldTests() {
             *12 .   .   .   *8  .   .   .   *20
             .   *11 *10 *9  .   *21 *22 *23 .
         """.trimIndent(),
-            sampleField.render(DumpParameters(printNumbers = true, padding = 0, printCoordinates = false, debugInfo = false))
+            sampleField.render(DumpParameters(printNumbers = true, padding = 0, printCoordinates = false, debugInfo = false, isSgf = false))
         )
     }
 
@@ -112,7 +112,7 @@ class FieldRenderTests : FieldTests() {
             *  *^ *^ *^ *  `* `* `* *
             .  *  *  *  .  *  *  *  .
             """.trimIndent(),
-            sampleField.render(DumpParameters(printNumbers = false, padding = 0, printCoordinates = false, debugInfo = true))
+            sampleField.render(DumpParameters(printNumbers = false, padding = 0, printCoordinates = false, debugInfo = true, isSgf = false))
         )
     }
 }

@@ -16,13 +16,14 @@ data class DumpParameters(
     val printCoordinates: Boolean = true,
     val printBorders: Boolean = false,
     val debugInfo: Boolean = false,
-    val isSgf: Boolean = false,
+    val isSgf: Boolean = true,
 ) : ClassSettings<DumpParameters>() {
     override val default: DumpParameters
         get() = DEFAULT
 
     companion object {
         val DEFAULT = DumpParameters()
+        val PLAIN_FIELD = DEFAULT.copy(isSgf = false)
     }
 }
 

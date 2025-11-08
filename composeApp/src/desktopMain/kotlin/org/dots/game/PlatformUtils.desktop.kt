@@ -103,7 +103,7 @@ data class WindowSettings(
         get() = DEFAULT
 
     companion object {
-        val DEFAULT = WindowSettings(0.dp, 0.dp, 1280.dp, 1024.dp, WindowPlacement.Floating)
+        val DEFAULT = WindowSettings(0.dp, 0.dp, 1600.dp, 900.dp, WindowPlacement.Floating)
     }
 }
 

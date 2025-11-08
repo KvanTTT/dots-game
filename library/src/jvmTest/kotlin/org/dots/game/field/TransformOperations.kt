@@ -95,7 +95,7 @@ class TransformOperations : FieldTests() {
 
     private fun checkOperation(originField: Field, expectedData: String, transformType: TransformType?) {
         val transformedField = transformType?.let { originField.transform(it) } ?: originField
-        assertEquals(expectedData, transformedField.render(DumpParameters(printCoordinates = false)))
+        assertEquals(expectedData, transformedField.render(DumpParameters(printCoordinates = false, isSgf = false)))
         assertEquals(originField.initialMovesCount, transformedField.initialMovesCount)
         assertEquals(originField.player1Score, transformedField.player1Score)
         assertEquals(originField.player2Score, transformedField.player2Score)
