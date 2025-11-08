@@ -7,16 +7,12 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import com.russhwolf.settings.Settings
-import com.russhwolf.settings.StorageSettings
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.await
 import org.w3c.dom.HTMLInputElement
 import org.w3c.files.FileReader
 import org.w3c.fetch.Response
-
-actual var appSettings: Settings? = StorageSettings()
 
 @Composable
 actual fun HorizontalScrollbar(

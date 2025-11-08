@@ -1,8 +1,8 @@
 package org.dots.game
 
 import androidx.compose.foundation.HorizontalScrollbar
-import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -14,19 +14,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
-import com.russhwolf.settings.PreferencesSettings
-import com.russhwolf.settings.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.dots.game.core.ClassSettings
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import java.io.FilenameFilter
 import java.net.URI
-import java.util.prefs.Preferences
-
-val preferencesSettings = PreferencesSettings(Preferences.userRoot())
-actual var appSettings: Settings? = preferencesSettings
 
 @Composable
 actual fun HorizontalScrollbar(
@@ -48,11 +43,12 @@ actual suspend fun downloadFileText(fileUrl: String): String = URI.create(fileUr
     it.readBytes().decodeToString()
 }
 
-fun loadWindowsState(): WindowState {
+fun loadWindowsState(directory: String? = null): WindowState {
+    val settingsWrapper = SettingsWrapper.initialize(WindowSettings.DEFAULT, directory = directory, loading = true)
+    val settings = settingsWrapper.settings ?: return WindowState()
     val windowStateClass = WindowSettings::class // TODO: inline after KT-80853
-    context(preferencesSettings, windowStateClass, WindowSettings.DEFAULT) {
-        val hasWindowPositionKey = preferencesSettings.hasKey(windowStateClass.getSettingName(WindowPosition::x))
-
+    context(settings, windowStateClass, WindowSettings.DEFAULT) {
+        val hasWindowPositionKey = settings.hasKey(windowStateClass.getSettingName(WindowPosition::x))
         return WindowState(
             placement = getEnumSetting(WindowSettings::placement),
 
@@ -73,9 +69,11 @@ fun loadWindowsState(): WindowState {
     }
 }
 
-fun saveWindowsState(windowState: WindowState) {
+fun saveWindowsState(windowState: WindowState, directory: String? = null): Boolean {
+    val settingsWrapper = SettingsWrapper.initialize(WindowSettings.DEFAULT, directory = directory, loading = false)
+    val settings = settingsWrapper.settings ?: return false
     val windowStateClass = WindowSettings::class // TODO: inline after KT-80853
-    context(preferencesSettings, windowStateClass,
+    context(settings, windowStateClass,
         WindowSettings(windowState.position.x, windowState.position.y, windowState.size.width, windowState.size.height, windowState.placement))
     {
         // Ignore `isMinimized` to prevent loading the Window in a minimized state
@@ -90,6 +88,8 @@ fun saveWindowsState(windowState: WindowState) {
         setSetting(WindowSettings::width)
         setSetting(WindowSettings::height)
     }
+    settingsWrapper.save()
+    return true
 }
 
 data class WindowSettings(
@@ -98,7 +98,10 @@ data class WindowSettings(
     val width: Dp,
     val height: Dp,
     val placement: WindowPlacement,
-) {
+) : ClassSettings<WindowSettings>() {
+    override val default: WindowSettings
+        get() = DEFAULT
+
     companion object {
         val DEFAULT = WindowSettings(0.dp, 0.dp, 1280.dp, 1024.dp, WindowPlacement.Floating)
     }

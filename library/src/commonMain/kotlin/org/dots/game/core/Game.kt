@@ -190,11 +190,13 @@ data class MoveInfo internal constructor(
 
 data class Label(val positionXY: PositionXY, val text: String)
 
+const val ThisAppName = "DotsGame"
+
 enum class AppType(val value: String) {
     Zagram("zagram.org"),
     Notago("NOTAGO"),
     Playdots("Спортивные Точки (playdots.ru)"),
     Katago("katago"),
-    DotsGame("DotsGame"), // This app
+    DotsGame(ThisAppName),
     Unknown(""),
 }

@@ -1,3 +1,4 @@
+import org.dots.game.core.ClassSettings
 import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.EMPTY_TERRITORY_MARKER
 import org.dots.game.core.Field
@@ -16,7 +17,10 @@ data class DumpParameters(
     val printBorders: Boolean = false,
     val debugInfo: Boolean = false,
     val isSgf: Boolean = false,
-) {
+) : ClassSettings<DumpParameters>() {
+    override val default: DumpParameters
+        get() = DEFAULT
+
     companion object {
         val DEFAULT = DumpParameters()
     }

@@ -10,11 +10,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.russhwolf.settings.Settings
 import java.io.File
 import java.net.URI
-
-actual var appSettings: Settings? = null
 
 /** Provides access to application context for non-composable platform calls. */
 object AndroidContextHolder {

@@ -1,6 +1,7 @@
 package org.dots.game
 
 import androidx.compose.ui.graphics.Color
+import org.dots.game.core.ClassSettings
 import org.dots.game.core.Player
 import org.dots.game.views.ConnectionDrawMode
 import org.dots.game.views.PolygonDrawMode
@@ -17,10 +18,13 @@ data class UiSettings(
     val showThreats: Boolean = false,
     val showSurroundings: Boolean = false,
     val developerMode: Boolean = false,
-) {
+) : ClassSettings<UiSettings>() {
     companion object {
         val Standard = UiSettings()
     }
+
+    override val default: UiSettings
+        get() = Standard
 
     fun toColor(player: Player): Color = if (player == Player.First) playerFirstColor else playerSecondColor
 }

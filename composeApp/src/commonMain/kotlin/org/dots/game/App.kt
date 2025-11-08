@@ -39,7 +39,7 @@ import dotsgame.composeapp.generated.resources.ic_resign
 
 @Composable
 @Preview
-fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), onGamesChange: (games: Games?) -> Unit = { }) {
+fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGameSettings.Default), onGamesChange: (games: Games?) -> Unit = { }) {
     val localizationManager = remember {
         appSettings?.let { LocalizationManager(it) } ?: LocalizationManager(
             object : com.russhwolf.settings.Settings {
@@ -74,10 +74,10 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
     CompositionLocalProvider(LocalLocalizationManager provides localizationManager) {
         MaterialTheme {
             val strings = LocalStrings
-            var uiSettings by remember { mutableStateOf(loadUiSettings()) }
-            var newGameDialogRules by remember { mutableStateOf(loadRules()) }
-            var openGameSettings by remember { mutableStateOf(loadOpenGameSettings()) }
-            var kataGoDotsSettings by remember { mutableStateOf(loadKataGoDotsSettings()) }
+            var uiSettings by remember { mutableStateOf(loadClassSettings(UiSettings.Standard)) }
+            var newGameDialogRules by remember { mutableStateOf(loadClassSettings(Rules.Standard)) }
+            var openGameSettings by remember { mutableStateOf(loadClassSettings(OpenGameSettings.Default)) }
+            var kataGoDotsSettings by remember { mutableStateOf(loadClassSettings(KataGoDotsSettings.Default)) }
             val coroutineScope = rememberCoroutineScope()
 
             var start by remember { mutableStateOf(true) }
@@ -96,7 +96,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
             var moveNumber by remember { mutableStateOf(0) }
             var showNewGameDialog by remember { mutableStateOf(false) }
             var openGameDialog by remember { mutableStateOf(false) }
-            var dumpParameters by remember { mutableStateOf(loadDumpParameters()) }
+            var dumpParameters by remember { mutableStateOf(loadClassSettings(DumpParameters.DEFAULT)) }
             var showSaveGameDialog by remember { mutableStateOf(false) }
             var showUiSettingsForm by remember { mutableStateOf(false) }
             var showKataGoDotsSettingsForm by remember { mutableStateOf(false) }
@@ -160,7 +160,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                 ) {
                     showNewGameDialog = false
                     newGameDialogRules = it
-                    saveRules(newGameDialogRules)
+                    saveClassSettings(newGameDialogRules)
                     reset(newGame = true)
                 }
             }
@@ -211,7 +211,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                     onConfirmation = { newGames, newOpenGameSettings, path, content ->
                         openGameDialog = false
                         openGameSettings = newOpenGameSettings
-                        saveOpenGameSettings(openGameSettings)
+                        saveClassSettings(openGameSettings)
                         currentGameSettings.path = path
                         currentGameSettings.content = content
                         currentGameSettings.currentGameNumber = 0
@@ -232,14 +232,14 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                         showSaveGameDialog = false
                         focusRequester.requestFocus()
                         dumpParameters = it
-                        saveDumpParameters(it)
+                        saveClassSettings(it)
                     })
             }
 
             if (showUiSettingsForm) {
                 UiSettingsForm(uiSettings, onUiSettingsChange = {
                     uiSettings = it
-                    saveUiSettings(it)
+                    saveClassSettings(it)
                 }, onDismiss = {
                     showUiSettingsForm = false
                     focusRequester.requestFocus()
@@ -252,7 +252,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                     focusRequester.requestFocus()
                     kataGoDotsSettings = it.settings
                     kataGoDotsEngine = it
-                    saveKataGoDotsSettings(it.settings)
+                    saveClassSettings(it.settings)
                 }, onDismiss = {
                     showKataGoDotsSettingsForm = false
                     focusRequester.requestFocus()
@@ -485,7 +485,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadCurrentGameSettings(), on
                             Checkbox(automove, onCheckedChange = { value ->
                                 automove = value
                                 kataGoDotsSettings = kataGoDotsSettings.copy(autoMove = automove)
-                                saveKataGoDotsSettings(kataGoDotsSettings)
+                                saveClassSettings(kataGoDotsSettings)
                             })
                         }
                     }

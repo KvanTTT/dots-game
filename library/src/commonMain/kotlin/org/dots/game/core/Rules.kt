@@ -21,9 +21,12 @@ class Rules private constructor(
     val initPosType: InitPosType,
     val initPosIsRandom: Boolean,
     val komi: Double,
-) {
+) : ClassSettings<Rules>() {
     val random: Random?
         get() = Random.takeIf { initPosIsRandom }
+
+    override val default: Rules
+        get() = Standard
 
     companion object {
         val Standard = create(

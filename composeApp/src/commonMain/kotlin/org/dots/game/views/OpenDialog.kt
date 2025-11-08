@@ -40,6 +40,7 @@ import org.dots.game.core.Games
 import org.dots.game.core.Rules
 import org.dots.game.localization.LocalStrings
 import org.dots.game.OpenFileDialog
+import org.dots.game.core.ClassSettings
 import org.dots.game.toLineColumnDiagnostic
 
 @Composable
@@ -240,7 +241,10 @@ data class OpenGameSettings(
     var pathOrContent: String?,
     var addFinishingMove: Boolean,
     var rewindToEnd: Boolean,
-) {
+) : ClassSettings<OpenGameSettings>() {
+    override val default: OpenGameSettings
+        get() = Default
+
     companion object {
         val Default = OpenGameSettings(pathOrContent = null, addFinishingMove = false, rewindToEnd = true)
     }
