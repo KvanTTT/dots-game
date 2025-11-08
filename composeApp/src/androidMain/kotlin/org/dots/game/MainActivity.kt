@@ -6,12 +6,15 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.russhwolf.settings.SharedPreferencesSettings
+import org.dots.game.core.ThisAppName
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        appSettings = SharedPreferencesSettings(getSharedPreferences("DotsGamePrefs", MODE_PRIVATE))
+        val settings = SharedPreferencesSettings(getSharedPreferences(ThisAppName, MODE_PRIVATE))
+        appSettings = settings
+        SettingsWrapper.androidSettings = settings
         AndroidContextHolder.appContext = applicationContext
 
         setContent {
