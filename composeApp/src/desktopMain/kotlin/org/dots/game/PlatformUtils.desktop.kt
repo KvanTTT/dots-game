@@ -134,3 +134,5 @@ actual fun OpenFileDialog(
         }
     }
 }
+
+actual val platform: String = System.getProperty("os.name").lowercase()

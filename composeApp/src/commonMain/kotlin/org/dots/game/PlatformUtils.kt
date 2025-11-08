@@ -26,3 +26,5 @@ expect fun OpenFileDialog(
     allowedExtensions: List<String> = emptyList(),
     onFileSelected: (String?) -> Unit
 )
+
+expect val platform: String

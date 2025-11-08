@@ -35,3 +35,5 @@ actual fun OpenFileDialog(
     // File dialog is not implemented for native platforms (iOS)
     onFileSelected(null)
 }
+
+actual val platform: String = "native"

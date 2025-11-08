@@ -135,3 +135,5 @@ private object WasmVirtualFS {
 
     fun exists(path: String): Boolean = files.containsKey(path)
 }
+
+actual val platform: String = "web"
