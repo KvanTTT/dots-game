@@ -1091,7 +1091,7 @@ class Field {
         positionHash = positionHash xor value
     }
 
-    override fun toString(): String = render()
+    override fun toString(): String = render(DumpParameters.PLAIN_FIELD)
 }
 
 sealed class MoveResult {

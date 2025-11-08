@@ -13,7 +13,7 @@ const val maxFieldDimension = 39
 data class UiSettings(
     val playerFirstColor: Color = Color.Blue,
     val playerSecondColor: Color = Color.Red,
-    val connectionDrawMode: ConnectionDrawMode = ConnectionDrawMode.PolygonOutline,
+    val connectionDrawMode: ConnectionDrawMode = ConnectionDrawMode.PolygonOutlineAndFill,
     val baseDrawMode: PolygonDrawMode = PolygonDrawMode.OutlineAndFill,
     val showDiagonalConnections: Boolean = false,
     val showThreats: Boolean = false,
