@@ -10,9 +10,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import org.dots.game.UiSettings
 import org.dots.game.core.Field
 import org.dots.game.core.Games
-import org.dots.game.localization.LocalStrings
 import org.dots.game.sgf.SgfWriter
 import render
 
@@ -21,9 +21,10 @@ fun SaveDialog(
     games: Games,
     field: Field,
     dumpParameters: DumpParameters,
+    uiSettings: UiSettings,
     onDismiss: (DumpParameters) -> Unit,
 ) {
-    val strings = LocalStrings
+    val strings by remember { mutableStateOf(uiSettings.language.getStrings()) }
     var minX = field.realWidth - 1
     var maxX = 0
     var minY = field.realHeight - 1

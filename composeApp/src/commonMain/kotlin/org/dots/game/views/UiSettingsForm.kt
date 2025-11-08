@@ -19,9 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import org.dots.game.UiSettings
-import org.dots.game.localization.Language
-import org.dots.game.localization.LocalLocalizationManager
-import org.dots.game.localization.LocalStrings
 
 @Composable
 fun UiSettingsForm(
@@ -29,11 +26,10 @@ fun UiSettingsForm(
     onUiSettingsChange: (UiSettings) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val strings = LocalStrings
-    val localizationManager = LocalLocalizationManager.current
     var connectionDrawMode by remember { mutableStateOf(EnumMode(uiSettings.connectionDrawMode)) }
     var baseDrawMode by remember { mutableStateOf(EnumMode(uiSettings.baseDrawMode)) }
-    var currentLanguageMode by remember { mutableStateOf(EnumMode(localizationManager.currentLanguage)) }
+    var language by remember { mutableStateOf(EnumMode(uiSettings.language)) }
+    var strings by remember { mutableStateOf(uiSettings.language.getStrings())}
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(470.dp).wrapContentHeight()) {
@@ -41,8 +37,8 @@ fun UiSettingsForm(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ModeConfig(
                         connectionDrawMode,
-                        typeLabelProvider = { strings.connectionDrawMode },
-                        labelProvider = { strings.connectionDrawModeLabel(it) }
+                        nameRenderer = { strings.connectionDrawMode },
+                        valueRenderer = { strings.connectionDrawModeLabel(it) }
                     ) {
                         connectionDrawMode = it
                         onUiSettingsChange(uiSettings.copy(connectionDrawMode = connectionDrawMode.selected))
@@ -51,8 +47,8 @@ fun UiSettingsForm(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ModeConfig(
                         baseDrawMode,
-                        typeLabelProvider = { strings.polygonDrawMode },
-                        labelProvider = { strings.polygonDrawModeLabel(it) }
+                        nameRenderer = { strings.polygonDrawMode },
+                        valueRenderer = { strings.polygonDrawModeLabel(it) }
                     ) {
                         baseDrawMode = it
                         onUiSettingsChange(uiSettings.copy(baseDrawMode = it.selected))
@@ -84,12 +80,13 @@ fun UiSettingsForm(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ModeConfig(
-                        currentLanguageMode,
-                        typeLabelProvider = { strings.language },
-                        labelProvider = { it.displayName }
+                        language,
+                        nameRenderer = { strings.language },
+                        valueRenderer = { it.displayName }
                     ) {
-                        currentLanguageMode = it
-                        localizationManager.setLanguage(it.selected)
+                        language = it
+                        strings = language.selected.getStrings()
+                        onUiSettingsChange(uiSettings.copy(language = it.selected))
                     }
                 }
             }

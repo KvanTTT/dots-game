@@ -33,7 +33,6 @@ object RussianStrings : Strings {
     override val createNewGame = "Создать новую игру"
     override val randomStartPosition = "Случайная стартовая позиция"
 
-    // InitPosType enum labels
     override fun initPosTypeLabel(type: InitPosType): String = when (type) {
         InitPosType.Empty -> "Нет"
         InitPosType.Single -> "Точка"
@@ -43,7 +42,6 @@ object RussianStrings : Strings {
         InitPosType.Custom -> "Пользовательская"
     }
 
-    // BaseMode enum labels
     override fun baseModeLabel(mode: BaseMode): String = when (mode) {
         BaseMode.AtLeastOneOpponentDot -> "Захват при одной точке"
         BaseMode.AnySurrounding -> "Захват пустой области"
@@ -65,7 +63,6 @@ object RussianStrings : Strings {
     override val debugInfo = "Отладочная информация"
     override val padding = "Отступ"
 
-    // Settings Dialog
     override val connectionDrawMode = "Отрисовка соединений"
     override val polygonDrawMode = "Отрисовка окружений"
     override val diagonalConnections = "Диагональные соединения"
@@ -73,7 +70,6 @@ object RussianStrings : Strings {
     override val surroundings = "Области под угрозой"
     override val developerMode = "Режим разработчика"
 
-    // ConnectionDrawMode enum labels
     override fun connectionDrawModeLabel(mode: ConnectionDrawMode): String = when (mode) {
         ConnectionDrawMode.None -> "Нет"
         ConnectionDrawMode.Lines -> "Линии"
@@ -82,14 +78,12 @@ object RussianStrings : Strings {
         ConnectionDrawMode.PolygonOutlineAndFill -> "Контуры и заливка полигонов"
     }
 
-    // PolygonDrawMode enum labels
     override fun polygonDrawModeLabel(mode: PolygonDrawMode): String = when (mode) {
         PolygonDrawMode.Outline -> "Контур"
         PolygonDrawMode.Fill -> "Заливка"
         PolygonDrawMode.OutlineAndFill -> "Контур и заливка"
     }
 
-    // Language settings
     override val language = "Язык"
     override val languageName = "Русский"
 }

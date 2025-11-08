@@ -38,8 +38,8 @@ import org.dots.game.LoadResult
 import org.dots.game.buildLineOffsets
 import org.dots.game.core.Games
 import org.dots.game.core.Rules
-import org.dots.game.localization.LocalStrings
 import org.dots.game.OpenFileDialog
+import org.dots.game.UiSettings
 import org.dots.game.core.ClassSettings
 import org.dots.game.toLineColumnDiagnostic
 
@@ -47,10 +47,11 @@ import org.dots.game.toLineColumnDiagnostic
 fun OpenDialog(
     rules: Rules?,
     openGameSettings: OpenGameSettings,
+    uiSettings: UiSettings,
     onDismiss: () -> Unit,
     onConfirmation: (games: Games, newOpenGameSettings: OpenGameSettings, refinedPath: String?, content: String) -> Unit,
 ) {
-    val strings = LocalStrings
+    val strings by remember { mutableStateOf(uiSettings.language.getStrings()) }
     val coroutineScope = rememberCoroutineScope()
     var pathOrContentTextFieldValue by remember { mutableStateOf(TextFieldValue(openGameSettings.pathOrContent ?: "")) }
     var contentTextFieldValue by remember { mutableStateOf(TextFieldValue("")) }
