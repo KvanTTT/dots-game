@@ -33,7 +33,6 @@ object EnglishStrings : Strings {
     override val createNewGame = "Create new game"
     override val randomStartPosition = "Random start position"
 
-    // InitPosType enum labels
     override fun initPosTypeLabel(type: InitPosType): String = when (type) {
         InitPosType.Empty -> "Empty"
         InitPosType.Single -> "Single"
@@ -43,7 +42,6 @@ object EnglishStrings : Strings {
         InitPosType.Custom -> "Custom"
     }
 
-    // BaseMode enum labels
     override fun baseModeLabel(mode: BaseMode): String = when (mode) {
         BaseMode.AtLeastOneOpponentDot -> "At Least One Opponent Dot"
         BaseMode.AnySurrounding -> "Any Surrounding"
@@ -73,7 +71,6 @@ object EnglishStrings : Strings {
     override val surroundings = "Surroundings"
     override val developerMode = "Developer Mode"
 
-    // ConnectionDrawMode enum labels
     override fun connectionDrawModeLabel(mode: ConnectionDrawMode): String = when (mode) {
         ConnectionDrawMode.None -> "None"
         ConnectionDrawMode.Lines -> "Lines"
@@ -82,14 +79,12 @@ object EnglishStrings : Strings {
         ConnectionDrawMode.PolygonOutlineAndFill -> "Polygon Outline And Fill"
     }
 
-    // PolygonDrawMode enum labels
     override fun polygonDrawModeLabel(mode: PolygonDrawMode): String = when (mode) {
         PolygonDrawMode.Outline -> "Outline"
         PolygonDrawMode.Fill -> "Fill"
         PolygonDrawMode.OutlineAndFill -> "Outline And Fill"
     }
 
-    // Language settings
     override val language = "Language"
     override val languageName = "English"
 }

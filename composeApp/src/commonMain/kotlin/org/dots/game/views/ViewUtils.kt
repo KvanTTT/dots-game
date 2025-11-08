@@ -59,26 +59,25 @@ data class EnumMode<E: Enum<E>>(val expanded: Boolean, val selected: E) {
 inline fun <reified E : Enum<E>> ModeConfig(
     enumMode: EnumMode<E>,
     ignoredEntries: Set<E> = emptySet(),
-    noinline typeLabelProvider: (() -> String)? = null,
-    noinline labelProvider: ((E) -> String)? = null,
+    noinline nameRenderer: () -> String = { splitByUppercase(E::class.simpleName!!) },
+    noinline valueRenderer: (E) -> String = { splitByUppercase(enumMode.selected.toString()) },
     crossinline onChange: (newMode: EnumMode<E>) -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 10.dp)) {
-        val typeLabel = typeLabelProvider?.invoke() ?: splitByUppercase(E::class.simpleName!!)
-        Text("$typeLabel ", Modifier.fillMaxWidth(configKeyTextFraction))
+
+        Text("${nameRenderer()} ", Modifier.fillMaxWidth(configKeyTextFraction))
         Column(Modifier.fillMaxWidth().height(30.dp)
             .border(1.dp, Color.hsv(0f, 0f, 0.4f))
             .clickable(onClick = { onChange(enumMode.copy(expanded = true)) }),
             verticalArrangement = Arrangement.Center,
         ) {
-            val selectedLabel = labelProvider?.invoke(enumMode.selected) ?: splitByUppercase(enumMode.selected.toString())
-            Text(selectedLabel, Modifier.align(Alignment.CenterHorizontally))
+            Text(valueRenderer(enumMode.selected), Modifier.align(Alignment.CenterHorizontally))
             DropdownMenu(
                 enumMode.expanded,
                 onDismissRequest = { onChange(enumMode.copy(expanded = false)) },
             ) {
                 enumValues<E>().filterNot { ignoredEntries.contains(it) }.forEach { entry ->
-                    val entryLabel = labelProvider?.invoke(entry) ?: splitByUppercase(entry.toString())
+                    val entryLabel = valueRenderer(entry)
                     DropdownMenuItem(onClick = { onChange(enumMode.copy(expanded = false, selected = entry)) }) {
                         Text(entryLabel)
                     }

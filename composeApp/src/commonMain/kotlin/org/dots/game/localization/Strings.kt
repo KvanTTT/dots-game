@@ -5,10 +5,6 @@ import org.dots.game.core.InitPosType
 import org.dots.game.views.ConnectionDrawMode
 import org.dots.game.views.PolygonDrawMode
 
-/**
- * Localization strings interface.
- * Pure Kotlin implementation that works across all platforms including WASM.
- */
 interface Strings {
     // Common UI
     val new: String
@@ -66,10 +62,7 @@ interface Strings {
     val surroundings: String
     val developerMode: String
 
-    // ConnectionDrawMode enum labels
     fun connectionDrawModeLabel(mode: ConnectionDrawMode): String
-
-    // PolygonDrawMode enum labels
     fun polygonDrawModeLabel(mode: PolygonDrawMode): String
 
     // Language settings

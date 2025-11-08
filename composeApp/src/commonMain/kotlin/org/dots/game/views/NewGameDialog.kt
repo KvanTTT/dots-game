@@ -10,7 +10,6 @@ import androidx.compose.ui.window.Dialog
 import org.dots.game.UiSettings
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
-import org.dots.game.localization.LocalStrings
 import org.dots.game.maxFieldDimension
 import org.dots.game.minFieldDimension
 import kotlin.random.Random
@@ -22,7 +21,7 @@ fun NewGameDialog(
     onDismiss: () -> Unit,
     onConfirmation: (newGameRules: Rules) -> Unit,
 ) {
-    val strings = LocalStrings
+    val strings by remember { mutableStateOf(uiSettings.language.getStrings()) }
     var width by remember { mutableStateOf(rules.width.coerceIn(minFieldDimension, maxFieldDimension)) }
     var height by remember { mutableStateOf(rules.height.coerceIn(minFieldDimension, maxFieldDimension)) }
     var captureByBorder by remember { mutableStateOf(rules.captureByBorder) }
@@ -51,15 +50,15 @@ fun NewGameDialog(
                 ModeConfig(
                     initPosType,
                     ignoredEntries = setOf(InitPosType.Custom),
-                    typeLabelProvider = { strings.initPosType },
-                    labelProvider = { strings.initPosTypeLabel(it) }
+                    nameRenderer = { strings.initPosType },
+                    valueRenderer = { strings.initPosTypeLabel(it) }
                 ) {
                     initPosType = it
                 }
                 ModeConfig(
                     baseMode,
-                    typeLabelProvider = { strings.baseMode },
-                    labelProvider = { strings.baseModeLabel(it) }
+                    nameRenderer = { strings.baseMode },
+                    valueRenderer = { strings.baseModeLabel(it) }
                 ) {
                     baseMode = it
                 }
