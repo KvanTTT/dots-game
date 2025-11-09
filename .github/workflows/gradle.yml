@@ -108,7 +108,7 @@ jobs:
 
     - name: Setup Android SDK
       if: matrix.target == 'Android'
-      uses: android-actions/setup-android@v3
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Grant execute permission
       run: chmod +x ./gradlew
