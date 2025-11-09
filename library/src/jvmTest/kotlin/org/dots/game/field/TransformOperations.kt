@@ -1,12 +1,12 @@
 package org.dots.game.field
 
-import DumpParameters
+import org.dots.game.dump.DumpParameters
 import org.dots.game.core.Field
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
 import org.dots.game.core.TransformType
 import org.dots.game.dump.FieldParser
-import render
+import org.dots.game.dump.render
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

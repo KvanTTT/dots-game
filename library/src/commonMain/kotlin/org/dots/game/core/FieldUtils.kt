@@ -1,7 +1,7 @@
 package org.dots.game.core
 
-import DumpParameters
-import render
+import org.dots.game.dump.DumpParameters
+import org.dots.game.dump.render
 import kotlin.reflect.KProperty
 
 fun Field.getStrongConnectionLinePositions(position: Position): List<Position> {

@@ -1,6 +1,6 @@
 package org.dots.game.views
 
-import DumpParameters
+import org.dots.game.dump.DumpParameters
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -13,8 +13,8 @@ import androidx.compose.ui.window.Dialog
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
 import org.dots.game.core.Games
+import org.dots.game.dump.render
 import org.dots.game.sgf.SgfWriter
-import render
 
 @Composable
 fun SaveDialog(

@@ -1,6 +1,6 @@
 package org.dots.game
 
-import DumpParameters
+import org.dots.game.dump.DumpParameters
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import com.russhwolf.settings.Settings

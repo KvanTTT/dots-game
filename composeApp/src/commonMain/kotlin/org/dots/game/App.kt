@@ -31,6 +31,7 @@ import org.jetbrains.compose.resources.painterResource
 import dotsgame.composeapp.generated.resources.Res
 import dotsgame.composeapp.generated.resources.ic_grounding
 import dotsgame.composeapp.generated.resources.ic_resign
+import org.dots.game.dump.DumpParameters
 
 @Composable
 @Preview
