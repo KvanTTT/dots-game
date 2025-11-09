@@ -82,13 +82,13 @@ actual fun KataGoDotsSettingsForm(
             FileMode.Exe -> listOf(if (platform.contains("win")) "exe" else "")
             FileMode.Model -> listOf("bin.gz")
             FileMode.Config -> listOf("cfg")
-            null -> emptyList()
+            null -> emptyList() // TODO: it shouldn't be a warning, see KT-82211
         }
         val selectedFile = when (selectedFileMode) {
             FileMode.Exe -> exePath
             FileMode.Model -> modelPath
             FileMode.Config -> configPath
-            null -> null
+            null -> null // TODO: it shouldn't be a warning, see KT-82211
         }
         OpenFileDialog("Select ${selectedFileMode!!.name.lowercase()} file", selectedFile, allowedExtensions) {
             if (it != null) {
