@@ -108,14 +108,40 @@ data class WindowSettings(
 }
 
 @Composable
+actual fun SaveFileDialog(
+    title: String?,
+    selectedFile: String?,
+    extension: String,
+    onFileSelected: (String?) -> Unit,
+    content: String,
+) {
+    FileDialog(title, selectedFile, listOf(extension), onFileSelected, content)
+}
+
+@Composable
 actual fun OpenFileDialog(
-    title: String,
+    title: String?,
     selectedFile: String?,
     allowedExtensions: List<String>,
-    onFileSelected: (String?) -> Unit
+    onFileSelected: (String?) -> Unit,
 ) {
+    FileDialog(title, selectedFile, allowedExtensions, onFileSelected, content = null)
+}
+
+@Composable
+private fun FileDialog(
+    title: String?,
+    selectedFile: String?,
+    allowedExtensions: List<String>,
+    onFileSelected: (String?) -> Unit,
+    content: String?,
+) {
+    // Save mode doesn't allow multiple extensions
+    require(content != null && allowedExtensions.size <= 1 || content == null)
+
     val fileDialog = remember {
-        FileDialog(null as Frame?, title, FileDialog.LOAD).apply {
+        val mode = if (content != null) FileDialog.SAVE else FileDialog.LOAD
+        FileDialog(null as Frame?, title, mode).apply {
             if (allowedExtensions.isNotEmpty()) {
                 // TODO: figure out why it doesn't work on Windows and fix
                 filenameFilter = FilenameFilter { _, name ->
@@ -135,9 +161,14 @@ actual fun OpenFileDialog(
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val selectedFile = fileDialog.file?.let {
-                File(fileDialog.directory, it).absolutePath
+                File(fileDialog.directory, it)
             }
-            onFileSelected(selectedFile)
+            if (selectedFile != null) {
+                if (content != null) {
+                    selectedFile.writeText(content)
+                }
+                onFileSelected(selectedFile.absolutePath)
+            }
         }
     }
 }
