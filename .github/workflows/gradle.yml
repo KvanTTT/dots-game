@@ -63,6 +63,13 @@ jobs:
     - name: Compile App WasmJS
       run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :composeApp:compileKotlinWasmJs --no-daemon --stacktrace
 
+    - name: Compile App Android
+      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :composeApp:compileDebugKotlinAndroid --no-daemon --stacktrace
+
+    - name: Compile App Native
+      if: runner.os == 'macOS' # It makes sense only on macOS, disable on other platforms to save resources
+      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :composeApp:compileIosMainKotlinMetadata --no-daemon --stacktrace
+
     - name: Publish test report
       if: always()
       uses: actions/upload-artifact@v4
