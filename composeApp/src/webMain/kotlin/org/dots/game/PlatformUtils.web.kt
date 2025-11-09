@@ -64,15 +64,12 @@ actual fun SaveFileDialog(
                 else -> "document.$extension"
             }
 
-            // Create a Blob from the content
-            val blob = js("new Blob([content], {type: 'text/plain'})")
-
-            // Create a temporary URL for the Blob
-            val url = js("URL.createObjectURL(blob)") as String
+            // Create a data URL with the content
+            val dataUrl = "data:text/plain;charset=utf-8," + js("encodeURIComponent(content)") as String
 
             // Create a temporary anchor element
             val anchor = document.createElement("a") as HTMLAnchorElement
-            anchor.href = url
+            anchor.href = dataUrl
             anchor.download = fileName
             anchor.style.display = "none"
 
@@ -80,9 +77,6 @@ actual fun SaveFileDialog(
             document.body?.appendChild(anchor)
             anchor.click()
             document.body?.removeChild(anchor)
-
-            // Clean up the object URL
-            js("URL.revokeObjectURL(url)")
 
             // Notify success by passing the file name
             onFileSelected(fileName)
