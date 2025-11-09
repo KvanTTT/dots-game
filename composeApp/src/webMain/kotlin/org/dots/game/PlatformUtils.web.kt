@@ -15,6 +15,14 @@ import org.w3c.dom.HTMLInputElement
 import org.w3c.files.FileReader
 import org.w3c.fetch.Response
 
+/**
+ * External JavaScript function to encode a URI component.
+ * Used for properly encoding file content in data URLs.
+ */
+@OptIn(ExperimentalWasmJsInterop::class)
+@JsFun("encodeURIComponent")
+external fun encodeURIComponent(value: String): String
+
 @Composable
 actual fun HorizontalScrollbar(
     scrollState: ScrollState,
@@ -65,7 +73,7 @@ actual fun SaveFileDialog(
             }
 
             // Create a data URL with the content
-            val dataUrl = "data:text/plain;charset=utf-8," + js("encodeURIComponent(content)") as String
+            val dataUrl = "data:text/plain;charset=utf-8," + encodeURIComponent(content)
 
             // Create a temporary anchor element
             val anchor = document.createElement("a") as HTMLAnchorElement
