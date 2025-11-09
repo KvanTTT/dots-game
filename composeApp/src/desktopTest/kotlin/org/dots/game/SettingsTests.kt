@@ -37,7 +37,7 @@ class SettingsTests {
         assertEquals(CurrentGameSettings.Default.content, defaultCurrentGameSettings.content)
 
         val defaultKataGoDotsSettings = loadClassSettings(KataGoDotsSettings.Default, directory = TEMP_DIRECTORY)
-        assertEquals(defaultKataGoDotsSettings.exePath, defaultKataGoDotsSettings.exePath)
+        assertEquals(KataGoDotsSettings.Default.exePath, defaultKataGoDotsSettings.exePath)
 
         val defaultWindowState = loadWindowsState(directory = TEMP_DIRECTORY)
         assertEquals(WindowSettings.DEFAULT.placement, defaultWindowState.placement)

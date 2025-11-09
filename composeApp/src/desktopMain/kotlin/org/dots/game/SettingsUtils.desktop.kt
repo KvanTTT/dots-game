@@ -1,6 +1,5 @@
 package org.dots.game
 
-import com.russhwolf.settings.PreferencesSettings
 import com.russhwolf.settings.PropertiesSettings
 import com.russhwolf.settings.Settings
 import org.dots.game.core.ClassSettings
