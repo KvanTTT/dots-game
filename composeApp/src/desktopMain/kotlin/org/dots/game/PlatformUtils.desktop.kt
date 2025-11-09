@@ -137,7 +137,7 @@ private fun FileDialog(
     content: String?,
 ) {
     // Save mode doesn't allow multiple extensions
-    require(content != null && allowedExtensions.size <= 1 || content == null)
+    require(content == null || allowedExtensions.size <= 1)
 
     val fileDialog = remember {
         val mode = if (content != null) FileDialog.SAVE else FileDialog.LOAD
@@ -167,8 +167,8 @@ private fun FileDialog(
                 if (content != null) {
                     selectedFile.writeText(content)
                 }
-                onFileSelected(selectedFile.absolutePath)
             }
+            onFileSelected(selectedFile?.absolutePath)
         }
     }
 }

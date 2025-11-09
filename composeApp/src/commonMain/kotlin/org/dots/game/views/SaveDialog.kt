@@ -84,7 +84,6 @@ fun SaveDialog(
             },
             content = fieldRepresentation,
         )
-        showSaveDialog = false
     }
 
     fun updateFieldRepresentation() {
