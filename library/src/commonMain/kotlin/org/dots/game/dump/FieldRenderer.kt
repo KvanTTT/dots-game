@@ -1,3 +1,5 @@
+package org.dots.game.dump
+
 import org.dots.game.core.ClassSettings
 import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.EMPTY_TERRITORY_MARKER

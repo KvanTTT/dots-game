@@ -4,7 +4,8 @@ import org.dots.game.core.GameResult.ResignWin
 import org.dots.game.core.GameResult.TimeWin
 import org.dots.game.core.GameResult.UnknownWin
 import org.dots.game.core.PositionXY.Companion.COORDINATE_BITS_COUNT
-import render
+import org.dots.game.dump.DumpParameters
+import org.dots.game.dump.render
 
 class Field {
     companion object {

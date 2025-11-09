@@ -1,8 +1,8 @@
 package org.dots.game.field
 
-import DumpParameters
+import org.dots.game.dump.DumpParameters
 import org.dots.game.dump.FieldParser
-import render
+import org.dots.game.dump.render
 import kotlin.Int
 import kotlin.test.Test
 import kotlin.test.assertEquals

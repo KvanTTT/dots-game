@@ -4,6 +4,7 @@ import androidx.compose.ui.window.WindowState
 import org.dots.game.core.ClassSettings
 import org.dots.game.core.Rules
 import org.dots.game.core.ThisAppName
+import org.dots.game.dump.DumpParameters
 import org.dots.game.views.OpenGameSettings
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
