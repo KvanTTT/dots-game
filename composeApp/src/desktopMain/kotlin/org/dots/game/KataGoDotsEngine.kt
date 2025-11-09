@@ -43,6 +43,10 @@ actual class KataGoDotsEngine private constructor(
         actual const val IS_SUPPORTED = true
 
         actual suspend fun initialize(kataGoDotsSettings: KataGoDotsSettings, logger: (Diagnostic) -> Unit): KataGoDotsEngine? {
+            if (kataGoDotsSettings.exePath.isEmpty()) {
+                return null
+            }
+
             try {
                 return withContext(Dispatchers.IO) {
                     val args = buildList {
