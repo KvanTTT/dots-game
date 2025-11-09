@@ -10,6 +10,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import org.dots.game.SaveFileDialog
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
 import org.dots.game.core.Games
@@ -20,9 +21,10 @@ import org.dots.game.sgf.SgfWriter
 fun SaveDialog(
     games: Games,
     field: Field,
+    path: String?,
     dumpParameters: DumpParameters,
     uiSettings: UiSettings,
-    onDismiss: (DumpParameters) -> Unit,
+    onDismiss: (dumpParameters: DumpParameters, newPath: String?) -> Unit,
 ) {
     val strings by remember { mutableStateOf(uiSettings.language.getStrings()) }
     var minX = field.realWidth - 1
@@ -55,6 +57,35 @@ fun SaveDialog(
     var isSgf by remember { mutableStateOf(dumpParameters.isSgf) }
     var fieldRepresentation by remember { mutableStateOf("") }
 
+    var path by remember { mutableStateOf(path ?: "") }
+    var showSaveDialog by remember { mutableStateOf(false) }
+
+    fun createDumpParameters(): DumpParameters {
+        return DumpParameters(
+            printNumbers = printNumbers,
+            padding = padding,
+            printCoordinates = printCoordinates,
+            debugInfo = debugInfo,
+            isSgf = isSgf
+        )
+    }
+
+    if (showSaveDialog) {
+        SaveFileDialog(
+            title = "Save game to ${if (isSgf) "sgf" else "txt"}",
+            selectedFile = path,
+            extension = if (isSgf) "sgf" else "txt",
+            onFileSelected = {
+                if (it != null) {
+                    path = it
+                    onDismiss(createDumpParameters(), path)
+                }
+                showSaveDialog = false
+            },
+            content = fieldRepresentation,
+        )
+    }
+
     fun updateFieldRepresentation() {
         fieldRepresentation = if (isSgf) {
             SgfWriter.write(games)
@@ -66,13 +97,7 @@ fun SaveDialog(
     updateFieldRepresentation()
 
     Dialog(onDismissRequest = {
-        onDismiss(DumpParameters(
-            printNumbers = printNumbers,
-            padding = padding,
-            printCoordinates = printCoordinates,
-            debugInfo = debugInfo,
-            isSgf = isSgf
-        ))
+        onDismiss(createDumpParameters(), null)
     }) {
         Card(modifier = Modifier.wrapContentHeight()) {
             Column(modifier = Modifier.padding(20.dp)) {
@@ -123,6 +148,23 @@ fun SaveDialog(
                             debugInfo = it
                             updateFieldRepresentation()
                         })
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Path", Modifier.fillMaxWidth(0.1f))
+                    TextField(path, {
+                        path = it
+                    },
+                    modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 10.dp),
+                        maxLines = 1,
+                        singleLine = true,
+                    )
+                    Button(
+                        onClick = { showSaveDialog = true },
+                        Modifier.padding(horizontal = 10.dp),
+                    ) {
+                        Text("Save")
                     }
                 }
             }

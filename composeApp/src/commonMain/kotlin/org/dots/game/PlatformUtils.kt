@@ -17,11 +17,20 @@ expect fun fileExists(filePath: String): Boolean
 expect suspend fun downloadFileText(fileUrl: String): String
 
 @Composable
+expect fun SaveFileDialog(
+    title: String?,
+    selectedFile: String?,
+    extension: String,
+    onFileSelected: (String?) -> Unit,
+    content: String,
+)
+
+@Composable
 expect fun OpenFileDialog(
-    title: String = "Open File",
+    title: String?,
     selectedFile: String?,
     allowedExtensions: List<String> = emptyList(),
-    onFileSelected: (String?) -> Unit
+    onFileSelected: (String?) -> Unit,
 )
 
 expect val platform: String

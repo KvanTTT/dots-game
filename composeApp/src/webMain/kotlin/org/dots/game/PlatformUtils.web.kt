@@ -38,10 +38,21 @@ actual suspend fun downloadFileText(fileUrl: String): String {
     return response.text().await()
 }
 
+@Composable
+actual fun SaveFileDialog(
+    title: String?,
+    selectedFile: String?,
+    extension: String,
+    onFileSelected: (String?) -> Unit,
+    content: String
+) {
+    // TODO: See https://github.com/KvanTTT/dots-game/issues/65
+}
+
 @OptIn(ExperimentalWasmJsInterop::class)
 @Composable
 actual fun OpenFileDialog(
-    title: String,
+    title: String?,
     selectedFile: String?,
     allowedExtensions: List<String>,
     onFileSelected: (String?) -> Unit

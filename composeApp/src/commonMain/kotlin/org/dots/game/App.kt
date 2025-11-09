@@ -192,13 +192,20 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
             SaveDialog(
                 games,
                 getField(),
+                currentGameSettings.path,
                 dumpParameters,
                 uiSettings,
-                onDismiss = {
+                onDismiss = { newDumpParameters, newPath ->
                     showSaveGameDialog = false
                     focusRequester.requestFocus()
-                    dumpParameters = it
-                    saveClassSettings(it)
+                    dumpParameters = newDumpParameters
+                    saveClassSettings(newDumpParameters)
+                    if (newPath != null) {
+                        openGameSettings = openGameSettings.copy(pathOrContent = newPath)
+                        saveClassSettings(openGameSettings)
+                        currentGameSettings.path = newPath
+                        saveClassSettings(currentGameSettings, games)
+                    }
                 })
         }
 
