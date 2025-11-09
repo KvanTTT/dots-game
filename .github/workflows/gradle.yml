@@ -51,14 +51,17 @@ jobs:
         cache-read-only: ${{ github.ref != 'refs/heads/main' }}
         add-job-summary: on-failure
 
-    - name: Execute JVM tests
+    - name: Execute Library tests
       run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :library:jvmTest --no-daemon --stacktrace
 
-    - name: Execute ComposeApp desktop tests
+    - name: Compile Cli
+      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :cli:compileKotlin --no-daemon --stacktrace
+
+    - name: Execute App Desktop tests
       run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :composeApp:desktopTest --no-daemon --stacktrace
 
-    - name: Execute WASM tests
-      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :library:wasmJsTest --no-daemon --stacktrace
+    - name: Compile App WasmJS
+      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :composeApp:compileKotlinWasmJs --no-daemon --stacktrace
 
     - name: Publish test report
       if: always()
@@ -70,7 +73,5 @@ jobs:
           library/build/reports/tests/jvmTest/
           composeApp/build/test-results/desktopTest/
           composeApp/build/reports/tests/desktopTest/
-          library/build/test-results/wasmJsTest/
-          library/build/reports/tests/wasmJsTest/
-        retention-days: 7
+        retention-days: 3
         if-no-files-found: ignore
