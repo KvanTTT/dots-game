@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.await
+import org.w3c.dom.HTMLAnchorElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.files.FileReader
 import org.w3c.fetch.Response
@@ -38,6 +39,7 @@ actual suspend fun downloadFileText(fileUrl: String): String {
     return response.text().await()
 }
 
+@OptIn(ExperimentalWasmJsInterop::class)
 @Composable
 actual fun SaveFileDialog(
     title: String?,
@@ -46,7 +48,49 @@ actual fun SaveFileDialog(
     onFileSelected: (String?) -> Unit,
     content: String
 ) {
-    // TODO: See https://github.com/KvanTTT/dots-game/issues/65
+    // Trigger file download using browser's download mechanism
+    LaunchedEffect(Unit) {
+        try {
+            // Determine file name: use selectedFile if provided, otherwise generate a default name
+            val fileName = when {
+                !selectedFile.isNullOrBlank() -> {
+                    // If selectedFile doesn't have the extension, add it
+                    if (selectedFile.endsWith(".$extension")) {
+                        selectedFile
+                    } else {
+                        "$selectedFile.$extension"
+                    }
+                }
+                else -> "document.$extension"
+            }
+
+            // Create a Blob from the content
+            val blob = js("new Blob([content], {type: 'text/plain'})")
+
+            // Create a temporary URL for the Blob
+            val url = js("URL.createObjectURL(blob)") as String
+
+            // Create a temporary anchor element
+            val anchor = document.createElement("a") as HTMLAnchorElement
+            anchor.href = url
+            anchor.download = fileName
+            anchor.style.display = "none"
+
+            // Add to document, click, and remove
+            document.body?.appendChild(anchor)
+            anchor.click()
+            document.body?.removeChild(anchor)
+
+            // Clean up the object URL
+            js("URL.revokeObjectURL(url)")
+
+            // Notify success by passing the file name
+            onFileSelected(fileName)
+        } catch (e: Throwable) {
+            println("Error saving file: ${e.message}")
+            onFileSelected(null)
+        }
+    }
 }
 
 @OptIn(ExperimentalWasmJsInterop::class)
