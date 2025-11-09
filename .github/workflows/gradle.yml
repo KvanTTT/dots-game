@@ -74,3 +74,63 @@ jobs:
           library/build/reports/tests/wasmJsTest/
         retention-days: 7
         if-no-files-found: ignore
+
+  compile:
+    name: Compile - ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: Android
+          - os: macos-latest
+            target: Native
+          - os: ubuntu-latest
+            target: WasmJS
+          - os: ubuntu-latest
+            target: CLI
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Validate Gradle wrapper
+      uses: gradle/actions/wrapper-validation@v4
+
+    - name: Setup JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      if: matrix.target == 'Android'
+      uses: android-actions/setup-android@v3
+
+    - name: Grant execute permission
+      run: chmod +x ./gradlew
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+        add-job-summary: on-failure
+
+    - name: Compile Android targets
+      if: matrix.target == 'Android'
+      run: ./gradlew :composeApp:compileDebugKotlinAndroid --no-daemon --stacktrace
+
+    - name: Compile Native targets
+      if: matrix.target == 'Native'
+      run: ./gradlew :library:compileKotlinIosArm64 :composeApp:compileKotlinIosArm64 --no-daemon --stacktrace
+
+    - name: Compile WasmJS targets
+      if: matrix.target == 'WasmJS'
+      run: ./gradlew :library:compileKotlinWasmJs :composeApp:compileKotlinWasmJs --no-daemon --stacktrace
+
+    - name: Compile CLI
+      if: matrix.target == 'CLI'
+      run: ./gradlew :cli:compileKotlin --no-daemon --stacktrace
