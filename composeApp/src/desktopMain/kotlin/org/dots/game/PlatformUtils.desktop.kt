@@ -119,8 +119,12 @@ actual fun OpenFileDialog(
             if (allowedExtensions.isNotEmpty()) {
                 // TODO: figure out why it doesn't work on Windows and fix
                 filenameFilter = FilenameFilter { _, name ->
-                    val extension = name.substringAfter('.', "")
-                    allowedExtensions.any { it == extension }
+                    allowedExtensions.any { ext ->
+                        if (ext.isNotEmpty())
+                            name.endsWith(ext)
+                        else
+                            !name.contains('.')
+                    }
                 }
             }
             file = selectedFile
