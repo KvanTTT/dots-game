@@ -28,7 +28,7 @@ actual class KataGoDotsEngine {
             kataGoDotsSettings: KataGoDotsSettings,
             logger: (Diagnostic) -> Unit
         ): KataGoDotsEngine? {
-            TODO("Not yet implemented")
+            return null
         }
     }
 }

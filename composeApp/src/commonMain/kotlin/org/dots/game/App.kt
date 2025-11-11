@@ -153,9 +153,11 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
             }
 
             if (start) {
-                coroutineScope.launch {
-                    kataGoDotsEngine = KataGoDotsEngine.initialize(kataGoDotsSettings) {
-                        println(it)
+                if (KataGoDotsEngine.IS_SUPPORTED) {
+                    coroutineScope.launch {
+                        kataGoDotsEngine = KataGoDotsEngine.initialize(kataGoDotsSettings) {
+                            println(it)
+                        }
                     }
                 }
             }

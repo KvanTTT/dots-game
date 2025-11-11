@@ -33,4 +33,16 @@ expect fun OpenFileDialog(
     onFileSelected: (String?) -> Unit,
 )
 
-expect val platform: String
+enum class Platform {
+    DESKTOP_WINDOWS,
+    DESKTOP_MACOS,
+    DESKTOP_LINUX,
+    MOBILE_ANDROID,
+    MOBILE_IOS,
+    WEB;
+
+    val isMobile: Boolean
+        get() = this == MOBILE_ANDROID || this == MOBILE_IOS
+}
+
+expect val platform: Platform
