@@ -46,4 +46,4 @@ actual fun OpenFileDialog(
     onFileSelected(null)
 }
 
-actual val platform: String = "native"
+actual val platform: Platform = Platform.MOBILE_IOS

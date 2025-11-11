@@ -15,6 +15,7 @@ import org.dots.game.Diagnostic
 import org.dots.game.KataGoDotsEngine
 import org.dots.game.KataGoDotsSettings
 import org.dots.game.OpenFileDialog
+import org.dots.game.Platform
 import org.dots.game.platform
 
 @Composable
@@ -79,7 +80,7 @@ actual fun KataGoDotsSettingsForm(
 
     if (selectedFileMode != null) {
         val allowedExtensions = when (selectedFileMode) {
-            FileMode.Exe -> listOf(if (platform.contains("win")) "exe" else "")
+            FileMode.Exe -> listOf(if (platform == Platform.DESKTOP_WINDOWS) "exe" else "")
             FileMode.Model -> listOf("bin.gz")
             FileMode.Config -> listOf("cfg")
             null -> emptyList() // TODO: it shouldn't be a warning, see KT-82211

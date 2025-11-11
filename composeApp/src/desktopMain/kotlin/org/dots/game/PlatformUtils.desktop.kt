@@ -175,4 +175,12 @@ private fun FileDialog(
     }
 }
 
-actual val platform: String = System.getProperty("os.name").lowercase()
+actual val platform: Platform = run {
+    val osName = System.getProperty("os.name").lowercase()
+    when {
+        osName.contains("win") -> Platform.DESKTOP_WINDOWS
+        osName.contains("nux") || osName.contains("linux") -> Platform.DESKTOP_LINUX
+        osName.contains("mac") -> Platform.DESKTOP_MACOS
+        else -> error("Unsupported platform: $osName")
+    }
+}
