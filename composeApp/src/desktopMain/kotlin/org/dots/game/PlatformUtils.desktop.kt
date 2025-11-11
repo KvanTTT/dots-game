@@ -39,8 +39,10 @@ actual fun readFileText(filePath: String): String = File(filePath).readText()
 
 actual fun fileExists(filePath: String): Boolean = File(filePath).exists()
 
-actual suspend fun downloadFileText(fileUrl: String): String = URI.create(fileUrl).toURL().openStream().use {
-    it.readBytes().decodeToString()
+actual suspend fun downloadFileText(fileUrl: String): String {
+    return withContext(Dispatchers.IO) {
+        URI.create(fileUrl).toURL().openStream().readBytes().decodeToString()
+    }
 }
 
 fun loadWindowsState(directory: String? = null): WindowState {

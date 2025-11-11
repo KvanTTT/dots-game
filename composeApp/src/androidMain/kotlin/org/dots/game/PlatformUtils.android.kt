@@ -10,8 +10,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URI
+import androidx.core.net.toUri
 
 /** Provides access to application context for non-composable platform calls. */
 object AndroidContextHolder {
@@ -33,7 +36,7 @@ actual fun HorizontalScrollbar(
 actual fun readFileText(filePath: String): String {
     // If it's a direct content URI, read via ContentResolver
     if (filePath.startsWith("content://")) {
-        val uri = Uri.parse(filePath)
+        val uri = filePath.toUri()
         return AndroidContextHolder.appContext.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
             ?: error("Failed to open content URI: $filePath")
     }
@@ -53,8 +56,10 @@ actual fun fileExists(filePath: String): Boolean {
     return filePath.startsWith("content://") || AndroidPickedFiles.exists(filePath) || File(filePath).exists()
 }
 
-actual suspend fun downloadFileText(fileUrl: String): String = URI.create(fileUrl).toURL().openStream().use {
-    it.readBytes().decodeToString()
+actual suspend fun downloadFileText(fileUrl: String): String {
+    return withContext(Dispatchers.IO) {
+        URI.create(fileUrl).toURL().openStream().readBytes().decodeToString()
+    }
 }
 
 @Composable
