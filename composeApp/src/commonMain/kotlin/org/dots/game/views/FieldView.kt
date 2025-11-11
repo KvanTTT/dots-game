@@ -45,6 +45,7 @@ import org.dots.game.core.getSortedClosurePositions
 import org.dots.game.core.getStrongConnectionLinePositions
 import org.dots.game.core.squareDistanceTo
 import org.dots.game.maxFieldDimension
+import org.dots.game.platform
 import kotlin.math.round
 
 private val borderPaddingRatio = 2.0f
@@ -142,7 +143,8 @@ fun FieldView(
                                 pointerFieldPosition = event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
                             }
                             PointerEventType.Press -> {
-                                if (event.buttons.isPrimaryPressed) {
+                                // Mobile platforms don't support `isPrimaryPressed` (at least Android)
+                                if (platform.isMobile || event.buttons.isPrimaryPressed) {
                                     val fieldPosition =
                                         event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
                                     if (fieldPosition != null) {
