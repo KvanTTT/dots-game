@@ -82,10 +82,14 @@ kotlin {
         desktopTest.dependencies {
             implementation(compose.desktop.currentOs)
         }
-        all {
-            languageSettings.enableLanguageFeature("ContextParameters")
-            languageSettings.enableLanguageFeature("ExpectActualClasses")
-        }
+    }
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            listOf(
+                "-Xcontext-parameters",
+                "-Xexpect-actual-classes",
+            )
+        )
     }
 }
 
