@@ -1,5 +1,7 @@
 package org.dots.game
 
+import kotlin.math.abs
+
 data class LineColumn(val line: Int, val column: Int) {
     override fun toString(): String {
         return "$line:$column"
@@ -51,4 +53,8 @@ fun Int.getLineColumn(lineOffsets: List<Int>): LineColumn {
  */
 fun Double.toNeatNumber(): Number {
     return if (this % 1 == 0.0) toInt() else this
+}
+
+fun Double.isAlmostEqual(other: Double): Boolean {
+    return abs(this - other) < 1e-9
 }

@@ -55,8 +55,8 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
         var gameTreeViewData: GameTreeViewData by remember { mutableStateOf(GameTreeViewData(currentGame.gameTree)) }
 
         var currentGameTreeNode by remember { mutableStateOf<GameTreeNode?>(null) }
-        var player1Score by remember { mutableStateOf(0) }
-        var player2Score by remember { mutableStateOf(0) }
+        var player1Score by remember { mutableStateOf(0.0) }
+        var player2Score by remember { mutableStateOf(0.0) }
         var moveNumber by remember { mutableStateOf(0) }
         var showNewGameDialog by remember { mutableStateOf(false) }
         var openGameDialog by remember { mutableStateOf(false) }
@@ -73,8 +73,14 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
         var engineIsCalculating by remember { mutableStateOf(false) }
 
         fun updateCurrentNode() {
-            player1Score = getField().player1Score
-            player2Score = getField().player2Score
+            val field = getField()
+            if (field.rules.komi < 0) {
+                player1Score = field.player1Score - field.rules.komi
+                player2Score = field.player2Score.toDouble()
+            } else {
+                player1Score = field.player1Score.toDouble()
+                player2Score = field.player2Score + field.rules.komi
+            }
 
             val currentNode = getGameTree().currentNode
             currentGameTreeNode = currentNode
@@ -290,26 +296,25 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                     val player2Name = currentGame.player2Name ?: Player.Second.toString()
 
                     Text("$player1Name   ", color = uiSettings.playerFirstColor)
-                    Text(player1Score.toString(), color = uiSettings.playerFirstColor, fontWeight = FontWeight.Bold)
+                    Text(player1Score.toNeatNumber().toString(), color = uiSettings.playerFirstColor, fontWeight = FontWeight.Bold)
 
                     Text(" : ")
 
                     Text(
-                        player2Score.toString(),
+                        player2Score.toNeatNumber().toString(),
                         color = uiSettings.playerSecondColor,
                         fontWeight = FontWeight.Bold
                     )
                     Text("   $player2Name", color = uiSettings.playerSecondColor)
 
                     if (uiSettings.developerMode) {
-                        val winnerColor: Color = if (player2Score > 0.0f) {
-                            uiSettings.playerSecondColor
-                        } else if (player2Score < 0.0f) {
-                            uiSettings.playerFirstColor
-                        } else {
-                            Color.Black
+                        val diff = player2Score - player1Score
+                        val winnerColor: Color = when {
+                            diff.isAlmostEqual(0.0) -> Color.Black
+                            diff > 0.0 -> uiSettings.playerSecondColor
+                            else -> uiSettings.playerFirstColor
                         }
-                        Text("  ($player2Score)", color = winnerColor)
+                        Text("  ($diff)", color = winnerColor)
                     }
                 }
                 Row {

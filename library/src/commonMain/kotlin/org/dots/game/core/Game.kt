@@ -1,6 +1,7 @@
 package org.dots.game.core
 
 import org.dots.game.ParsedNode
+import org.dots.game.isAlmostEqual
 import kotlin.Comparator
 import kotlin.reflect.KProperty
 
@@ -77,6 +78,11 @@ class Game(
             require(height == rules.height)
         } else {
             properties[Game::size] = GameProperty(rules.width to rules.height)
+        }
+
+        val komiProperty = properties[Game::komi]
+        if (komiProperty == null && !rules.komi.isAlmostEqual(0.0)) {
+            properties[Game::komi] = GameProperty(rules.komi)
         }
 
         fun initAddDots(first: Boolean) {

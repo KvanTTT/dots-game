@@ -111,6 +111,28 @@ class SgfWriterTests {
         )
     }
 
+    @Test
+    fun noSgfWithNonStandardRules() {
+        val field = Field.create(
+            Rules.create(
+                width = 10,
+                height = 10,
+                captureByBorder = true,
+                baseMode = BaseMode.AnySurrounding,
+                suicideAllowed = false,
+                initPosType = InitPosType.QuadrupleCross,
+                random = null,
+                komi = 0.5,
+            )
+        )
+        val games = Games.fromField(field)
+        // TODO: Support custom parameters in RU property
+        checkOutput(
+            "(;GM[40]FF[4]AP[DotsGame]SZ[10]KM[0.5]AB[cc][dd][gc][hd][gg][hh][cg][dh]AW[dc][cd][hc][gd][hg][gh][dg][ch])",
+            games
+        )
+    }
+
     private fun checkOutput(output: String, games: Games) {
         val sgf = SgfWriter.write(games)
         parseConvertAndCheck(sgf)
