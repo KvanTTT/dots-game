@@ -1,8 +1,25 @@
 # Dots game
 
 [![Build & Test](https://github.com/nikitos4683/dots-game/actions/workflows/gradle.yml/badge.svg)](https://github.com/nikitos4683/dots-game/actions/workflows/gradle.yml)
+[![Build & Publish WasmJS](https://github.com/KvanTTT/dots-game/actions/workflows/wasmjs-publish.yml/badge.svg)](https://github.com/KvanTTT/dots-game/actions/workflows/wasmjs-publish.yml)
 
 *The project's title is working and will be changed later.*
+
+## Try it in your browser!
+
+The game is available as a WebAssembly (WasmJS) application. The WasmJS build artifacts are automatically generated and published through GitHub Actions on every push to the main branch.
+
+To access the latest WasmJS build:
+1. Go to the [Actions tab](https://github.com/KvanTTT/dots-game/actions/workflows/wasmjs-publish.yml)
+2. Click on the latest successful workflow run
+3. Download the `wasmjs-distribution` artifact
+4. Extract the artifact and open `index.html` in a modern web browser
+
+Alternatively, you can build it locally:
+```bash
+./gradlew :composeApp:wasmJsBrowserDistribution
+```
+The output will be in `composeApp/build/dist/wasmJs/productionExecutable/`
 
 ![sample-screenshot](sample-screenshot.png)
 
