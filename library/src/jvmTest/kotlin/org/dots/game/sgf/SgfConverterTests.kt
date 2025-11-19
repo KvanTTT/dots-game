@@ -459,6 +459,22 @@ class SgfConverterTests {
     }
 
     @Test
+    fun remainingInitMoves() {
+        val gameTree = checkParseAndUnparse("(;GM[40]FF[4]SZ[20]AB[jj][kk][bb]AW[kj][jk])").single().gameTree
+        val field = gameTree.field
+        assertEquals(4, field.rules.initialMoves.size)
+        assertEquals(0, IgnoreParseNodeComparator.compare(MoveInfo(PositionXY(2, 2,), Player.First), field.rules.remainingInitMoves.single()))
+
+        // Check the remaining init dot is placed
+        with(field) {
+            assertEquals(Player.First, field.getPositionIfWithinBounds(2, 2)!!.getState().getActivePlayer())
+        }
+
+        // Check there are no real moves
+        assertEquals(gameTree.rootNode, gameTree.currentNode)
+    }
+
+    @Test
     fun kataGoRules() {
         val configuredRules = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[39:32]RU[dotsCaptureEmptyBase1sui1])").single().rules
         assertEquals(BaseMode.AnySurrounding, configuredRules.baseMode)

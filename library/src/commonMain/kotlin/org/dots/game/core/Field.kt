@@ -19,7 +19,7 @@ class Field {
 
         fun create(rules: Rules, onIncorrectInitialMove: (moveInfo: MoveInfo, incorrectMove: Boolean, moveNumber: Int) -> Unit = { _, _, _ -> }): Field {
             return Field(rules).apply {
-                for (moveInfo in rules.initialMoves) {
+                for (moveInfo in rules.initialMoves + rules.remainingInitMoves) {
                     val position = if (moveInfo.positionXY != null) {
                         val (x, y) = moveInfo.positionXY
                         getPositionIfWithinBounds(x, y)

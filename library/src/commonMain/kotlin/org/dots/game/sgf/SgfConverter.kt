@@ -157,6 +157,7 @@ class SgfConverter(
         val definedGameResult = game.result
         val gameTree = game.gameTree
         val field = gameTree.field
+        val rules = field.rules
 
         val gameResultProperty by lazy(LazyThreadSafetyMode.NONE) { getValue(RESULT_KEY) }
 
@@ -165,8 +166,8 @@ class SgfConverter(
             val handicapValueFromGameInfo = handicapProperty.value as? Int
             if (handicapValueFromGameInfo != null) {
                 val extraBlackDotsCount = field.moveSequence.drop(field.initialMovesCount).takeWhile { it.player == Player.First }.count()
-                val remainingFirstPlayerInitDotsCount = game.remainingInitMoves.count { it.player == Player.First }
-                val remainingSecondPlayerInitDotsCount = game.remainingInitMoves.count { it.player == Player.Second }
+                val remainingFirstPlayerInitDotsCount = rules.remainingInitMoves.count { it.player == Player.First }
+                val remainingSecondPlayerInitDotsCount = rules.remainingInitMoves.count { it.player == Player.Second }
                 val handicapFromField =
                     remainingFirstPlayerInitDotsCount - remainingSecondPlayerInitDotsCount + extraBlackDotsCount
                 if ((handicapValueFromGameInfo > 1 || handicapFromField > 1) && handicapValueFromGameInfo != handicapFromField) {
@@ -333,7 +334,7 @@ class SgfConverter(
             }
         }
 
-        val (rules, remainingInitMoves, specifiedRandomizationContradictsRecognition) = Rules.createAndDetectInitPos(
+        val (rules, specifiedRandomizationContradictsRecognition) = Rules.createAndDetectInitPos(
             width,
             height,
             captureByBorder = captureByBorder,
@@ -356,7 +357,7 @@ class SgfConverter(
 
         val gameTree = GameTree(field, sgfNode).also { it.memoizePaths = false }
 
-        return Game(gameTree, gameProperties, sgfGameTree, remainingInitMoves)
+        return Game(gameTree, gameProperties, sgfGameTree)
     }
 
     private fun convertMovesInfo(

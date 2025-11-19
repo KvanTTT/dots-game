@@ -9,7 +9,9 @@ import org.dots.game.core.recognizeInitPosType
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class InitPosesTests {
     @Test
@@ -188,6 +190,24 @@ class InitPosesTests {
     }
 
     @Test
+    fun recognizeRemainingInitMoves() {
+        val initialPosMoves = listOf(
+            MoveInfo(PositionXY(20, 16), Player.First),
+            MoveInfo(PositionXY(21, 16), Player.Second),
+            MoveInfo(PositionXY(21, 17), Player.First),
+            MoveInfo(PositionXY(20, 17), Player.Second),
+        )
+        val remainingMove = MoveInfo(PositionXY(25, 17), Player.Second)
+        val (initPosType, refinedInitMoves, isRandomized, remainingInitMoves) = recognizeInitPosType(
+            initialPosMoves + remainingMove, Rules.Standard.width, Rules.Standard.height
+        )
+        assertEquals(InitPosType.Cross, initPosType)
+        assertFalse(isRandomized)
+        assertEquals(initialPosMoves.toSet(), refinedInitMoves.toSet())
+        assertEquals(remainingMove, remainingInitMoves.single())
+    }
+
+    @Test
     fun recognizeDoubleCross() {
         val standardDoubleCrossX = 19
         val standardDoubleCrossY = 16
@@ -314,9 +334,10 @@ class InitPosesTests {
     }
 
     private fun checkRecognition(expectInitPosType: InitPosType, isRandom: Boolean, vararg actualMoveInfos: MoveInfo) {
-        val (actualInitPosType, actualIsRandom) = recognizeInitPosType(actualMoveInfos.toList(), Rules.Standard.width, Rules.Standard.height)
+        val (actualInitPosType, _, actualIsRandom, remainingInitMoves) = recognizeInitPosType(actualMoveInfos.toList(), Rules.Standard.width, Rules.Standard.height)
         assertEquals(expectInitPosType, actualInitPosType)
         assertEquals(isRandom, actualIsRandom)
+        assertTrue(remainingInitMoves.isEmpty())
     }
 
     private fun List<MoveInfo>.checkCross(x: Int, y: Int, startPlayer: Player = Player.First) {

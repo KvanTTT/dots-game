@@ -19,6 +19,7 @@ class Rules private constructor(
     val suicideAllowed: Boolean,
     val initialMoves: List<MoveInfo>,
     val initPosType: InitPosType,
+    val remainingInitMoves: List<MoveInfo>,
     val initPosIsRandom: Boolean,
     val komi: Double,
 ) : ClassSettings<Rules>() {
@@ -58,12 +59,13 @@ class Rules private constructor(
                 suicideAllowed,
                 initPosType.generateMoves(width, height, random)!!,
                 initPosType = initPosType,
+                remainingInitMoves = emptyList(),
                 initPosIsRandom = random != null,
                 komi = komi
             )
         }
 
-        data class RulesExtra(val rules: Rules, val remainingInitMoves: List<MoveInfo>, val specifiedRandomizationContradictsRecognition: Boolean)
+        data class RulesExtra(val rules: Rules, val specifiedRandomizationContradictsRecognition: Boolean)
 
         fun createAndDetectInitPos(
             width: Int,
@@ -75,7 +77,7 @@ class Rules private constructor(
             komi: Double,
             specifiedInitPosIsRandom: Boolean = false,
         ): RulesExtra {
-            val (initPosType, isRandomized, remainingInitMoves) = recognizeInitPosType(initialMoves, width, height)
+            val (initPosType, refinedInitialMoves, isRandomized, remainingInitMoves) = recognizeInitPosType(initialMoves, width, height)
             return RulesExtra(
                 Rules(
                     width,
@@ -83,12 +85,12 @@ class Rules private constructor(
                     captureByBorder,
                     baseMode,
                     suicideAllowed,
-                    initialMoves,
+                    refinedInitialMoves,
                     initPosType,
+                    remainingInitMoves,
                     isRandomized || specifiedInitPosIsRandom, // In rare cases random position matches strict position
                     komi
                 ),
-                remainingInitMoves,
                 specifiedRandomizationContradictsRecognition = isRandomized && !specifiedInitPosIsRandom
             )
         }
@@ -103,7 +105,7 @@ enum class InitPosType {
     QuadrupleCross,
     Custom;
 
-    data class RecognitionInfo(val initPosType: InitPosType, val isRandomized: Boolean, val remainingInitMoves: List<MoveInfo>)
+    data class RecognitionInfo(val initPosType: InitPosType, val refinedInitMoves: List<MoveInfo>, val isRandomized: Boolean, val remainingInitMoves: List<MoveInfo>)
 
     /**
      * The generator tries to obey notago and bbs implementations.
@@ -203,19 +205,19 @@ enum class InitPosType {
 }
 
 fun recognizeInitPosType(initialMoves: List<MoveInfo>, width: Int, height: Int): RecognitionInfo {
-    val recognizedMoves = mutableListOf<MoveInfo>()
+    val recognizedCrossMoves = mutableListOf<MoveInfo>()
 
     fun detectRandomization(expectedInitPosType: InitPosType): RecognitionInfo {
         val nonRandomInitPosMoves =
             expectedInitPosType.generateMoves(width, height, random = null)!!.sortedBy { it.positionXY!!.position }
-        recognizedMoves.sortBy { it.positionXY!!.position }
+        recognizedCrossMoves.sortBy { it.positionXY!!.position }
 
-        require(recognizedMoves.size == nonRandomInitPosMoves.size)
+        require(recognizedCrossMoves.size == nonRandomInitPosMoves.size)
         val remainingMoves = initialMoves.toMutableSet()
 
         var randomized = false
-        for (index in 0..<recognizedMoves.size) {
-            val recognizedMove = recognizedMoves[index]
+        for (index in 0..<recognizedCrossMoves.size) {
+            val recognizedMove = recognizedCrossMoves[index]
             val nonRandomInitPosMove = nonRandomInitPosMoves[index]
             if (!randomized && (recognizedMove.positionXY != nonRandomInitPosMove.positionXY || recognizedMove.player != nonRandomInitPosMove.player)) {
                 randomized = true
@@ -226,13 +228,13 @@ fun recognizeInitPosType(initialMoves: List<MoveInfo>, width: Int, height: Int):
         // If the recognized moves sequence is not random, it's not possible to detect whether it's generated or not
         // because randomizer can generate ordinary poses in rare cases
 
-        return RecognitionInfo(expectedInitPosType, randomized, remainingMoves.toList())
+        return RecognitionInfo(expectedInitPosType, recognizedCrossMoves, randomized, remainingMoves.toList())
     }
 
     return when (initialMoves.size) {
-        0 -> RecognitionInfo(Empty, false, emptyList())
+        0 -> RecognitionInfo(Empty, emptyList(), false, emptyList())
         1 -> {
-            recognizedMoves.add(initialMoves.single())
+            recognizedCrossMoves.add(initialMoves.single())
             detectRandomization(Single)
         }
         else -> {
@@ -259,7 +261,7 @@ fun recognizeInitPosType(initialMoves: List<MoveInfo>, width: Int, height: Int):
                 val xy1MoveInfo = movesArray[x][y + 1] ?: continue
                 if (xy1MoveInfo.player != secondPlayer) continue
 
-                recognizedMoves.apply {
+                recognizedCrossMoves.apply {
                     add(xyMoveInfo)
                     add(x1yMoveInfo)
                     add(x1y1MoveInfo)
@@ -273,11 +275,11 @@ fun recognizeInitPosType(initialMoves: List<MoveInfo>, width: Int, height: Int):
                 movesArray[x][y + 1] = null
             }
 
-            when (recognizedMoves.size) {
+            when (recognizedCrossMoves.size) {
                 4 -> detectRandomization(Cross)
                 8 -> detectRandomization(DoubleCross)
                 16 -> detectRandomization(QuadrupleCross)
-                else -> RecognitionInfo(Custom, false, initialMoves) // Assume custom poses always are not random
+                else -> RecognitionInfo(Custom, initialMoves,  false, emptyList()) // Assume custom poses always are not random
             }
         }
     }

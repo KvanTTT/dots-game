@@ -60,7 +60,6 @@ class Game(
     val gameTree: GameTree,
     properties: PropertiesMap = mutableMapOf(),
     parsedNode: ParsedNode? = null,
-    val remainingInitMoves: List<MoveInfo> = emptyList(),
 ) : PropertiesHolder(properties, parsedNode) {
     init {
         gameTree.game = this
@@ -139,7 +138,6 @@ class Game(
     val sgfFileFormat: Int? by PropertyDelegate()
     val charset: String? by PropertyDelegate()
     val size: Pair<Int, Int> by PropertyDelegate()
-    val extraRules: String? by PropertyDelegate()
     val player1AddDots: List<MoveInfo> by PropertyDelegate()
     val player2AddDots: List<MoveInfo> by PropertyDelegate()
     var appInfo: AppInfo? by PropertyDelegate()
