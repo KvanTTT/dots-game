@@ -211,22 +211,22 @@ class SgfConverterTests {
     }
 
     @Test
-    fun requiredPropertiesMissing() {
+    fun majorPropertiesAreMissing() {
         assertTrue(
             parseConvertAndCheck(
                 "(;)", listOf(
                     LineColumnDiagnostic(
-                        "Property GM (Game Mode) should be specified.",
+                        "Property GM (Game Mode) must be specified.",
                         LineColumn(1, 3),
                         DiagnosticSeverity.Error
                     ),
                     LineColumnDiagnostic(
-                        "Property FF (File Format) should be specified.",
+                        "Property FF (File Format) is recommended to be specified.",
                         LineColumn(1, 3),
-                        DiagnosticSeverity.Error
+                        DiagnosticSeverity.Warning
                     ),
                     LineColumnDiagnostic(
-                        "Property SZ (Size) should be specified.",
+                        "Property SZ (Size) must be specified.",
                         LineColumn(1, 3),
                         DiagnosticSeverity.Critical
                     ),

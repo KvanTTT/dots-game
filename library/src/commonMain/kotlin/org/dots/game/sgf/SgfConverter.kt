@@ -258,7 +258,7 @@ class SgfConverter(
 
         // Report only properties that should be specified
         gameInfoProperties.reportPropertyIfNotSpecified(GAME_MODE_KEY, sgfNode, DiagnosticSeverity.Error)
-        gameInfoProperties.reportPropertyIfNotSpecified(FILE_FORMAT_KEY, sgfNode, DiagnosticSeverity.Error)
+        gameInfoProperties.reportPropertyIfNotSpecified(FILE_FORMAT_KEY, sgfNode, DiagnosticSeverity.Warning)
 
         val sizeProperty = gameInfoProperties[SIZE_KEY]
         val width: Int?
@@ -490,7 +490,7 @@ class SgfConverter(
     ) {
         if (this[propertyKey] == null) {
             propertyInfos.getValue(propertyKey).reportPropertyDiagnostic(
-                "should be specified.",
+                if (severity >= DiagnosticSeverity.Error) "must be specified." else "is recommended to be specified.",
                 TextSpan(node.semicolon.textSpan.end, 0),
                 severity
             )
