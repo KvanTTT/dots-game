@@ -16,7 +16,7 @@ import org.dots.game.core.GameResult
 import org.dots.game.core.GameTree
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Games
-import org.dots.game.core.KataGoDotsRules
+import org.dots.game.core.KataGoDotsExtraRules
 import org.dots.game.core.Label
 import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
@@ -50,6 +50,7 @@ import org.dots.game.sgf.SgfMetaInfo.sgfPropertyInfoToKey
 import org.dots.game.sgf.SgfMetaInfo.propertyInfos
 import org.dots.game.toNeatNumber
 import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 import kotlin.time.Duration
 import kotlin.time.measureTime
 
@@ -285,7 +286,7 @@ class SgfConverter(
             for (player2InitialMoveInfo in (gameInfoProperties.getPropertyValue<List<MoveInfo>>(PLAYER2_ADD_DOTS_KEY)
                 ?: emptyList())) {
                 if (removeAll { it.positionXY == player2InitialMoveInfo.positionXY }) {
-                    val (propertyInfo, textSpan) = player2InitialMoveInfo.parsedNode as PropertyInfoAndTextSpan
+                    val (propertyInfo, textSpan) = player2InitialMoveInfo.parsedNode as SgfPropertyInfoAndTextSpan
                     propertyInfo.reportPropertyDiagnostic(
                         "value `${textSpan.getText()}` overwrites one the previous position of first player ${
                             propertyInfos.getValue(PLAYER1_ADD_DOTS_KEY).getFullName()
@@ -300,34 +301,51 @@ class SgfConverter(
 
         val gameProperties = transformSgfToGameProperties(gameInfoProperties)
 
+        var captureByBorder = Rules.Standard.captureByBorder
         var baseMode = Rules.Standard.baseMode
         var suicideAllowed = Rules.Standard.suicideAllowed
-        var initPosIsRandom: Boolean? = null
+        var initPosIsRandom: Boolean = Rules.Standard.initPosIsRandom
 
         val rulesProperty = gameInfoProperties[SgfMetaInfo.RULES_KEY]
-        if ((gameInfoProperties[SgfMetaInfo.APP_INFO_KEY]?.value as? AppInfo)?.appType == AppType.Katago) {
-            rulesProperty?.let {
-                val kataGoExtraRules = tryParseKataGoExtraRules(it)
-                if (kataGoExtraRules != null) {
-                    baseMode = if (kataGoExtraRules.dotsCaptureEmptyBase) BaseMode.AnySurrounding else Rules.Standard.baseMode
-                    suicideAllowed = kataGoExtraRules.sui
-                    initPosIsRandom = kataGoExtraRules.startPosIsRandom
+        if (rulesProperty != null) {
+            when ((gameInfoProperties[SgfMetaInfo.APP_INFO_KEY]?.value as? AppInfo)?.appType) {
+                AppType.Katago -> {
+                    val kataGoExtraRules = tryParseKataGoExtraRules(rulesProperty)
+                    if (kataGoExtraRules != null) {
+                        baseMode =
+                            if (kataGoExtraRules.dotsCaptureEmptyBase) BaseMode.AnySurrounding else Rules.Standard.baseMode
+                        suicideAllowed = kataGoExtraRules.sui
+                        initPosIsRandom = kataGoExtraRules.startPosIsRandom
+                    }
                 }
+
+                AppType.DotsGame -> {
+                    val thisAppExtraRules = tryParseThisAppExtraRules(rulesProperty)
+                    if (thisAppExtraRules != null) {
+                        captureByBorder = thisAppExtraRules.captureByBorder
+                        baseMode = thisAppExtraRules.baseMode
+                        suicideAllowed = thisAppExtraRules.suicideAllowed
+                        initPosIsRandom = thisAppExtraRules.startPosIsRandom
+                    }
+                }
+
+                else -> {}
             }
         }
 
-        val (rules, remainingInitMoves) = Rules.createAndDetectInitPos(
+        val (rules, remainingInitMoves, specifiedRandomizationContradictsRecognition) = Rules.createAndDetectInitPos(
             width,
             height,
-            captureByBorder = false,
+            captureByBorder = captureByBorder,
             baseMode = baseMode,
             suicideAllowed = suicideAllowed,
             initialMoves = initialMoves,
-            komi = gameProperties[Game::komi]?.value as? Double ?: 0.0
+            komi = gameProperties[Game::komi]?.value as? Double ?: 0.0,
+            specifiedInitPosIsRandom = initPosIsRandom
         )
-        if (rules.initPosIsRandom && initPosIsRandom == false) {
+        if (specifiedRandomizationContradictsRecognition) {
             rulesProperty?.info?.reportPropertyDiagnostic(
-                "Random `${rules.initPosType}` is detected but strict is expected according to extra rules.",
+                "specifies strict `${rules.initPosType}` but random is detected.",
                 rulesProperty.node.textSpan,
                 DiagnosticSeverity.Warning,
             )
@@ -354,7 +372,7 @@ class SgfConverter(
             gameTree.addChild(gameProperties, sgfNode) { moveInfo, moveResult ->
                 when (moveResult) {
                     is GameIsAlreadyOverIllegalMove -> {
-                        val (propertyInfo, textSpan) = moveInfo.parsedNode as PropertyInfoAndTextSpan
+                        val (propertyInfo, textSpan) = moveInfo.parsedNode as SgfPropertyInfoAndTextSpan
                         propertyInfo.reportPropertyDiagnostic(
                             "is defined (`${textSpan.getText()}`), however the game is already over with the result: ${field.gameResult}",
                             textSpan,
@@ -404,7 +422,7 @@ class SgfConverter(
     }
 
     private fun MoveInfo.reportPositionThatViolatesRules(withinBounds: Boolean, width: Int, height: Int, currentMoveNumber: Int) {
-        val (propertyInfo, textSpan) = parsedNode as PropertyInfoAndTextSpan
+        val (propertyInfo, textSpan) = parsedNode as SgfPropertyInfoAndTextSpan
         val errorMessageSuffix = if (!withinBounds) {
             "The position $positionXY is out of bounds $width:$height"
         } else {
@@ -708,7 +726,7 @@ class SgfConverter(
     }
 
     private fun PropertyValueToken.convertMoveInfo(propertyInfo: SgfPropertyInfo): MoveInfo? {
-        val propertyInfoAndTextSpan = PropertyInfoAndTextSpan(propertyInfo, TextSpan(textSpan.start, value.length))
+        val sgfPropertyInfoAndTextSpan = SgfPropertyInfoAndTextSpan(propertyInfo, TextSpan(textSpan.start, value.length))
 
         val externalFinishReason = if (value.isEmpty()) {
             ExternalFinishReason.Grounding
@@ -717,7 +735,7 @@ class SgfConverter(
         }
 
         return if (externalFinishReason != null) {
-            MoveInfo.createFinishingMove(propertyInfo.getPlayer(), externalFinishReason, propertyInfoAndTextSpan)
+            MoveInfo.createFinishingMove(propertyInfo.getPlayer(), externalFinishReason, sgfPropertyInfoAndTextSpan)
         } else {
             val positionXY = convertCoordinates(propertyInfo, 0).toPositionXY()
 
@@ -745,7 +763,7 @@ class SgfConverter(
             }
 
             positionXY?.let {
-                MoveInfo(it, propertyInfo.getPlayer(), propertyInfoAndTextSpan)
+                MoveInfo(it, propertyInfo.getPlayer(), sgfPropertyInfoAndTextSpan)
             }
         }
     }
@@ -876,14 +894,12 @@ class SgfConverter(
         }
     }
 
-
-    private fun tryParseKataGoExtraRules(sgfRulesProperty: SgfProperty<*>): KataGoDotsRules? {
+    private fun tryParseKataGoExtraRules(sgfRulesProperty: SgfProperty<*>): KataGoDotsExtraRules? {
         val propertyInfo = sgfRulesProperty.info
-        val sgfPropertyNode = sgfRulesProperty.node
 
-        val propertyValueNode = sgfPropertyNode.value.firstOrNull() ?: return null
-        val propertyValueToken = propertyValueNode.propertyValueToken
-        val propertyValue = propertyValueNode.propertyValueToken.value
+        val propertyValueToken = sgfRulesProperty.node.value.firstOrNull()?.propertyValueToken ?: return null
+        val propertyStart = propertyValueToken.textSpan.start
+        val propertyValue = propertyValueToken.value
 
         var currentIndex = 0
 
@@ -905,10 +921,9 @@ class SgfConverter(
                     return element == '1'
                 }
                 else -> {
-                    val textSpan = TextSpan(propertyValueToken.textSpan.start + currentIndex, if (element == null) 0 else 1)
                     propertyInfo.reportPropertyDiagnostic(
                         "Invalid value `$element`. Expected: `0` or `1`.",
-                        textSpan,
+                        TextSpan(propertyStart + currentIndex, if (element == null) 0 else 1),
                         DiagnosticSeverity.Error
                     )
                     return null
@@ -922,7 +937,7 @@ class SgfConverter(
 
         while (currentIndex < propertyValue.length) {
             when {
-                tryParseKey(KataGoDotsRules::dotsCaptureEmptyBase) -> {
+                tryParseKey(KataGoDotsExtraRules::dotsCaptureEmptyBase) -> {
                     val value = tryParseBooleanValue()
                     if (value != null) {
                         dotsCaptureEmptyBase = value
@@ -930,7 +945,7 @@ class SgfConverter(
                         break
                     }
                 }
-                tryParseKey(KataGoDotsRules::sui) -> {
+                tryParseKey(KataGoDotsExtraRules::sui) -> {
                     val value = tryParseBooleanValue()
                     if (value != null) {
                         suicideAllowed = value
@@ -938,7 +953,7 @@ class SgfConverter(
                         break
                     }
                 }
-                tryParseKey(KataGoDotsRules::startPosIsRandom) -> {
+                tryParseKey(KataGoDotsExtraRules::startPosIsRandom) -> {
                     val value = tryParseBooleanValue()
                     if (value != null) {
                         startPosIsRandom = value
@@ -947,7 +962,7 @@ class SgfConverter(
                     }
                 }
                 else -> {
-                    val errorTextSpan = TextSpan(propertyValueToken.textSpan.start + currentIndex, propertyValue.length - currentIndex)
+                    val errorTextSpan = TextSpan(propertyStart + currentIndex, propertyValue.length - currentIndex)
                     propertyInfo.reportPropertyDiagnostic(
                         "Unrecognized KataGo key `${errorTextSpan.getText()}`.",
                         errorTextSpan,
@@ -958,10 +973,115 @@ class SgfConverter(
             }
         }
 
-        return KataGoDotsRules(dotsCaptureEmptyBase, suicideAllowed, startPosIsRandom)
+        return KataGoDotsExtraRules(dotsCaptureEmptyBase, suicideAllowed, startPosIsRandom)
     }
 
-    private class PropertyInfoAndTextSpan(val propertyInfo: SgfPropertyInfo, textSpan: TextSpan) : ParsedNode(textSpan) {
+    private fun tryParseThisAppExtraRules(sgfRulesProperty: SgfProperty<*>): ExtraRules? {
+        val propertyInfo = sgfRulesProperty.info
+
+        val propertyValueToken = sgfRulesProperty.node.value.firstOrNull()?.propertyValueToken ?: return null
+        val propertyStart = propertyValueToken.textSpan.start
+        val propertyValue = propertyValueToken.value
+
+        var currentIndex = 0
+        val subproperties = mutableMapOf<KProperty1<Rules, *>, Any?>()
+
+        do {
+            val commaOrEndIndex = propertyValue.indexOf(',', currentIndex).let {
+                if (it == -1) propertyValue.length else it
+            }
+            val subPropertyWithValue = propertyValue.subSequence(currentIndex, commaOrEndIndex)
+
+            val equalsIndex = subPropertyWithValue.indexOf('=')
+            val subPropertyKey: CharSequence
+            val subPropertyValue: CharSequence
+
+            if (equalsIndex == -1) {
+                subPropertyKey = subPropertyWithValue
+                subPropertyValue = ""
+            } else {
+                subPropertyKey = subPropertyWithValue.substring(0, equalsIndex)
+                subPropertyValue = subPropertyWithValue.substring(equalsIndex + 1)
+            }
+
+            val subProperty = ruleNameToExtraProperty[subPropertyKey]
+            val subPropertyGlobalIndex = propertyStart + currentIndex
+
+            if (subproperties[subProperty] != null) {
+                propertyInfo.reportPropertyDiagnostic("has duplicated key `$subPropertyKey`.",
+                    TextSpan(propertyStart + currentIndex, subPropertyKey.length),
+                    DiagnosticSeverity.Warning
+                )
+            }
+            when (subProperty) {
+                Rules::captureByBorder,
+                Rules::suicideAllowed,
+                Rules::initPosIsRandom -> {
+                    if (equalsIndex != -1) {
+                        when (subPropertyValue) {
+                            "0", "1" -> {
+                                subproperties[subProperty] = subPropertyValue == "1"
+                            }
+
+                            else -> {
+                                propertyInfo.reportPropertyDiagnostic(
+                                    "has key `$subPropertyKey` with invalid value `$subPropertyValue`. Expected: `0` or `1`.",
+                                    TextSpan(
+                                        subPropertyGlobalIndex + equalsIndex + 1,
+                                        subPropertyValue.length
+                                    ),
+                                    DiagnosticSeverity.Error
+                                )
+                            }
+                        }
+                    } else {
+                        subproperties[subProperty] = true
+                    }
+                }
+                Rules::baseMode -> {
+                    if (equalsIndex != -1) {
+                        val intValue = subPropertyValue.toIntOrNull()
+                        val parsedBaseMode = BaseMode.entries.firstOrNull { it.ordinal == intValue }
+                        if (parsedBaseMode != null) {
+                            subproperties[subProperty] = parsedBaseMode
+                        } else {
+                            propertyInfo.reportPropertyDiagnostic(
+                                "has key `$subPropertyKey` with invalid or out of range value `$subPropertyValue`. Expected: 0, 1, 2.",
+                                TextSpan(subPropertyGlobalIndex + equalsIndex + 1, subPropertyValue.length),
+                                DiagnosticSeverity.Error
+                            )
+                        }
+                    } else {
+                        propertyInfo.reportPropertyDiagnostic(
+                            "has uninitialized value for `$subPropertyKey`. Expected: 0, 1, 2.",
+                            TextSpan(subPropertyGlobalIndex, subPropertyKey.length),
+                            DiagnosticSeverity.Error
+                        )
+                    }
+                }
+                else -> {
+                    if (subPropertyKey.isNotEmpty() || equalsIndex != -1) {
+                        propertyInfo.reportPropertyDiagnostic(
+                            "has unrecognized or unspecified key `$subPropertyKey`.",
+                            TextSpan(subPropertyGlobalIndex, subPropertyKey.length),
+                            DiagnosticSeverity.Error
+                        )
+                    }
+                }
+            }
+
+            currentIndex = commaOrEndIndex + 1
+        } while (currentIndex < propertyValue.length)
+
+        return ExtraRules(
+            subproperties[Rules::captureByBorder]?.let { it as Boolean } ?: Rules.Standard.captureByBorder,
+            subproperties[Rules::baseMode]?.let { it as BaseMode } ?: Rules.Standard.baseMode,
+            subproperties[Rules::suicideAllowed]?.let { it as Boolean } ?: Rules.Standard.suicideAllowed,
+            subproperties[Rules::initPosIsRandom]?.let { it as Boolean } ?: Rules.Standard.initPosIsRandom
+        )
+    }
+
+    private class SgfPropertyInfoAndTextSpan(val propertyInfo: SgfPropertyInfo, textSpan: TextSpan) : ParsedNode(textSpan) {
         operator fun component1(): SgfPropertyInfo = propertyInfo
         operator fun component2(): TextSpan = textSpan
     }

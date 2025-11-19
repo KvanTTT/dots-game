@@ -159,7 +159,7 @@ class Field {
                 MoveInfo(it.positionXY?.transform(transformType, width, height), it.player, it.externalFinishReason, parsedNode = it.parsedNode)
             },
             komi = rules.komi,
-        ).first)
+        ).rules)
         newField.initialMovesCount = initialMovesCount
 
         for (posIndex in 0..<dots.size - 1) {

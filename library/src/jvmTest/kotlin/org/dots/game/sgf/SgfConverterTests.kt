@@ -503,13 +503,69 @@ class SgfConverterTests {
 
         val randomInitPosFromMovesButNotRandomFromRules = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[4]RU[startPosIsRandom0]AB[cb][bc]AW[bb][cc])", listOf(
             LineColumnDiagnostic(
-                "Property RU (Rules) Random `Cross` is detected but strict is expected according to extra rules.",
+                "Property RU (Rules) specifies strict `Cross` but random is detected.",
                 LineColumn(1, 29),
                 DiagnosticSeverity.Warning
             )
         )).single().rules
         assertEquals(InitPosType.Cross, randomInitPosFromMovesButNotRandomFromRules.initPosType)
         assertTrue(randomInitPosFromMovesButNotRandomFromRules.initPosIsRandom)
+    }
+
+    @Test
+    fun thisAppRulesCorrect() {
+        val defaultRules = checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[])").single().rules
+        assertEquals(Rules.Standard.captureByBorder, defaultRules.captureByBorder)
+        assertEquals(Rules.Standard.suicideAllowed, defaultRules.suicideAllowed)
+        assertEquals(Rules.Standard.baseMode, defaultRules.baseMode)
+        assertEquals(Rules.Standard.initPosIsRandom, defaultRules.initPosIsRandom)
+
+        val rules = checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[Border,Suicide=0,BaseMode=2,StartIsRandom=1,,])").single().rules
+        assertTrue(rules.captureByBorder)
+        assertFalse(rules.suicideAllowed)
+        assertEquals(BaseMode.AllOpponentDots, rules.baseMode)
+        assertTrue(rules.initPosIsRandom)
+    }
+
+    @Test
+    fun thisAppRulesIncorrect() {
+        checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[IncorrectKey=1,Suicide=0,IncorrectKey2])", listOf(
+            LineColumnDiagnostic("Property RU (Rules) has unrecognized or unspecified key `IncorrectKey`.", LineColumn(1, 38), DiagnosticSeverity.Error),
+            LineColumnDiagnostic("Property RU (Rules) has unrecognized or unspecified key `IncorrectKey2`.", LineColumn(1, 63), DiagnosticSeverity.Error),
+        )).single().rules
+
+        checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[Suicide=IncorrectBooleanValue,Border=1,BaseMode=IncorrectIntValue])", listOf(
+            LineColumnDiagnostic("Property RU (Rules) has key `Suicide` with invalid value `IncorrectBooleanValue`. Expected: `0` or `1`.", LineColumn(1, 46), DiagnosticSeverity.Error),
+            LineColumnDiagnostic("Property RU (Rules) has key `BaseMode` with invalid or out of range value `IncorrectIntValue`. Expected: 0, 1, 2.", LineColumn(1, 86), DiagnosticSeverity.Error),
+        )).single().rules
+
+        checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[BaseMode=,Border=1])", listOf(
+            LineColumnDiagnostic(
+                "Property RU (Rules) has key `BaseMode` with invalid or out of range value ``. Expected: 0, 1, 2.",
+                LineColumn(1, 47), DiagnosticSeverity.Error
+            )
+        ))
+
+        checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[Border=0,Border=1])", listOf(
+            LineColumnDiagnostic(
+                "Property RU (Rules) has duplicated key `Border`.",
+                LineColumn(1, 47), DiagnosticSeverity.Warning
+            )
+        ))
+
+        checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[=0])", listOf(
+            LineColumnDiagnostic(
+                "Property RU (Rules) has unrecognized or unspecified key ``.",
+                LineColumn(1, 38), DiagnosticSeverity.Error
+            )
+        ))
+
+        checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[StartIsRandom=0]AB[cb][bc]AW[bb][cc])", listOf(
+            LineColumnDiagnostic(
+                "Property RU (Rules) specifies strict `Cross` but random is detected.",
+                LineColumn(1, 35), DiagnosticSeverity.Warning
+            )
+        ))
     }
 }
 

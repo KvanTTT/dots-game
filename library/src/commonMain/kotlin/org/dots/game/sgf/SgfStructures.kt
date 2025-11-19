@@ -1,9 +1,11 @@
 package org.dots.game.sgf
 
+import org.dots.game.core.BaseMode
 import org.dots.game.core.Game
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Player
 import org.dots.game.core.PropertiesHolder
+import org.dots.game.core.Rules
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_ADD_DOTS_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_MOVE_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER1_NAME_KEY
@@ -18,6 +20,7 @@ import org.dots.game.sgf.SgfMetaInfo.PLAYER2_TEAM_KEY
 import org.dots.game.sgf.SgfMetaInfo.PLAYER2_TIME_LEFT_KEY
 import org.dots.game.sgf.SgfMetaInfo.sgfPropertyInfoToKey
 import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 
 const val SUPPORTED_FILE_FORMAT = 4
 
@@ -218,3 +221,19 @@ fun <T> Map<String, SgfProperty<*>>.getPropertyValue(propertyKey: String): T? {
     @Suppress("UNCHECKED_CAST")
     return this[propertyKey]?.value as? T
 }
+
+data class ExtraRules(
+    val captureByBorder: Boolean,
+    val baseMode: BaseMode,
+    val suicideAllowed: Boolean,
+    val startPosIsRandom: Boolean,
+)
+
+val ruleExtraPropertyToName: Map<KProperty1<Rules, *>, String> = buildMap {
+    this[Rules::captureByBorder] = "Border"
+    this[Rules::baseMode] = "BaseMode"
+    this[Rules::suicideAllowed] = "Suicide"
+    this[Rules::initPosIsRandom] = "StartIsRandom"
+}
+
+val ruleNameToExtraProperty: Map<String, KProperty1<Rules, *>> = ruleExtraPropertyToName.entries.associateBy({ it.value }) { it.key }

@@ -137,7 +137,7 @@ actual class KataGoDotsEngine private constructor(
 
         if (syncType == FullSync) {
             require(!sendMessage("boardsize ${field.width}:${field.height}").isError)
-            require(!sendMessage("kata-set-rule ${KataGoDotsRules::dotsCaptureEmptyBase.name} ${rules.baseMode == BaseMode.AnySurrounding}").isError)
+            require(!sendMessage("kata-set-rule ${KataGoDotsExtraRules::dotsCaptureEmptyBase.name} ${rules.baseMode == BaseMode.AnySurrounding}").isError)
             require(!sendMessage("kata-set-rule suicide ${rules.suicideAllowed}").isError)
             require(!sendMessage("komi ${rules.komi}").isError)
 
@@ -213,7 +213,7 @@ actual class KataGoDotsEngine private constructor(
                 "dots" -> {
                     require(value.toBoolean())
                 }
-                KataGoDotsRules::dotsCaptureEmptyBase.name -> {
+                KataGoDotsExtraRules::dotsCaptureEmptyBase.name -> {
                     val engineCaptureEmptyBase = value.toBoolean()
                     val isSame = when (rules.baseMode) {
                         BaseMode.AtLeastOneOpponentDot -> !engineCaptureEmptyBase

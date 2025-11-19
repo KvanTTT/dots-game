@@ -5,6 +5,7 @@ import org.dots.game.LineColumn
 import org.dots.game.LineColumnDiagnostic
 import org.dots.game.core.*
 import org.dots.game.core.GameTree.NodeKind
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -79,7 +80,7 @@ class SgfWriterTests {
         ))
 
         checkOutput(
-            "(;GM[40]FF[4]AP[DotsGame]SZ[39:32]AB[tp][uq]AW[up][tq];B[ef]W[gg]BL[300]WL[200]C[Some comment]LB[jj:label][kj:]CR[oj]SQ[oo])",
+            "(;GM[40]FF[4]AP[$ThisAppName]SZ[39:32]AB[tp][uq]AW[up][tq];B[ef]W[gg]BL[300]WL[200]C[Some comment]LB[jj:label][kj:]CR[oj]SQ[oo])",
             games
         )
     }
@@ -95,7 +96,7 @@ class SgfWriterTests {
         assertEquals(NodeKind.New,gameTree.addChild(MoveInfo.createFinishingMove(Player.Second, ExternalFinishReason.Grounding)))
 
         checkOutput(
-            "(;GM[40]FF[4]AP[DotsGame]SZ[39:32]AB[tp][uq]AW[up][tq]RE[B+2];B[jj];W[])",
+            "(;GM[40]FF[4]AP[$ThisAppName]SZ[39:32]AB[tp][uq]AW[up][tq]RE[B+2];B[jj];W[])",
             games
         )
 
@@ -106,7 +107,7 @@ class SgfWriterTests {
 
         // Check that secondary branches don't affect the result of the game
         checkOutput(
-            "(;GM[40]FF[4]AP[DotsGame]SZ[39:32]AB[tp][uq]AW[up][tq]RE[B+2];B[jj](;W[])(;W[tt];B[resign]))",
+            "(;GM[40]FF[4]AP[$ThisAppName]SZ[39:32]AB[tp][uq]AW[up][tq]RE[B+2];B[jj](;W[])(;W[tt];B[resign]))",
             games
         )
     }
@@ -121,14 +122,13 @@ class SgfWriterTests {
                 baseMode = BaseMode.AnySurrounding,
                 suicideAllowed = false,
                 initPosType = InitPosType.QuadrupleCross,
-                random = null,
+                random = Random(1),
                 komi = 0.5,
             )
         )
         val games = Games.fromField(field)
-        // TODO: Support custom parameters in RU property
         checkOutput(
-            "(;GM[40]FF[4]AP[DotsGame]SZ[10]KM[0.5]AB[cc][dd][gc][hd][gg][hh][cg][dh]AW[dc][cd][hc][gd][hg][gh][dg][ch])",
+            "(;GM[40]FF[4]AP[$ThisAppName]SZ[10]KM[0.5]RU[Border=1,BaseMode=1,Suicide=0,StartIsRandom=1]AB[dc][ed][gc][hd][fg][gh][cg][dh]AW[ec][dd][hc][gd][gg][fh][dg][ch])",
             games
         )
     }

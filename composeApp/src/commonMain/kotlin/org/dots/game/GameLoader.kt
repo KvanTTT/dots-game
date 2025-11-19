@@ -36,7 +36,7 @@ object GameLoader {
                                 suicideAllowed = rules?.suicideAllowed ?: Rules.Standard.suicideAllowed,
                                 initialMoves = emptyList(),
                                 komi = Rules.Standard.komi,
-                            ).first
+                            ).rules
                         }, diagnosticReporter
                     )
                     return LoadResult(inputType, content = pathOrContent, Games.fromField(field))

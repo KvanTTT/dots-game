@@ -2,8 +2,10 @@ package org.dots.game.core
 
 import org.dots.game.ParsedNode
 import org.dots.game.isAlmostEqual
+import org.dots.game.sgf.ruleExtraPropertyToName
 import kotlin.Comparator
 import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 
 typealias PropertiesMap = MutableMap<KProperty<*>, GameProperty<*>>
 
@@ -83,6 +85,35 @@ class Game(
         val komiProperty = properties[Game::komi]
         if (komiProperty == null && !rules.komi.isAlmostEqual(0.0)) {
             properties[Game::komi] = GameProperty(rules.komi)
+        }
+
+        val ruleProperty = properties[Game::rules]
+        if (ruleProperty == null && (properties[Game::appInfo]?.value as? AppInfo)?.appType == AppType.DotsGame) {
+            val extraRules = buildString {
+                fun appendIfNonStandard(kProperty: KProperty1<Rules, *>) {
+                    val value = kProperty.get(rules)!!
+                    if (value != kProperty.get(Rules.Standard)) {
+                        if (isNotEmpty())
+                            append(',')
+                        append(ruleExtraPropertyToName.getValue(kProperty))
+                        append('=')
+                        val intValue = when (value) {
+                            is Boolean -> if (value) 1 else 0
+                            is BaseMode -> value.ordinal
+                            else -> error("Not implemented type ${value::class.simpleName}")
+                        }
+                        append(intValue)
+                    }
+                }
+
+                appendIfNonStandard(Rules::captureByBorder)
+                appendIfNonStandard(Rules::baseMode)
+                appendIfNonStandard(Rules::suicideAllowed)
+                appendIfNonStandard(Rules::initPosIsRandom)
+            }
+            if (extraRules.isNotEmpty()) {
+                properties[Game::rules] = GameProperty(extraRules)
+            }
         }
 
         fun initAddDots(first: Boolean) {

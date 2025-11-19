@@ -63,6 +63,8 @@ class Rules private constructor(
             )
         }
 
+        data class RulesExtra(val rules: Rules, val remainingInitMoves: List<MoveInfo>, val specifiedRandomizationContradictsRecognition: Boolean)
+
         fun createAndDetectInitPos(
             width: Int,
             height: Int,
@@ -71,19 +73,24 @@ class Rules private constructor(
             suicideAllowed: Boolean,
             initialMoves: List<MoveInfo>,
             komi: Double,
-        ): Pair<Rules, List<MoveInfo>> {
-            val (initPosType, random, remainingInitMoves) = recognizeInitPosType(initialMoves, width, height)
-            return Rules(
-                width,
-                height,
-                captureByBorder,
-                baseMode,
-                suicideAllowed,
-                initialMoves,
-                initPosType,
-                random,
-                komi
-            ) to remainingInitMoves
+            specifiedInitPosIsRandom: Boolean = false,
+        ): RulesExtra {
+            val (initPosType, isRandomized, remainingInitMoves) = recognizeInitPosType(initialMoves, width, height)
+            return RulesExtra(
+                Rules(
+                    width,
+                    height,
+                    captureByBorder,
+                    baseMode,
+                    suicideAllowed,
+                    initialMoves,
+                    initPosType,
+                    isRandomized || specifiedInitPosIsRandom, // In rare cases random position matches strict position
+                    komi
+                ),
+                remainingInitMoves,
+                specifiedRandomizationContradictsRecognition = isRandomized && !specifiedInitPosIsRandom
+            )
         }
     }
 }
@@ -96,7 +103,7 @@ enum class InitPosType {
     QuadrupleCross,
     Custom;
 
-    data class RecognitionInfo(val initPosType: InitPosType, val randomized: Boolean, val remainingInitMoves: List<MoveInfo>)
+    data class RecognitionInfo(val initPosType: InitPosType, val isRandomized: Boolean, val remainingInitMoves: List<MoveInfo>)
 
     /**
      * The generator tries to obey notago and bbs implementations.
