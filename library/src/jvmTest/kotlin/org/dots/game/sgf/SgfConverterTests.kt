@@ -526,6 +526,15 @@ class SgfConverterTests {
         )).single().rules
         assertEquals(InitPosType.Cross, randomInitPosFromMovesButNotRandomFromRules.initPosType)
         assertTrue(randomInitPosFromMovesButNotRandomFromRules.initPosIsRandom)
+
+        val rulesWithDuplicatedKey = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[4]RU[sui1sui0])", listOf(
+            LineColumnDiagnostic(
+                "Property RU (Rules) has duplicated key `sui`.",
+                LineColumn(1, 36),
+                DiagnosticSeverity.Warning,
+            )
+        )).single().rules
+        assertFalse(rulesWithDuplicatedKey.suicideAllowed)
     }
 
     @Test

@@ -30,6 +30,8 @@ actual class KataGoDotsEngine private constructor(
         private const val GROUND_MOVE = "ground"
         private const val PLAYER1_MARKER = "P1"
         private const val PLAYER2_MARKER = "P2"
+        private const val SUICIDE_OPTION_NAME = "suicide"
+        private const val CAPTURE_EMPTY_BASE_OPTION_NAME = "dotsCaptureEmptyBase"
 
         val DEFAULT_KATA_GO_DOTS_DIR: String = Paths.get(System.getProperty("user.dir"), "src/desktopMain/resources/$KATA_GO_DOTS_APP_NAME").toString()
 
@@ -137,8 +139,8 @@ actual class KataGoDotsEngine private constructor(
 
         if (syncType == FullSync) {
             require(!sendMessage("boardsize ${field.width}:${field.height}").isError)
-            require(!sendMessage("kata-set-rule ${KataGoDotsExtraRules::dotsCaptureEmptyBase.name} ${rules.baseMode == BaseMode.AnySurrounding}").isError)
-            require(!sendMessage("kata-set-rule suicide ${rules.suicideAllowed}").isError)
+            require(!sendMessage("kata-set-rule $CAPTURE_EMPTY_BASE_OPTION_NAME ${rules.baseMode == BaseMode.AnySurrounding}").isError)
+            require(!sendMessage("kata-set-rule $SUICIDE_OPTION_NAME ${rules.suicideAllowed}").isError)
             require(!sendMessage("komi ${rules.komi}").isError)
 
             val startPosMovesPieces = mutableListOf<String>()
@@ -213,7 +215,7 @@ actual class KataGoDotsEngine private constructor(
                 "dots" -> {
                     require(value.toBoolean())
                 }
-                KataGoDotsExtraRules::dotsCaptureEmptyBase.name -> {
+                CAPTURE_EMPTY_BASE_OPTION_NAME -> {
                     val engineCaptureEmptyBase = value.toBoolean()
                     val isSame = when (rules.baseMode) {
                         BaseMode.AtLeastOneOpponentDot -> !engineCaptureEmptyBase
@@ -224,7 +226,7 @@ actual class KataGoDotsEngine private constructor(
                         return FullSync
                     }
                 }
-                "suicide" -> {
+                SUICIDE_OPTION_NAME -> {
                     if (rules.suicideAllowed != value.toBoolean()) {
                         return FullSync
                     }

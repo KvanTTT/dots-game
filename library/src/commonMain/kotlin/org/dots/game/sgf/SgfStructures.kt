@@ -222,7 +222,7 @@ fun <T> Map<String, SgfProperty<*>>.getPropertyValue(propertyKey: String): T? {
     return this[propertyKey]?.value as? T
 }
 
-data class ExtraRules(
+data class SgfExtraRules(
     val captureByBorder: Boolean,
     val baseMode: BaseMode,
     val suicideAllowed: Boolean,
@@ -236,4 +236,13 @@ val ruleExtraPropertyToName: Map<KProperty1<Rules, *>, String> = buildMap {
     this[Rules::initPosIsRandom] = "StartIsRandom"
 }
 
+val ruleExtraPropertyToKataGoName: Map<KProperty1<Rules, *>, String> = buildMap {
+    this[Rules::suicideAllowed] = "sui"
+    this[Rules::baseMode] = "dotsCaptureEmptyBase"
+    this[Rules::initPosIsRandom] = "startPosIsRandom"
+}
+
 val ruleNameToExtraProperty: Map<String, KProperty1<Rules, *>> = ruleExtraPropertyToName.entries.associateBy({ it.value }) { it.key }
+
+val ruleKataGoNameToExtraProperty: Map<String, KProperty1<Rules, *>> = ruleExtraPropertyToKataGoName.entries.associateBy({ it.value }) { it.key }
+

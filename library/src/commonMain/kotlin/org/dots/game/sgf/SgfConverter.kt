@@ -16,7 +16,6 @@ import org.dots.game.core.GameResult
 import org.dots.game.core.GameTree
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Games
-import org.dots.game.core.KataGoDotsExtraRules
 import org.dots.game.core.Label
 import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
@@ -49,6 +48,7 @@ import org.dots.game.sgf.SgfMetaInfo.UNKNOWN_WIN_GAME_RESULT
 import org.dots.game.sgf.SgfMetaInfo.sgfPropertyInfoToKey
 import org.dots.game.sgf.SgfMetaInfo.propertyInfos
 import org.dots.game.toNeatNumber
+import kotlin.collections.get
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 import kotlin.time.Duration
@@ -302,47 +302,24 @@ class SgfConverter(
 
         val gameProperties = transformSgfToGameProperties(gameInfoProperties)
 
-        var captureByBorder = Rules.Standard.captureByBorder
-        var baseMode = Rules.Standard.baseMode
-        var suicideAllowed = Rules.Standard.suicideAllowed
-        var initPosIsRandom: Boolean = Rules.Standard.initPosIsRandom
-
         val rulesProperty = gameInfoProperties[SgfMetaInfo.RULES_KEY]
-        if (rulesProperty != null) {
+        val sgfExtraRules = rulesProperty?.let {
             when ((gameInfoProperties[SgfMetaInfo.APP_INFO_KEY]?.value as? AppInfo)?.appType) {
-                AppType.Katago -> {
-                    val kataGoExtraRules = tryParseKataGoExtraRules(rulesProperty)
-                    if (kataGoExtraRules != null) {
-                        baseMode =
-                            if (kataGoExtraRules.dotsCaptureEmptyBase) BaseMode.AnySurrounding else Rules.Standard.baseMode
-                        suicideAllowed = kataGoExtraRules.sui
-                        initPosIsRandom = kataGoExtraRules.startPosIsRandom
-                    }
-                }
-
-                AppType.DotsGame -> {
-                    val thisAppExtraRules = tryParseThisAppExtraRules(rulesProperty)
-                    if (thisAppExtraRules != null) {
-                        captureByBorder = thisAppExtraRules.captureByBorder
-                        baseMode = thisAppExtraRules.baseMode
-                        suicideAllowed = thisAppExtraRules.suicideAllowed
-                        initPosIsRandom = thisAppExtraRules.startPosIsRandom
-                    }
-                }
-
-                else -> {}
+                AppType.Katago -> tryParseKataGoExtraRules(it)
+                AppType.DotsGame -> tryParseThisAppExtraRules(it)
+                else -> null
             }
         }
 
         val (rules, specifiedRandomizationContradictsRecognition) = Rules.createAndDetectInitPos(
             width,
             height,
-            captureByBorder = captureByBorder,
-            baseMode = baseMode,
-            suicideAllowed = suicideAllowed,
+            captureByBorder = sgfExtraRules?.captureByBorder ?: Rules.Standard.captureByBorder,
+            baseMode = sgfExtraRules?.baseMode ?: Rules.Standard.baseMode,
+            suicideAllowed = sgfExtraRules?.suicideAllowed ?: Rules.Standard.suicideAllowed,
             initialMoves = initialMoves,
             komi = gameProperties[Game::komi]?.value as? Double ?: 0.0,
-            specifiedInitPosIsRandom = initPosIsRandom
+            specifiedInitPosIsRandom = sgfExtraRules?.startPosIsRandom ?: Rules.Standard.initPosIsRandom,
         )
         if (specifiedRandomizationContradictsRecognition) {
             rulesProperty?.info?.reportPropertyDiagnostic(
@@ -895,7 +872,7 @@ class SgfConverter(
         }
     }
 
-    private fun tryParseKataGoExtraRules(sgfRulesProperty: SgfProperty<*>): KataGoDotsExtraRules? {
+    private fun tryParseKataGoExtraRules(sgfRulesProperty: SgfProperty<*>): SgfExtraRules? {
         val propertyInfo = sgfRulesProperty.info
 
         val propertyValueToken = sgfRulesProperty.node.value.firstOrNull()?.propertyValueToken ?: return null
@@ -903,81 +880,71 @@ class SgfConverter(
         val propertyValue = propertyValueToken.value
 
         var currentIndex = 0
+        val subproperties = mutableMapOf<KProperty1<Rules, *>, Any?>()
 
-        fun tryParseKey(property: KProperty<*>): Boolean {
-            val name = property.name
-            for (i in 0 until name.length) {
-                if (propertyValue.elementAtOrNull(currentIndex + i) != name[i]) {
-                    return false
+        subPropertiesLoop@ while (currentIndex < propertyValue.length) {
+            var propertyIsFound = false
+            namesLoop@ for ((key, subProperty) in ruleKataGoNameToExtraProperty) {
+                for (i in 0 until key.length) {
+                    if (propertyValue.elementAtOrNull(currentIndex + i) != key[i]) {
+                        continue@namesLoop
+                    }
                 }
-            }
-            currentIndex += name.length
-            return true
-        }
 
-        fun tryParseBooleanValue(): Boolean? {
-            when (val element = propertyValue.elementAtOrNull(currentIndex)) {
-                '0', '1' -> {
-                    currentIndex++
-                    return element == '1'
-                }
-                else -> {
-                    propertyInfo.reportPropertyDiagnostic(
-                        "Invalid value `$element`. Expected: `0` or `1`.",
-                        TextSpan(propertyStart + currentIndex, if (element == null) 0 else 1),
-                        DiagnosticSeverity.Error
+                if (subproperties[subProperty] != null) {
+                    propertyInfo.reportPropertyDiagnostic("has duplicated key `$key`.",
+                        TextSpan(propertyStart + currentIndex, key.length),
+                        DiagnosticSeverity.Warning
                     )
-                    return null
                 }
+
+                currentIndex += key.length
+
+                val value = when (val element = propertyValue.elementAtOrNull(currentIndex)) {
+                    '0', '1' -> {
+                        currentIndex++
+                        element == '1'
+                    }
+                    else -> {
+                        propertyInfo.reportPropertyDiagnostic(
+                            "Invalid value `$element`. Expected: `0` or `1`.",
+                            TextSpan(propertyStart + currentIndex, if (element == null) 0 else 1),
+                            DiagnosticSeverity.Error
+                        )
+                        break@subPropertiesLoop
+                    }
+                }
+
+                subproperties[subProperty] = when (subProperty) {
+                    Rules::initPosIsRandom,
+                    Rules::suicideAllowed -> value
+                    Rules::baseMode -> if (value) BaseMode.AnySurrounding else BaseMode.AtLeastOneOpponentDot
+                    else -> error("Unexpected property $subProperty")
+                }
+                propertyIsFound = true
+                break
+            }
+
+            if (!propertyIsFound) {
+                val errorTextSpan = TextSpan(propertyStart + currentIndex, propertyValue.length - currentIndex)
+                propertyInfo.reportPropertyDiagnostic(
+                    "Unrecognized KataGo key `${errorTextSpan.getText()}`.",
+                    errorTextSpan,
+                    DiagnosticSeverity.Error
+                )
+                break
             }
         }
 
-        var dotsCaptureEmptyBase = Rules.Standard.baseMode == BaseMode.AnySurrounding
-        var suicideAllowed = Rules.Standard.suicideAllowed
-        var startPosIsRandom = Rules.Standard.initPosIsRandom
-
-        while (currentIndex < propertyValue.length) {
-            when {
-                tryParseKey(KataGoDotsExtraRules::dotsCaptureEmptyBase) -> {
-                    val value = tryParseBooleanValue()
-                    if (value != null) {
-                        dotsCaptureEmptyBase = value
-                    } else {
-                        break
-                    }
-                }
-                tryParseKey(KataGoDotsExtraRules::sui) -> {
-                    val value = tryParseBooleanValue()
-                    if (value != null) {
-                        suicideAllowed = value
-                    } else {
-                        break
-                    }
-                }
-                tryParseKey(KataGoDotsExtraRules::startPosIsRandom) -> {
-                    val value = tryParseBooleanValue()
-                    if (value != null) {
-                        startPosIsRandom = value
-                    } else {
-                        break
-                    }
-                }
-                else -> {
-                    val errorTextSpan = TextSpan(propertyStart + currentIndex, propertyValue.length - currentIndex)
-                    propertyInfo.reportPropertyDiagnostic(
-                        "Unrecognized KataGo key `${errorTextSpan.getText()}`.",
-                        errorTextSpan,
-                        DiagnosticSeverity.Error
-                    )
-                    break
-                }
-            }
-        }
-
-        return KataGoDotsExtraRules(dotsCaptureEmptyBase, suicideAllowed, startPosIsRandom)
+        return SgfExtraRules(
+            captureByBorder = false,
+            subproperties[Rules::baseMode]?.let { it as BaseMode } ?: Rules.Standard.baseMode,
+            subproperties[Rules::suicideAllowed]?.let { it as Boolean } ?: Rules.Standard.suicideAllowed,
+            subproperties[Rules::initPosIsRandom]?.let { it as Boolean } ?: Rules.Standard.initPosIsRandom
+        )
     }
 
-    private fun tryParseThisAppExtraRules(sgfRulesProperty: SgfProperty<*>): ExtraRules? {
+    private fun tryParseThisAppExtraRules(sgfRulesProperty: SgfProperty<*>): SgfExtraRules? {
         val propertyInfo = sgfRulesProperty.info
 
         val propertyValueToken = sgfRulesProperty.node.value.firstOrNull()?.propertyValueToken ?: return null
@@ -1074,7 +1041,7 @@ class SgfConverter(
             currentIndex = commaOrEndIndex + 1
         } while (currentIndex < propertyValue.length)
 
-        return ExtraRules(
+        return SgfExtraRules(
             subproperties[Rules::captureByBorder]?.let { it as Boolean } ?: Rules.Standard.captureByBorder,
             subproperties[Rules::baseMode]?.let { it as BaseMode } ?: Rules.Standard.baseMode,
             subproperties[Rules::suicideAllowed]?.let { it as Boolean } ?: Rules.Standard.suicideAllowed,
