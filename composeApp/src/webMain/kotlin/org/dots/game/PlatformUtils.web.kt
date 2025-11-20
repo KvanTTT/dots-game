@@ -189,4 +189,17 @@ private object WasmVirtualFS {
     fun exists(path: String): Boolean = files.containsKey(path)
 }
 
-actual val platform: Platform = Platform.WEB
+class Web(os: OS) : Platform(os)
+
+actual val platform: Platform = run {
+    val userAgent = window.navigator.userAgent.lowercase()
+    val os = when {
+        userAgent.contains("android") -> OS.Android
+        userAgent.contains("iphone") || userAgent.contains("ipad") || userAgent.contains("ipod") -> OS.Native
+        userAgent.contains("win") -> OS.Windows
+        userAgent.contains("mac") -> OS.MacOS
+        userAgent.contains("linux") || userAgent.contains("x11") -> OS.Linux
+        else -> OS.Native
+    }
+    Web(os)
+}

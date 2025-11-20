@@ -143,8 +143,7 @@ fun FieldView(
                                 pointerFieldPosition = event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
                             }
                             PointerEventType.Press -> {
-                                // Mobile platforms don't support `isPrimaryPressed` (at least Android)
-                                if (platform.isMobile || event.buttons.isPrimaryPressed) {
+                                if (event.buttons.isPrimaryPressed || !platform.supportsPrimaryButton) {
                                     val fieldPosition =
                                         event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
                                     if (fieldPosition != null) {

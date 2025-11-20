@@ -161,4 +161,6 @@ private object AndroidPickedFiles {
     fun exists(path: String): Boolean = nameToUri.containsKey(path)
 }
 
-actual val platform: Platform = Platform.MOBILE_ANDROID
+object Android : Platform(OS.Android)
+
+actual val platform: Platform = Android

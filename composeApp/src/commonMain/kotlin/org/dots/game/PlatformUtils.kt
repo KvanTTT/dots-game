@@ -33,16 +33,22 @@ expect fun OpenFileDialog(
     onFileSelected: (String?) -> Unit,
 )
 
-enum class Platform {
-    DESKTOP_WINDOWS,
-    DESKTOP_MACOS,
-    DESKTOP_LINUX,
-    MOBILE_ANDROID,
-    MOBILE_IOS,
-    WEB;
+enum class OS {
+    Windows,
+    MacOS,
+    Linux,
+    Android,
+    Native,
+    Unknown,
+}
 
-    val isMobile: Boolean
-        get() = this == MOBILE_ANDROID || this == MOBILE_IOS
+abstract class Platform(val os: OS) {
+    val isMobile get() = os == OS.Android || os == OS.Native
+    val supportsPrimaryButton: Boolean get() = !isMobile && os != OS.Unknown
+
+    override fun toString(): String {
+        return "${this::class.simpleName} ($os)"
+    }
 }
 
 expect val platform: Platform
