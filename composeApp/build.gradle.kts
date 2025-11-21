@@ -12,6 +12,20 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+val generateBuildConstants by tasks.registering {
+    val outputDir = layout.projectDirectory.dir("src/commonMain/composeResources/files")
+    outputs.dir(outputDir)
+
+    doLast {
+        val file = outputDir.asFile.resolve("build_info")
+        file.parentFile.mkdirs()
+        val buildNumber = project.findProperty("buildNumber") as? String ?: ""
+        val buildDate = project.findProperty("buildDate") as? String ?: ""
+        val buildCommit = project.findProperty("buildHash") as? String ?: ""
+        file.writeText("$buildNumber,$buildDate,$buildCommit")
+    }
+}
+
 kotlin {
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
