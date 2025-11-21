@@ -48,23 +48,29 @@ jobs:
         add-job-summary: on-failure
 
     - name: Execute Library tests
-      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :library:jvmTest --no-daemon --stacktrace
+      shell: bash
+      run: ./gradlew :library:jvmTest --no-daemon --stacktrace
 
     - name: Compile Cli
-      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :cli:compileKotlin --no-daemon --stacktrace
+      shell: bash
+      run: ./gradlew :cli:compileKotlin --no-daemon --stacktrace
 
     - name: Execute App Desktop tests
-      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :composeApp:desktopTest --no-daemon --stacktrace
+      shell: bash
+      run: ./gradlew :composeApp:desktopTest --no-daemon --stacktrace
 
     - name: Compile App WasmJS
-      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :composeApp:compileKotlinWasmJs --no-daemon --stacktrace
+      shell: bash
+      run: ./gradlew :composeApp:compileKotlinWasmJs --no-daemon --stacktrace
 
     - name: Compile App Android
-      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :composeApp:compileDebugKotlinAndroid --no-daemon --stacktrace
+      shell: bash
+      run: ./gradlew :composeApp:compileDebugKotlinAndroid --no-daemon --stacktrace
 
     - name: Compile App Native
+      shell: bash
       if: runner.os == 'macOS' # It makes sense only on macOS, disable on other platforms to save resources
-      run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :composeApp:compileIosMainKotlinMetadata --no-daemon --stacktrace
+      run: ./gradlew :composeApp:compileIosMainKotlinMetadata --no-daemon --stacktrace
 
     - name: Publish test report
       if: always()
