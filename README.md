@@ -1,25 +1,50 @@
 # Dots game
 
 [![Build & Test](https://github.com/nikitos4683/dots-game/actions/workflows/gradle.yml/badge.svg)](https://github.com/nikitos4683/dots-game/actions/workflows/gradle.yml)
-[![Build & Publish WasmJS](https://github.com/KvanTTT/dots-game/actions/workflows/wasmjs-publish.yml/badge.svg)](https://github.com/KvanTTT/dots-game/actions/workflows/wasmjs-publish.yml)
+[![Build & Publish Distributions](https://github.com/KvanTTT/dots-game/actions/workflows/wasmjs-publish.yml/badge.svg)](https://github.com/KvanTTT/dots-game/actions/workflows/wasmjs-publish.yml)
 
 *The project's title is working and will be changed later.*
 
-## Try it in your browser!
+## Download and Run
 
-The game is available as a WebAssembly (WasmJS) application. The WasmJS build artifacts are automatically generated and published through GitHub Actions on every push to the main branch.
+The game is available in multiple formats with pre-built distributions automatically generated through GitHub Actions:
 
-To access the latest WasmJS build:
+### Web (WasmJS)
+
+Try the game directly in your browser without any installation:
 1. Go to the [Actions tab](https://github.com/KvanTTT/dots-game/actions/workflows/wasmjs-publish.yml)
 2. Click on the latest successful workflow run
 3. Download the `wasmjs-distribution` artifact
 4. Extract the artifact and open `index.html` in a modern web browser
 
-Alternatively, you can build it locally:
+**Build locally:**
 ```bash
 ./gradlew :composeApp:wasmJsBrowserDistribution
 ```
 The output will be in `composeApp/build/dist/wasmJs/productionExecutable/`
+
+### Desktop (JVM)
+
+Download native installers for your platform:
+1. Go to the [Actions tab](https://github.com/KvanTTT/dots-game/actions/workflows/wasmjs-publish.yml)
+2. Click on the latest successful workflow run
+3. Download the artifact for your platform:
+   - **Linux**: `desktop-Linux` (`.deb` package)
+   - **Windows**: `desktop-Windows` (`.msi` installer)
+   - **macOS**: `desktop-macOS` (`.dmg` installer)
+4. Install and run the application
+
+**Build locally:**
+```bash
+# Linux
+./gradlew :composeApp:packageDeb
+
+# Windows
+.\gradlew.bat :composeApp:packageMsi
+
+# macOS
+./gradlew :composeApp:packageDmg
+```
 
 ![sample-screenshot](sample-screenshot.png)
 
