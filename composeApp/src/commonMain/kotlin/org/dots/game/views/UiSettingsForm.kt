@@ -10,6 +10,7 @@ import androidx.compose.material.Card
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,7 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import org.dots.game.BuildInfo
 import org.dots.game.UiSettings
+import org.dots.game.getBuildInfo
 
 @Composable
 fun UiSettingsForm(
@@ -30,6 +33,10 @@ fun UiSettingsForm(
     var baseDrawMode by remember { mutableStateOf(EnumMode(uiSettings.baseDrawMode)) }
     var language by remember { mutableStateOf(EnumMode(uiSettings.language)) }
     var strings by remember { mutableStateOf(uiSettings.language.getStrings())}
+    var buildInfo by remember { mutableStateOf(BuildInfo.Local) }
+    LaunchedEffect(Unit) {
+        buildInfo = getBuildInfo()
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(470.dp).wrapContentHeight()) {
@@ -88,6 +95,10 @@ fun UiSettingsForm(
                         strings = language.selected.getStrings()
                         onUiSettingsChange(uiSettings.copy(language = it.selected))
                     }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(strings.version, Modifier.fillMaxWidth(configKeyTextFraction))
+                    Text("${buildInfo.version} (${buildInfo.date})")
                 }
             }
         }

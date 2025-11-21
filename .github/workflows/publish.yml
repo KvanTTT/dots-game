@@ -12,6 +12,10 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  MAJOR_VERSION: '1'
+  MINOR_VERSION: '0'
+
 jobs:
   publish-wasmjs:
     name: Publish WasmJS
@@ -37,27 +41,15 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           add-job-summary: on-failure
 
-      - name: Set Build Variables
-        id: build_vars
+      - name: Generate Build Info
         shell: bash
         run: |
-          echo "number=${{ github.run_number }}" >> $GITHUB_OUTPUT
-          echo "date=$(date +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
-          echo "hash=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
-
-      - name: Generate Build Info
-        run: ./gradlew :composeApp:generateBuildConstants --no-daemon -PbuildNumber="${{ steps.build_vars.outputs.number }}" -PbuildDate="${{ steps.build_vars.outputs.date }}" -PbuildHash="${{ steps.build_vars.outputs.hash }}"
+          ./gradlew :composeApp:generateBuildConstants --no-daemon \
+            -PmajorVersion="${{ env.MAJOR_VERSION }}" -PminorVersion="${{ env.MINOR_VERSION }}" -PbuildNumber="${{ github.run_number }}" \
+            -PbuildDateTime="$(date +'%Y-%m-%dT%H:%M:%SZ')" -PbuildHash="${{ github.sha }}"
 
       - name: Build WasmJS Distribution
         run: ./gradlew :composeApp:wasmJsBrowserDistribution --no-daemon --stacktrace
-
-      - name: Upload WasmJS Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wasmjs-distribution
-          path: composeApp/build/dist/wasmJs/productionExecutable/
-          retention-days: 30
-          if-no-files-found: error
 
       - name: Publish to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -106,24 +98,24 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           add-job-summary: on-failure
 
-      - name: Set Build Variables
-        id: build_vars
+      - name: Generate Build Info
         shell: bash
         run: |
-          echo "number=${{ github.run_number }}" >> $GITHUB_OUTPUT
-          echo "date=$(date +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
-          echo "hash=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
-
-      - name: Generate Build Info
-        run: ./gradlew :composeApp:generateBuildConstants --no-daemon -PbuildNumber="${{ steps.build_vars.outputs.number }}" -PbuildDate="${{ steps.build_vars.outputs.date }}" -PbuildHash="${{ steps.build_vars.outputs.hash }}"
+          ./gradlew :composeApp:generateBuildConstants --no-daemon \
+            -PmajorVersion="${{ env.MAJOR_VERSION }}" -PminorVersion="${{ env.MINOR_VERSION }}" -PbuildNumber="${{ github.run_number }}" \
+            -PbuildDateTime="$(date +'%Y-%m-%dT%H:%M:%SZ')" -PbuildHash="${{ github.sha }}"
 
       - name: Build Desktop Distribution
-        run: ${{ runner.os == 'Windows' && '.\gradlew.bat' || './gradlew' }} :composeApp:${{ matrix.task }} --no-daemon --stacktrace
+        shell: bash
+        run: |
+          ./gradlew :composeApp:${{ matrix.task }} --no-daemon --stacktrace \
+            -PmajorVersion="${{ env.MAJOR_VERSION }}" -PminorVersion="${{ env.MINOR_VERSION }}" -PbuildNumber="${{ github.run_number }}" \
+            -PbuildDateTime="$(date +'%Y-%m-%dT%H:%M:%SZ')" -PbuildHash="${{ github.sha }}"
 
       - name: Upload Desktop Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.platform }}
+          name: DotsGame-${{ matrix.platform }}-${{ env.MAJOR_VERSION }}.${{ env.MINOR_VERSION }}.${{ github.run_number }}
           path: ${{ matrix.artifact-path }}
-          retention-days: 30
+          retention-days: 10
           if-no-files-found: error

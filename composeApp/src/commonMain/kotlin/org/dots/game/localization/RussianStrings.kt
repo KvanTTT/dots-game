@@ -69,6 +69,7 @@ object RussianStrings : Strings {
     override val threats = "Угрозы окружения"
     override val surroundings = "Области под угрозой"
     override val developerMode = "Режим разработчика"
+    override val version: String = "Версия"
 
     override fun connectionDrawModeLabel(mode: ConnectionDrawMode): String = when (mode) {
         ConnectionDrawMode.None -> "Нет"

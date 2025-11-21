@@ -70,6 +70,7 @@ object EnglishStrings : Strings {
     override val threats = "Threats"
     override val surroundings = "Surroundings"
     override val developerMode = "Developer Mode"
+    override val version: String = "Version"
 
     override fun connectionDrawModeLabel(mode: ConnectionDrawMode): String = when (mode) {
         ConnectionDrawMode.None -> "None"

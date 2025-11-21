@@ -61,6 +61,7 @@ interface Strings {
     val threats: String
     val surroundings: String
     val developerMode: String
+    val version: String
 
     fun connectionDrawModeLabel(mode: ConnectionDrawMode): String
     fun polygonDrawModeLabel(mode: PolygonDrawMode): String

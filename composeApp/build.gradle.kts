@@ -12,6 +12,12 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+val localBuildNumber = 65535
+
+val majorVersion = (project.findProperty("majorVersion") as? String)?.toInt() ?: 1
+val minorVersion = (project.findProperty("minorVersion") as? String)?.toInt() ?: 0
+val buildNumber = (project.findProperty("buildNumber") as? String)?.toInt() ?: localBuildNumber
+
 val generateBuildConstants by tasks.registering {
     val outputDir = layout.projectDirectory.dir("src/commonMain/composeResources/files")
     outputs.dir(outputDir)
@@ -19,10 +25,9 @@ val generateBuildConstants by tasks.registering {
     doLast {
         val file = outputDir.asFile.resolve("build_info")
         file.parentFile.mkdirs()
-        val buildNumber = project.findProperty("buildNumber") as? String ?: ""
-        val buildDate = project.findProperty("buildDate") as? String ?: ""
+        val buildDateTime = project.findProperty("buildDateTime") as? String ?: ""
         val buildCommit = project.findProperty("buildHash") as? String ?: ""
-        file.writeText("$buildNumber,$buildDate,$buildCommit")
+        file.writeText("$majorVersion,$minorVersion,$buildNumber,$buildDateTime,$buildCommit")
     }
 }
 
@@ -147,9 +152,20 @@ compose.desktop {
         mainClass = "org.dots.game.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb)
             packageName = "org.dots.game"
-            packageVersion = "1.0.0"
+            packageVersion = "$majorVersion.$minorVersion.$buildNumber"
+            vendor = "Dots Game Org"
+
+            windows {
+                perUserInstall = true
+                menu = true
+                copyright = "© 2025 KvanTTT (Ivan Kochurkin)"
+            }
+
+            linux {
+                menuGroup = "Game"
+            }
         }
     }
 }
