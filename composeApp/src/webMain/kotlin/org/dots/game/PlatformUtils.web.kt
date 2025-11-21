@@ -19,8 +19,6 @@ import org.w3c.fetch.Response
  * External JavaScript function to encode a URI component.
  * Used for properly encoding file content in data URLs.
  */
-@OptIn(ExperimentalWasmJsInterop::class)
-@JsFun("encodeURIComponent")
 external fun encodeURIComponent(value: String): String
 
 @Composable
