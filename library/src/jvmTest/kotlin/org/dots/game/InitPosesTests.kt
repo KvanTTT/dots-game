@@ -1,9 +1,11 @@
 package org.dots.game
 
+import org.dots.game.core.DoubleRange
 import org.dots.game.core.InitPosType
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
+import org.dots.game.core.RecognitionInfo
 import org.dots.game.core.Rules
 import org.dots.game.core.recognizeInitPosType
 import kotlin.random.Random
@@ -331,6 +333,32 @@ class InitPosesTests {
             MoveInfo(PositionXY(21, 21), Player.First),
             MoveInfo(PositionXY(19, 20), Player.Second),
         )
+    }
+
+    @Test
+    fun acceptableKomiRanges() {
+        fun getKomiRange(initPosType: InitPosType, considerDraws: Boolean, extraMoves: List<MoveInfo> = emptyList()): DoubleRange {
+            val initMoves = initPosType.generateMoves(39, 32)!!
+            val recognitionInfo = RecognitionInfo(initPosType, initMoves, false, extraMoves)
+            return recognitionInfo.calculateAcceptableKomiRange(considerDraws)
+        }
+
+        assertEquals(DoubleRange(-1.0, +1.0), getKomiRange(InitPosType.Empty, considerDraws = true))
+        assertEquals(DoubleRange(-0.5, +0.5), getKomiRange(InitPosType.Empty, considerDraws = false))
+
+        assertEquals(DoubleRange(-1.0, +0.0), getKomiRange(InitPosType.Single, considerDraws = true))
+        assertEquals(DoubleRange(-0.5, -0.5), getKomiRange(InitPosType.Single, considerDraws = false))
+
+        assertEquals(DoubleRange(-2.0, +2.0), getKomiRange(InitPosType.Cross, considerDraws = true))
+        assertEquals(DoubleRange(-1.5, +1.5), getKomiRange(InitPosType.Cross, considerDraws = false))
+
+        assertEquals(DoubleRange(-8.0, +8.0), getKomiRange(InitPosType.QuadrupleCross, considerDraws = true))
+        assertEquals(DoubleRange(-7.5, +7.5), getKomiRange(InitPosType.QuadrupleCross, considerDraws = false))
+
+        // Check handicap (extra blue dot)
+        val extraMoves = listOf(MoveInfo(PositionXY(20, 15), Player.First))
+        assertEquals(DoubleRange(-3.0, +2.0), getKomiRange(InitPosType.Cross, considerDraws = true, extraMoves))
+        assertEquals(DoubleRange(-2.5, +1.5), getKomiRange(InitPosType.Cross, considerDraws = false, extraMoves))
     }
 
     private fun checkRecognition(expectInitPosType: InitPosType, isRandom: Boolean, vararg actualMoveInfos: MoveInfo) {
