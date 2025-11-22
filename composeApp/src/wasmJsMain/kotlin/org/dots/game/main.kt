@@ -10,8 +10,13 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import org.dots.game.core.Games
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalWasmJsInterop::class)
 fun main() {
+    window.history.pushState(null, "", window.location.href)
+    window.onpopstate = {
+        window.history.pushState(null, "", window.location.href)
+    }
+
     ComposeViewport(document.body!!) {
         val currentGameSettings by remember { mutableStateOf(loadClassSettings(CurrentGameSettings.Default)) }
         var games: Games? by remember { mutableStateOf(null) }
