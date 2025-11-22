@@ -90,11 +90,14 @@ fun SaveDialog(
     }
 
     fun updateFieldRepresentation() {
-        fieldRepresentation = if (isSgf) {
-            SgfWriter.write(games)
-        } else {
-            field.render(DumpParameters(printNumbers, padding, printCoordinates, debugInfo, isSgf))
-        }
+        fieldRepresentation = field.render(DumpParameters(
+            printNumbers = printNumbers,
+            padding = padding,
+            printCoordinates = printCoordinates,
+            printBorders = false,
+            debugInfo = debugInfo,
+            isSgf = isSgf,
+        ))
     }
 
     updateFieldRepresentation()
