@@ -36,6 +36,12 @@ fun DiscreteSliderConfig(
 ) {
     val range = (maxValue - minValue) / step
 
+    if (currentValue < minValue) {
+        onValueChange(minValue)
+    } else if (currentValue > maxValue) {
+        onValueChange(maxValue)
+    }
+
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(name, Modifier.fillMaxWidth(configKeyTextFraction))
         Slider(
