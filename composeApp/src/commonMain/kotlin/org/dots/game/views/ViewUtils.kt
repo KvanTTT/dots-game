@@ -36,6 +36,12 @@ fun DiscreteSliderConfig(
 ) {
     val range = (maxValue - minValue) / step
 
+    if (currentValue < minValue) {
+        onValueChange(minValue)
+    } else if (currentValue > maxValue) {
+        onValueChange(maxValue)
+    }
+
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(name, Modifier.fillMaxWidth(configKeyTextFraction))
         Slider(
@@ -63,8 +69,11 @@ inline fun <reified E : Enum<E>> ModeConfig(
     noinline valueRenderer: (E) -> String = { splitByUppercase(enumMode.selected.toString()) },
     crossinline onChange: (newMode: EnumMode<E>) -> Unit
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 10.dp)) {
+    if (enumMode.selected in ignoredEntries) {
+        onChange(EnumMode(enumMode.expanded, enumValues<E>().first { it !in ignoredEntries }))
+    }
 
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 10.dp)) {
         Text("${nameRenderer()} ", Modifier.fillMaxWidth(configKeyTextFraction))
         Column(Modifier.fillMaxWidth().height(30.dp)
             .border(1.dp, Color.hsv(0f, 0f, 0.4f))
