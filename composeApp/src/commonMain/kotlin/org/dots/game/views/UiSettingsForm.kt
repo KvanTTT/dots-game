@@ -86,6 +86,12 @@ fun UiSettingsForm(
                     })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(strings.experimentalMode, Modifier.fillMaxWidth(configKeyTextFraction))
+                    Switch(uiSettings.experimentalMode, onCheckedChange = {
+                        onUiSettingsChange(uiSettings.copy(experimentalMode = it))
+                    })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     ModeConfig(
                         language,
                         nameRenderer = { strings.language },

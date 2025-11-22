@@ -64,6 +64,7 @@ fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, extraObj: Any? = nu
                     setSetting(UiSettings::showThreats)
                     setSetting(UiSettings::showSurroundings)
                     setSetting(UiSettings::developerMode)
+                    setSetting(UiSettings::experimentalMode)
                     setSetting(UiSettings::language)
                 }
             }
@@ -156,6 +157,7 @@ fun <T : ClassSettings<T>> loadClassSettings(defaultSettingsObj: T, directory: S
                         showThreats = getSetting(UiSettings::showThreats),
                         showSurroundings = getSetting(UiSettings::showSurroundings),
                         developerMode = getSetting(UiSettings::developerMode),
+                        experimentalMode = getSetting(UiSettings::experimentalMode),
                         language = getEnumSetting(UiSettings::language),
                     )
                 }
