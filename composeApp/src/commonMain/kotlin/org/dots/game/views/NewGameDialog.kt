@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import org.dots.game.UiSettings
+import org.dots.game.core.DoubleRange
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
 import org.dots.game.maxFieldDimension
@@ -30,14 +31,28 @@ fun NewGameDialog(
     var initPosIsRandom by remember { mutableStateOf(rules.initPosIsRandom) }
     var baseMode by remember { mutableStateOf(EnumMode(selected = rules.baseMode)) }
     var suicideAllowed by remember { mutableStateOf(rules.suicideAllowed) }
+
+    fun calculateKomiRange(): DoubleRange {
+        return initPosType.selected.calculateAcceptableKomiRange(width, height, considerDraws = true)
+    }
+
+    fun Double.doubleKomiToInt(): Int = (this * 2.0).toInt()
+    fun Int.intKomiToDouble(): Double = this * 0.5
+
+    var komiRange by remember { mutableStateOf(calculateKomiRange()) }
+
     var integerKomi by remember { mutableStateOf(
             // Only negative Komi makes sense for a single initial pos
             // Otherise, it allows instant grounding move that makes the game senseless because the first player always wins
-            when {
-                uiSettings.developerMode -> (rules.komi * 2).toInt()
-                rules.initPosType == InitPosType.Single -> -1
-                else -> 1
-            }
+        (when {
+                uiSettings.developerMode -> rules.komi
+                rules.initPosType == InitPosType.Single -> {
+                    if (rules.komi >= 0.0) 0.0 else -0.5
+                }
+                else -> {
+                    if (rules.komi > 0.0) +0.5 else 0.0
+                }
+            }).doubleKomiToInt()
         )
     }
     var drawIsAllowed by remember { mutableStateOf(integerKomi == 0) }
@@ -59,6 +74,7 @@ fun NewGameDialog(
                     valueRenderer = { strings.initPosTypeLabel(it) }
                 ) {
                     initPosType = it
+                    komiRange = calculateKomiRange()
                 }
                 ModeConfig(
                     baseMode,
@@ -87,8 +103,9 @@ fun NewGameDialog(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (uiSettings.developerMode) {
-                        DiscreteSliderConfig(strings.komi, integerKomi, -5, 5,
-                            valueRenderer = { (it.toDouble() / 2.0).toString() }
+                        DiscreteSliderConfig(strings.komi, integerKomi,
+                            komiRange.start.doubleKomiToInt(), komiRange.endInclusive.doubleKomiToInt(),
+                            valueRenderer = { it.intKomiToDouble().toString() }
                         ) {
                             integerKomi = it
                         }
@@ -110,7 +127,7 @@ fun NewGameDialog(
                                 initPosType.selected,
                                 Random.takeIf { initPosIsRandom },
                                 if (uiSettings.developerMode) {
-                                    integerKomi.toDouble() / 2.0
+                                    integerKomi.intKomiToDouble()
                                 } else {
                                     when {
                                         drawIsAllowed -> 0.0

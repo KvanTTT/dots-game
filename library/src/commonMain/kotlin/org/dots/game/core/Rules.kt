@@ -5,7 +5,6 @@ import org.dots.game.core.InitPosType.Custom
 import org.dots.game.core.InitPosType.DoubleCross
 import org.dots.game.core.InitPosType.Empty
 import org.dots.game.core.InitPosType.QuadrupleCross
-import org.dots.game.core.InitPosType.RecognitionInfo
 import org.dots.game.core.InitPosType.Single
 import kotlin.collections.elementAtOrNull
 import kotlin.math.round
@@ -105,8 +104,6 @@ enum class InitPosType {
     QuadrupleCross,
     Custom;
 
-    data class RecognitionInfo(val initPosType: InitPosType, val refinedInitMoves: List<MoveInfo>, val isRandomized: Boolean, val remainingInitMoves: List<MoveInfo>)
-
     /**
      * The generator tries to obey notago and bbs implementations.
      * If [random] is specified, the generator randomized the init pos, but currently it works only for 4*4 cross
@@ -201,6 +198,47 @@ enum class InitPosType {
         add(MoveInfo(PositionXY(x + 1, y), oppPlayer))
         add(MoveInfo(PositionXY(x + 1, y + 1), startPlayer))
         add(MoveInfo(PositionXY(x, y + 1), oppPlayer))
+    }
+
+    fun calculateAcceptableKomiRange(width: Int, height: Int, considerDraws: Boolean): DoubleRange {
+        return RecognitionInfo(this, generateMoves(width, height)!!, isRandomized = false, remainingInitMoves = emptyList())
+            .calculateAcceptableKomiRange(considerDraws)
+    }
+}
+
+data class DoubleRange(override val start: Double, override val endInclusive: Double) : ClosedFloatingPointRange<Double> {
+    override fun lessThanOrEquals(a: Double, b: Double): Boolean {
+        return a <= b
+    }
+}
+
+data class RecognitionInfo(val initPosType: InitPosType, val refinedInitMoves: List<MoveInfo>, val isRandomized: Boolean, val remainingInitMoves: List<MoveInfo>) {
+    /**
+     * A value within the acceptable range means that the game can't be instantly finished by the first or second player.
+     * Other values make the game imbalanced because of grounding move.
+     *
+     * For instance, if [initPosType] is [InitPosType.Cross] (2 blue dots, 2 red dots) and komi is +3,
+     * then the red player can instantly win the game by just grounding move: he loses 2 dots, but the komi compensate it
+     * and the player has result score of +1.
+     * The acceptable range of [InitPosType.Cross] is [-2.0, +2.0] if [considerDraws] is true and [-1.5, +1.5] if draw is prohibited.
+     *
+     * See tests for more examples.
+     */
+    fun calculateAcceptableKomiRange(considerDraws: Boolean): DoubleRange {
+        val allDots = refinedInitMoves + remainingInitMoves
+        val player1DotsCount: Int
+        val player2DotsCount: Int
+        if (allDots.isEmpty()) {
+            // In empty init pos mode it's expected that at least one ungrounded dot from both players will be played (due to a central square restriction)
+            player1DotsCount = 1
+            player2DotsCount = 1
+        } else {
+            player1DotsCount = allDots.count { it.player == Player.First }
+            player2DotsCount = allDots.count { it.player == Player.Second }
+        }
+        val lowerBound = -player1DotsCount + (if (considerDraws) 0.0 else 0.5)
+        val upperBound = player2DotsCount + (if (considerDraws) 0.0 else -0.5)
+        return DoubleRange(lowerBound, upperBound)
     }
 }
 
