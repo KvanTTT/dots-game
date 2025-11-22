@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import org.dots.game.UiSettings
+import org.dots.game.core.BaseMode
 import org.dots.game.core.DoubleRange
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
@@ -69,7 +70,11 @@ fun NewGameDialog(
 
                 ModeConfig(
                     initPosType,
-                    ignoredEntries = setOf(InitPosType.Custom),
+                    ignoredEntries = buildSet {
+                        add(InitPosType.Custom)
+                        if (!uiSettings.experimentalMode)
+                            add(InitPosType.Empty)
+                    },
                     nameRenderer = { strings.initPosType },
                     valueRenderer = { strings.initPosTypeLabel(it) }
                 ) {
@@ -78,6 +83,7 @@ fun NewGameDialog(
                 }
                 ModeConfig(
                     baseMode,
+                    ignoredEntries = if (!uiSettings.experimentalMode) setOf(BaseMode.AllOpponentDots) else emptySet(),
                     nameRenderer = { strings.baseMode },
                     valueRenderer = { strings.baseModeLabel(it) }
                 ) {
@@ -91,9 +97,11 @@ fun NewGameDialog(
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(strings.captureByBorder, Modifier.fillMaxWidth(configKeyTextFraction))
-                    Checkbox(captureByBorder, onCheckedChange = { captureByBorder = it })
+                if (uiSettings.experimentalMode) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(strings.captureByBorder, Modifier.fillMaxWidth(configKeyTextFraction))
+                        Checkbox(captureByBorder, onCheckedChange = { captureByBorder = it })
+                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {

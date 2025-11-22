@@ -76,6 +76,7 @@ object RussianStrings : Strings {
     override val threats = "Угрозы окружения"
     override val surroundings = "Области под угрозой"
     override val developerMode = "Режим разработчика"
+    override val experimentalMode = "Экспериментальный режим"
     override val version: String = "Версия"
 
     // AI Settings

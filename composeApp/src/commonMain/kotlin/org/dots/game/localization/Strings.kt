@@ -67,6 +67,7 @@ interface Strings {
     val threats: String
     val surroundings: String
     val developerMode: String
+    val experimentalMode: String
     val version: String
 
     // AI Settings

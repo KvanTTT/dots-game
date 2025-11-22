@@ -19,6 +19,7 @@ data class UiSettings(
     val showThreats: Boolean = false,
     val showSurroundings: Boolean = false,
     val developerMode: Boolean = false,
+    val experimentalMode: Boolean = false,
     val language: Language = Language.English,
 ) : ClassSettings<UiSettings>() {
     companion object {
