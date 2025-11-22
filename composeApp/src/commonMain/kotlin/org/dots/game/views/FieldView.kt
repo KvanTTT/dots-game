@@ -135,25 +135,37 @@ fun FieldView(
             .size(getFieldSizeSize(field.width, field.height))
             .pointerInput(moveMode, field) {
                 awaitPointerEventScope {
+                    var isPrimaryPressed = false
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Main)
                         val currentPlayer = moveMode.getMovePlayer(field)
                         when (event.type) {
                             PointerEventType.Move -> {
-                                pointerFieldPosition = event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
+                                val newPointerFieldPosition = event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
+                                if (newPointerFieldPosition != pointerFieldPosition) {
+                                    pointerFieldPosition = newPointerFieldPosition
+                                    isPrimaryPressed = false
+                                }
                             }
                             PointerEventType.Press -> {
-                                if (event.buttons.isPrimaryPressed || !platform.supportsPrimaryButton) {
+                                // Handle mouse left button click (if supported)
+                                isPrimaryPressed = event.buttons.isPrimaryPressed
+                            }
+                            PointerEventType.Release -> {
+                                if (isPrimaryPressed || !platform.supportsPrimaryButton) {
                                     val fieldPosition =
                                         event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
                                     if (fieldPosition != null) {
                                         onMovePlaced(fieldPosition, currentPlayer)
-                                        pointerFieldPosition = event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
+                                        pointerFieldPosition =
+                                            event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
                                     }
                                 }
+                                isPrimaryPressed = false
                             }
                             PointerEventType.Exit -> {
                                 pointerFieldPosition = null
+                                isPrimaryPressed = false
                             }
                         }
                     }
