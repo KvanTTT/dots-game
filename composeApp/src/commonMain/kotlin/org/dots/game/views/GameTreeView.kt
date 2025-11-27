@@ -35,7 +35,7 @@ import org.dots.game.VerticalScrollbar
 import org.dots.game.core.*
 import org.jetbrains.compose.resources.painterResource
 import dotsgame.composeapp.generated.resources.Res
-import dotsgame.composeapp.generated.resources.ic_grounding
+import dotsgame.composeapp.generated.resources.ic_ground
 import dotsgame.composeapp.generated.resources.ic_resign
 import dotsgame.composeapp.generated.resources.ic_finish
 import dotsgame.composeapp.generated.resources.ic_timer
@@ -298,7 +298,7 @@ private fun ConnectionsAndNodes(
                         val iconResource = when (singleResult) {
                             is GameResult.Draw, is GameResult.ScoreWin -> {
                                 if ((singleResult as EndGameResult).endGameKind == EndGameKind.Grounding)
-                                    Res.drawable.ic_grounding
+                                    Res.drawable.ic_ground
                                 else
                                     Res.drawable.ic_finish
                             }

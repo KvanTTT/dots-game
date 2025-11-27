@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Checkbox
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
@@ -29,8 +30,15 @@ import org.dots.game.views.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.jetbrains.compose.resources.painterResource
 import dotsgame.composeapp.generated.resources.Res
-import dotsgame.composeapp.generated.resources.ic_grounding
+import dotsgame.composeapp.generated.resources.ic_ai_move
+import dotsgame.composeapp.generated.resources.ic_ai_settings
+import dotsgame.composeapp.generated.resources.ic_ground
+import dotsgame.composeapp.generated.resources.ic_load_game
+import dotsgame.composeapp.generated.resources.ic_new_game
+import dotsgame.composeapp.generated.resources.ic_reset
 import dotsgame.composeapp.generated.resources.ic_resign
+import dotsgame.composeapp.generated.resources.ic_save_game
+import dotsgame.composeapp.generated.resources.ic_settings
 import org.dots.game.dump.DumpParameters
 
 @Composable
@@ -337,24 +345,25 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                 val selectedModeButtonColor = Color.Magenta
 
                 Row(rowModifier) {
-                    Button(onClick = { showNewGameDialog = true }, controlButtonModifier) {
-                        Text(strings.new)
+                    IconButton(strings.new, Res.drawable.ic_new_game, controlButtonModifier) {
+                        showNewGameDialog = true
                     }
-                    Button(onClick = { reset(newGame = false) }, controlButtonModifier) {
-                        Text(strings.reset)
+                    IconButton(strings.reset, Res.drawable.ic_reset, controlButtonModifier) {
+                        reset(newGame = false)
                     }
-                    Button(onClick = { openGameDialog = true }, controlButtonModifier) {
-                        Text(strings.load)
+                    IconButton(strings.load, Res.drawable.ic_load_game, controlButtonModifier) {
+                        openGameDialog = true
                     }
-                    Button(onClick = { showSaveGameDialog = true }, controlButtonModifier) {
-                        Text(strings.save)
+                    IconButton(strings.save, Res.drawable.ic_save_game, controlButtonModifier) {
+                        showSaveGameDialog = true
                     }
-                    Button(onClick = { showUiSettingsForm = true }, controlButtonModifier) {
-                        Text(strings.settings)
+                    IconButton(strings.settings, Res.drawable.ic_settings, controlButtonModifier) {
+                        showUiSettingsForm = true
                     }
+
                     if (KataGoDotsEngine.IS_SUPPORTED) {
-                        Button(onClick = { showKataGoDotsSettingsForm = true }, controlButtonModifier) {
-                            Text(strings.aiSettings)
+                        IconButton(strings.aiSettings, Res.drawable.ic_ai_settings, controlButtonModifier) {
+                            showKataGoDotsSettingsForm = true
                         }
                     }
                 }
@@ -430,7 +439,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                             enabled = !getField().isGameOver() && !engineIsCalculating
                         ) {
                             Icon(
-                                painter = painterResource(if (isGrounding) Res.drawable.ic_grounding else Res.drawable.ic_resign),
+                                painter = painterResource(if (isGrounding) Res.drawable.ic_ground else Res.drawable.ic_resign),
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -464,8 +473,19 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                             controlButtonModifier,
                             enabled = !getField().isGameOver() && !engineIsCalculating && doesKataSupportRules(getField().rules)
                         ) {
-                            Text(if (engineIsCalculating) "Thinking..." else "AI move")
+                            if (engineIsCalculating) {
+                                CircularProgressIndicator(
+                                    Modifier.size(20.dp) // "Thinking..."
+                                )
+                            } else {
+                                Icon(
+                                    painterResource(Res.drawable.ic_ai_move),
+                                    contentDescription = "AI Move",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
+
                         Text("Auto", Modifier.align(Alignment.CenterVertically))
                         Checkbox(automove, onCheckedChange = { value ->
                             automove = value
