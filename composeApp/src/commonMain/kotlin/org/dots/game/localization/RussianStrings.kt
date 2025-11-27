@@ -87,4 +87,33 @@ object RussianStrings : Strings {
 
     override val language = "Язык"
     override val languageName = "Русский"
+
+    // Player names
+    override val playerFirst = "Первый"
+    override val playerSecond = "Второй"
+
+    // AI Status
+    override val aiThinking = "Думаю..."
+    override val aiMove = "Ход ИИ"
+    override val aiAuto = "Авто"
+
+    // Save Dialog
+    override val pathLabel = "Путь"
+    override val saveGameTitleSgf = "Сохранить игру в sgf"
+    override val saveGameTitleTxt = "Сохранить игру в txt"
+
+    // AI Settings
+    override val exePath = "Путь к исполняемому файлу"
+    override val modelPath = "Путь к модели"
+    override val configPath = "Путь к конфигурации"
+    override fun selectFileTitle(fileType: String): String = "Выберите $fileType файл"
+    override val maxTime = "Макс время (сек)"
+    override val maxVisits = "Глубина анализа"
+    override val maxPlayouts = "Макс вариантов"
+    override val default = "По умолчанию"
+    override val checking = "Проверка..."
+    override val check = "Проверить"
+    override val fileModeExe = "Исполняемый"
+    override val fileModeModel = "Модель"
+    override val fileModeConfig = "Конфигурация"
 }

@@ -69,4 +69,33 @@ interface Strings {
     // Language settings
     val language: String
     val languageName: String
+
+    // Player names
+    val playerFirst: String
+    val playerSecond: String
+
+    // AI Status
+    val aiThinking: String
+    val aiMove: String
+    val aiAuto: String
+
+    // Save Dialog
+    val pathLabel: String
+    val saveGameTitleSgf: String
+    val saveGameTitleTxt: String
+
+    // AI Settings
+    val exePath: String
+    val modelPath: String
+    val configPath: String
+    fun selectFileTitle(fileType: String): String
+    val maxTime: String
+    val maxVisits: String
+    val maxPlayouts: String
+    val default: String
+    val checking: String
+    val check: String
+    val fileModeExe: String
+    val fileModeModel: String
+    val fileModeConfig: String
 }

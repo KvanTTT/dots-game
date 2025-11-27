@@ -72,7 +72,7 @@ fun SaveDialog(
 
     if (showSaveDialog) {
         SaveFileDialog(
-            title = "Save game to ${if (isSgf) "sgf" else "txt"}",
+            title = if (isSgf) strings.saveGameTitleSgf else strings.saveGameTitleTxt,
             selectedFile = path,
             extension = if (isSgf) "sgf" else "txt",
             onFileSelected = {
@@ -152,7 +152,7 @@ fun SaveDialog(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Path", Modifier.fillMaxWidth(0.1f))
+                    Text(strings.pathLabel, Modifier.fillMaxWidth(0.1f))
                     TextField(path, {
                         path = it
                     },
@@ -164,7 +164,7 @@ fun SaveDialog(
                         onClick = { showSaveDialog = true },
                         Modifier.padding(horizontal = 10.dp),
                     ) {
-                        Text("Save")
+                        Text(strings.save)
                     }
                 }
             }

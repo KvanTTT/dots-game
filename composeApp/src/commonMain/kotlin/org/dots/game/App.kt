@@ -233,7 +233,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
         }
 
         if (showKataGoDotsSettingsForm) {
-            KataGoDotsSettingsForm(kataGoDotsSettings, onSettingsChange = {
+            KataGoDotsSettingsForm(kataGoDotsSettings, strings, onSettingsChange = {
                 showKataGoDotsSettingsForm = false
                 focusRequester.requestFocus()
                 kataGoDotsSettings = it.settings
@@ -296,8 +296,8 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                     }
                 }
                 Row(Modifier.padding(bottom = 10.dp)) {
-                    val player1Name = currentGame.player1Name ?: Player.First.toString()
-                    val player2Name = currentGame.player2Name ?: Player.Second.toString()
+                    val player1Name = currentGame.player1Name ?: strings.playerFirst
+                    val player2Name = currentGame.player2Name ?: strings.playerSecond
 
                     Text("$player1Name   ", color = uiSettings.playerFirstColor)
                     Text(player1Score.toNeatNumber().toString(), color = uiSettings.playerFirstColor, fontWeight = FontWeight.Bold)
@@ -464,9 +464,9 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                             controlButtonModifier,
                             enabled = !getField().isGameOver() && !engineIsCalculating && doesKataSupportRules(getField().rules)
                         ) {
-                            Text(if (engineIsCalculating) "Thinking..." else "AI move")
+                            Text(if (engineIsCalculating) strings.aiThinking else strings.aiMove)
                         }
-                        Text("Auto", Modifier.align(Alignment.CenterVertically))
+                        Text(strings.aiAuto, Modifier.align(Alignment.CenterVertically))
                         Checkbox(automove, onCheckedChange = { value ->
                             automove = value
                             kataGoDotsSettings = kataGoDotsSettings.copy(autoMove = automove)

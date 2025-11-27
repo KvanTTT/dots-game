@@ -16,11 +16,13 @@ import org.dots.game.KataGoDotsEngine
 import org.dots.game.KataGoDotsSettings
 import org.dots.game.OS
 import org.dots.game.OpenFileDialog
+import org.dots.game.localization.Strings
 import org.dots.game.platform
 
 @Composable
 actual fun KataGoDotsSettingsForm(
     kataGoDotsSettings: KataGoDotsSettings,
+    strings: Strings,
     onSettingsChange: (KataGoDotsEngine) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -91,7 +93,13 @@ actual fun KataGoDotsSettingsForm(
             FileMode.Config -> configPath
             null -> null // TODO: it shouldn't be a warning, see KT-82211
         }
-        OpenFileDialog("Select ${selectedFileMode!!.name.lowercase()} file", selectedFile, allowedExtensions) {
+        val fileModeString = when (selectedFileMode) {
+            FileMode.Exe -> strings.fileModeExe
+            FileMode.Model -> strings.fileModeModel
+            FileMode.Config -> strings.fileModeConfig
+            null -> ""
+        }
+        OpenFileDialog(strings.selectFileTitle(fileModeString), selectedFile, allowedExtensions) {
             if (it != null) {
                 invalidatePath(it, selectedFileMode!!)
             }
@@ -104,8 +112,13 @@ actual fun KataGoDotsSettingsForm(
             Column(modifier = Modifier.padding(20.dp)) {
                 @Composable
                 fun FileSelector(path: String, fileMode: FileMode) {
+                    val label = when (fileMode) {
+                        FileMode.Exe -> strings.exePath
+                        FileMode.Model -> strings.modelPath
+                        FileMode.Config -> strings.configPath
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("$fileMode path", Modifier.fillMaxWidth(0.3f))
+                        Text(label, Modifier.fillMaxWidth(0.3f))
                         TextField(
                             path, {
                                 invalidatePath(it, fileMode)
@@ -130,24 +143,24 @@ actual fun KataGoDotsSettingsForm(
                 FileSelector(configPath, FileMode.Config)
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    DiscreteSliderConfig("Max time (sec)", maxTimeSeconds, 0, 60, enabled = !engineIsInitializing,
-                        valueRenderer = { if (it == 0) "Default" else it.toString()}) {
+                    DiscreteSliderConfig(strings.maxTime, maxTimeSeconds, 0, 60, enabled = !engineIsInitializing,
+                        valueRenderer = { if (it == 0) strings.default else it.toString()}) {
                         maxTimeSeconds = it
                         kataGoDotsEngine = null
                     }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    DiscreteSliderConfig("Max visits", maxVisits, 0, 3000, step = 100, enabled = !engineIsInitializing,
-                        valueRenderer = { if (it == 0) "Default" else it.toString() }) {
+                    DiscreteSliderConfig(strings.maxVisits, maxVisits, 0, 3000, step = 100, enabled = !engineIsInitializing,
+                        valueRenderer = { if (it == 0) strings.default else it.toString() }) {
                         maxVisits = it
                         kataGoDotsEngine = null
                     }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    DiscreteSliderConfig("Max playouts", maxPlayouts, 0, 3000, step = 100, enabled = !engineIsInitializing,
-                        valueRenderer = { if (it == 0) "Default" else it.toString() }) {
+                    DiscreteSliderConfig(strings.maxPlayouts, maxPlayouts, 0, 3000, step = 100, enabled = !engineIsInitializing,
+                        valueRenderer = { if (it == 0) strings.default else it.toString() }) {
                         maxPlayouts = it
                         kataGoDotsEngine = null
                     }
@@ -179,9 +192,9 @@ actual fun KataGoDotsSettingsForm(
                     enabled = !engineIsInitializing,
                 ) {
                     Text(if (kataGoDotsEngine == null) {
-                        if (engineIsInitializing) "Checking..." else "Check"
+                        if (engineIsInitializing) strings.checking else strings.check
                     } else {
-                        "Save"
+                        strings.save
                     })
                 }
             }

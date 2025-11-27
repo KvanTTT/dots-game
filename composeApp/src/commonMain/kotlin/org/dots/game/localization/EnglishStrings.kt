@@ -88,4 +88,33 @@ object EnglishStrings : Strings {
 
     override val language = "Language"
     override val languageName = "English"
+
+    // Player names
+    override val playerFirst = "First"
+    override val playerSecond = "Second"
+
+    // AI Status
+    override val aiThinking = "Thinking..."
+    override val aiMove = "AI move"
+    override val aiAuto = "Auto"
+
+    // Save Dialog
+    override val pathLabel = "Path"
+    override val saveGameTitleSgf = "Save game to sgf"
+    override val saveGameTitleTxt = "Save game to txt"
+
+    // AI Settings
+    override val exePath = "Exe path"
+    override val modelPath = "Model path"
+    override val configPath = "Config path"
+    override fun selectFileTitle(fileType: String): String = "Select $fileType file"
+    override val maxTime = "Max time (sec)"
+    override val maxVisits = "Max visits"
+    override val maxPlayouts = "Max playouts"
+    override val default = "Default"
+    override val checking = "Checking..."
+    override val check = "Check"
+    override val fileModeExe = "Exe"
+    override val fileModeModel = "Model"
+    override val fileModeConfig = "Config"
 }
