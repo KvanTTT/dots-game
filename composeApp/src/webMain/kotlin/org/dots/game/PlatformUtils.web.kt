@@ -14,6 +14,26 @@ import org.w3c.dom.HTMLAnchorElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.files.FileReader
 import org.w3c.fetch.Response
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.window.Popup
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.Job
 
 /**
  * External JavaScript function to encode a URI component.
@@ -147,7 +167,58 @@ actual fun Tooltip(
     text: String,
     content: @Composable () -> Unit
 ) {
-    content()
+    var isVisible by remember { mutableStateOf(false) }
+    var cursorPosition by remember { mutableStateOf(IntOffset.Zero) }
+    val scope = rememberCoroutineScope()
+    var showJob by remember { mutableStateOf<Job?>(null) }
+
+    Box(
+        modifier = Modifier.pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val position = event.changes.first().position
+                    // Update cursor position on move and enter
+                    if (event.type == PointerEventType.Move || event.type == PointerEventType.Enter) {
+                         cursorPosition = IntOffset(position.x.toInt(), position.y.toInt())
+                    }
+
+                    if (event.type == PointerEventType.Enter) {
+                        showJob?.cancel()
+                        showJob = scope.launch {
+                            delay(600) // Standard tooltip delay
+                            isVisible = true
+                        }
+                    } else if (event.type == PointerEventType.Exit) {
+                        showJob?.cancel()
+                        isVisible = false
+                    }
+                }
+            }
+        }
+    ) {
+        content()
+
+        if (isVisible) {
+            // Display tooltip relative to the cursor position
+            Popup(
+                alignment = Alignment.TopStart,
+                offset = cursorPosition.copy(y = cursorPosition.y + 20) // Offset 20px below the cursor
+            ) {
+                Surface(
+                    elevation = 4.dp,
+                    shape = RoundedCornerShape(4.dp),
+                    color = Color.DarkGray
+                ) {
+                    Text(
+                        text = text,
+                        modifier = Modifier.padding(8.dp),
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
 }
 
 /**
