@@ -87,4 +87,14 @@ object RussianStrings : Strings {
 
     override val language = "Язык"
     override val languageName = "Русский"
+
+    override val nextMove = "Следующий ход"
+    override val player1 = "Игрок 1"
+    override val player2 = "Игрок 2"
+    override val grounding = "Заземлиться"
+    override val resign = "Сдаться"
+    override val nextGame = "Следующая игра"
+    override val previousGame = "Предыдущая игра"
+    override val aiMove = "Ход ИИ"
+    override val thinking = "Думаю..."
 }

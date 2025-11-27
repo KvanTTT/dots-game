@@ -123,6 +123,14 @@ actual fun OpenFileDialog(
     }
 }
 
+@Composable
+actual fun Tooltip(
+    text: String,
+    content: @Composable () -> Unit
+) {
+    content()
+}
+
 /**
  * Lightweight storage for files picked via SAF: maps display names to content URIs.
  * Avoids copying file contents into memory while keeping UX consistent (showing a file-like name).

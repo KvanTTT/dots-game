@@ -1,19 +1,11 @@
 package org.dots.game
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Checkbox
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -27,10 +19,6 @@ import kotlinx.coroutines.launch
 import org.dots.game.core.*
 import org.dots.game.views.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
-import dotsgame.composeapp.generated.resources.Res
-import dotsgame.composeapp.generated.resources.ic_grounding
-import dotsgame.composeapp.generated.resources.ic_resign
 import org.dots.game.dump.DumpParameters
 
 @Composable
@@ -332,148 +320,74 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
             Column(Modifier.padding(start = 5.dp)) {
                 val controlButtonModifier = Modifier.padding(end = 5.dp)
                 val rowModifier = Modifier.padding(bottom = 5.dp)
-                val playerColorIconModifier =
-                    Modifier.size(16.dp).border(1.dp, Color.White, CircleShape).clip(CircleShape)
-                val selectedModeButtonColor = Color.Magenta
 
-                Row(rowModifier) {
-                    Button(onClick = { showNewGameDialog = true }, controlButtonModifier) {
-                        Text(strings.new)
-                    }
-                    Button(onClick = { reset(newGame = false) }, controlButtonModifier) {
-                        Text(strings.reset)
-                    }
-                    Button(onClick = { openGameDialog = true }, controlButtonModifier) {
-                        Text(strings.load)
-                    }
-                    Button(onClick = { showSaveGameDialog = true }, controlButtonModifier) {
-                        Text(strings.save)
-                    }
-                    Button(onClick = { showUiSettingsForm = true }, controlButtonModifier) {
-                        Text(strings.settings)
-                    }
-                    if (KataGoDotsEngine.IS_SUPPORTED) {
-                        Button(onClick = { showKataGoDotsSettingsForm = true }, controlButtonModifier) {
-                            Text(strings.aiSettings)
-                        }
-                    }
-                }
+                GameControlButtons(
+                    strings = strings,
+                    modifier = rowModifier,
+                    buttonModifier = controlButtonModifier,
+                    onNewGame = { showNewGameDialog = true },
+                    onReset = { reset(newGame = false) },
+                    onLoad = { openGameDialog = true },
+                    onSave = { showSaveGameDialog = true },
+                    onSettings = { showUiSettingsForm = true },
+                    onAiSettings = { showKataGoDotsSettingsForm = true },
+                    showAiSettings = KataGoDotsEngine.IS_SUPPORTED
+                )
 
-                Row(rowModifier) {
-                    Button(
-                        onClick = {
-                            moveMode = MoveMode.Next
-                            focusRequester.requestFocus()
-                        },
-                        controlButtonModifier,
-                        colors = if (moveMode == MoveMode.Next) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
-                    ) {
-                        Box {
-                            Box(
-                                modifier = Modifier.offset((-5).dp).size(16.dp)
-                                    .border(1.dp, Color.White, CircleShape).clip(CircleShape)
-                                    .background(uiSettings.playerFirstColor)
+                MoveControlButtons(
+                    moveMode = moveMode,
+                    uiSettings = uiSettings,
+                    strings = strings,
+                    isGameOver = getField().isGameOver(),
+                    engineIsCalculating = engineIsCalculating,
+                    modifier = rowModifier,
+                    buttonModifier = controlButtonModifier,
+                    onMoveModeChange = {
+                        moveMode = it
+                        focusRequester.requestFocus()
+                    },
+                    onEndMove = { reason ->
+                        getGameTree().addChild(
+                            MoveInfo.createFinishingMove(
+                                moveMode.getMovePlayer(getField()),
+                                reason
                             )
-                            Box(
-                                modifier = Modifier.offset(5.dp).size(16.dp).border(1.dp, Color.White, CircleShape)
-                                    .clip(CircleShape).background(uiSettings.playerSecondColor)
-                            )
-                        }
-                    }
-                    Button(
-                        onClick = {
-                            moveMode = MoveMode.First
-                            focusRequester.requestFocus()
-                        },
-                        controlButtonModifier,
-                        colors = if (moveMode == MoveMode.First) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
-                    ) {
-                        Box(
-                            modifier = playerColorIconModifier.background(uiSettings.playerFirstColor)
                         )
+                        updateFieldAndGameTree()
+                        focusRequester.requestFocus()
                     }
-                    Button(
-                        onClick = {
-                            moveMode = MoveMode.Second
-                            focusRequester.requestFocus()
-                        },
-                        controlButtonModifier,
-                        colors = if (moveMode == MoveMode.Second) ButtonDefaults.buttonColors(
-                            selectedModeButtonColor
-                        ) else ButtonDefaults.buttonColors(),
-                    ) {
-                        Box(
-                            modifier = playerColorIconModifier.background(uiSettings.playerSecondColor)
-                        )
+                )
+
+                GameNavigationButtons(
+                    gamesCount = games.size,
+                    strings = strings,
+                    modifier = rowModifier,
+                    buttonModifier = controlButtonModifier,
+                    engineIsCalculating = engineIsCalculating,
+                    onSwitchGame = { next ->
+                        var currentGameIndex = games.indexOf(currentGame)
+                        currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
+                        currentGameSettings.currentNodeNumber = -1
+                        switchGame(currentGameIndex)
                     }
+                )
 
-                    @Composable
-                    fun EndMoveButton(isGrounding: Boolean) {
-                        Button(
-                            onClick = {
-                                // Check for game over just in case
-                                if (getField().isGameOver()) return@Button
-
-                                getGameTree().addChild(
-                                    MoveInfo.createFinishingMove(
-                                        moveMode.getMovePlayer(getField()),
-                                        if (isGrounding)
-                                            ExternalFinishReason.Grounding
-                                        else
-                                            ExternalFinishReason.Resign
-                                    )
-                                )
-                                updateFieldAndGameTree()
-                                focusRequester.requestFocus()
-                            },
-                            controlButtonModifier,
-                            enabled = !getField().isGameOver() && !engineIsCalculating
-                        ) {
-                            Icon(
-                                painter = painterResource(if (isGrounding) Res.drawable.ic_grounding else Res.drawable.ic_resign),
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                AiControlButtons(
+                    isEngineAvailable = kataGoDotsEngine != null,
+                    isEngineCalculating = engineIsCalculating,
+                    isGameOver = getField().isGameOver(),
+                    isRulesSupported = doesKataSupportRules(getField().rules),
+                    autoMove = automove,
+                    strings = strings,
+                    modifier = rowModifier,
+                    buttonModifier = controlButtonModifier,
+                    onMakeAiMove = { makeAIMove() },
+                    onAutoMoveChange = { value ->
+                        automove = value
+                        kataGoDotsSettings = kataGoDotsSettings.copy(autoMove = automove)
+                        saveClassSettings(kataGoDotsSettings)
                     }
-
-                    EndMoveButton(isGrounding = true)
-                    EndMoveButton(isGrounding = false)
-
-                    if (games.size > 1) {
-                        @Composable
-                        fun SwitchGame(next: Boolean) {
-                            Button(onClick = {
-                                var currentGameIndex = games.indexOf(currentGame)
-                                currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
-                                currentGameSettings.currentNodeNumber = -1
-                                switchGame(currentGameIndex)
-                            }, controlButtonModifier, enabled = !engineIsCalculating) {
-                                Text(if (next) ">>" else "<<")
-                            }
-                        }
-                        SwitchGame(next = false)
-                        SwitchGame(next = true)
-                    }
-                }
-
-                kataGoDotsEngine?.let {
-                    Row(rowModifier) {
-                        Button(
-                            onClick = { makeAIMove() },
-                            controlButtonModifier,
-                            enabled = !getField().isGameOver() && !engineIsCalculating && doesKataSupportRules(getField().rules)
-                        ) {
-                            Text(if (engineIsCalculating) "Thinking..." else "AI move")
-                        }
-                        Text("Auto", Modifier.align(Alignment.CenterVertically))
-                        Checkbox(automove, onCheckedChange = { value ->
-                            automove = value
-                            kataGoDotsSettings = kataGoDotsSettings.copy(autoMove = automove)
-                            saveClassSettings(kataGoDotsSettings)
-                        })
-                    }
-                }
+                )
 
                 GameTreeView(
                     currentGameTreeNode,

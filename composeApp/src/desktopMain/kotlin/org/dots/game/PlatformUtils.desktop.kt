@@ -22,6 +22,13 @@ import java.awt.Frame
 import java.io.File
 import java.io.FilenameFilter
 import java.net.URI
+import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 
 @Composable
 actual fun HorizontalScrollbar(
@@ -128,6 +135,27 @@ actual fun OpenFileDialog(
     onFileSelected: (String?) -> Unit,
 ) {
     FileDialog(title, selectedFile, allowedExtensions, onFileSelected, content = null)
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+actual fun Tooltip(
+    text: String,
+    content: @Composable () -> Unit
+) {
+    TooltipArea(
+        tooltip = {
+            Surface(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(4.dp),
+                color = Color.DarkGray
+            ) {
+                Text(text, modifier = Modifier.padding(10.dp), color = Color.White)
+            }
+        }
+    ) {
+        content()
+    }
 }
 
 @Composable

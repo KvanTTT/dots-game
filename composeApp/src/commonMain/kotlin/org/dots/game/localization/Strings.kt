@@ -69,4 +69,15 @@ interface Strings {
     // Language settings
     val language: String
     val languageName: String
+
+    // Tooltips
+    val nextMove: String
+    val player1: String
+    val player2: String
+    val grounding: String
+    val resign: String
+    val nextGame: String
+    val previousGame: String
+    val aiMove: String
+    val thinking: String
 }

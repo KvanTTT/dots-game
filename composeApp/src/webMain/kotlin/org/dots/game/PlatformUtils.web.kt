@@ -142,6 +142,14 @@ actual fun OpenFileDialog(
     }
 }
 
+@Composable
+actual fun Tooltip(
+    text: String,
+    content: @Composable () -> Unit
+) {
+    content()
+}
+
 /**
  * Virtual file system for WASM platform.
  * Stores file contents in memory since WASM has no access to real file system.
