@@ -345,25 +345,27 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                 val selectedModeButtonColor = Color.Magenta
 
                 Row(rowModifier) {
-                    IconButton(strings.new, Res.drawable.ic_new_game, controlButtonModifier) {
-                        showNewGameDialog = true
-                    }
-                    IconButton(strings.reset, Res.drawable.ic_reset, controlButtonModifier) {
-                        reset(newGame = false)
-                    }
-                    IconButton(strings.load, Res.drawable.ic_load_game, controlButtonModifier) {
-                        openGameDialog = true
-                    }
-                    IconButton(strings.save, Res.drawable.ic_save_game, controlButtonModifier) {
-                        showSaveGameDialog = true
-                    }
-                    IconButton(strings.settings, Res.drawable.ic_settings, controlButtonModifier) {
-                        showUiSettingsForm = true
-                    }
+                    with (strings) {
+                        IconButton(Res.drawable.ic_new_game, controlButtonModifier) {
+                            showNewGameDialog = true
+                        }
+                        IconButton(Res.drawable.ic_reset, controlButtonModifier) {
+                            reset(newGame = false)
+                        }
+                        IconButton(Res.drawable.ic_load_game, controlButtonModifier) {
+                            openGameDialog = true
+                        }
+                        IconButton(Res.drawable.ic_save_game, controlButtonModifier) {
+                            showSaveGameDialog = true
+                        }
+                        IconButton(Res.drawable.ic_settings, controlButtonModifier) {
+                            showUiSettingsForm = true
+                        }
 
-                    if (KataGoDotsEngine.IS_SUPPORTED) {
-                        IconButton(strings.aiSettings, Res.drawable.ic_ai_settings, controlButtonModifier) {
-                            showKataGoDotsSettingsForm = true
+                        if (KataGoDotsEngine.IS_SUPPORTED) {
+                            IconButton(Res.drawable.ic_ai_settings, controlButtonModifier) {
+                                showKataGoDotsSettingsForm = true
+                            }
                         }
                     }
                 }
