@@ -16,7 +16,6 @@ object RussianStrings : Strings {
     override val settings = "Настройки"
     override val open = "Открыть"
     override val browse = "Обзор"
-    override val create = "Создать"
     override val aiSettings = "Настройки ИИ"
 
     // Game info
@@ -34,11 +33,11 @@ object RussianStrings : Strings {
     override val captureByBorder = "Захват через край"
     override val suicideAllowed = "Самоубийство разрешено"
     override val drawIsAllowed = "Возможность ничьи"
-    override val createNewGame = "Создать новую игру"
+    override val createNewGame = "Создать игру"
     override val randomStartPosition = "Случайная стартовая позиция"
 
     override fun initPosTypeLabel(type: InitPosType): String = when (type) {
-        InitPosType.Empty -> "Нет"
+        InitPosType.Empty -> "Пустая"
         InitPosType.Single -> "Точка"
         InitPosType.Cross -> "Скрест"
         InitPosType.DoubleCross -> "Двойной скрест"
@@ -47,9 +46,9 @@ object RussianStrings : Strings {
     }
 
     override fun baseModeLabel(mode: BaseMode): String = when (mode) {
-        BaseMode.AtLeastOneOpponentDot -> "Захват при одной точке"
-        BaseMode.AnySurrounding -> "Захват пустой области"
-        BaseMode.AllOpponentDots -> "Захват при полном заполнении"
+        BaseMode.AtLeastOneOpponentDot -> "Хотя бы одна точка соперника"
+        BaseMode.AnySurrounding -> "Любые области"
+        BaseMode.OnlyOpponentDots -> "Только точки соперника (как в Го)"
     }
 
     // Open Dialog

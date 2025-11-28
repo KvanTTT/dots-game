@@ -28,5 +28,5 @@ fun splitByUppercase(input: String): String {
 }
 
 fun doesKataSupportRules(rules: Rules): Boolean {
-    return !rules.captureByBorder && rules.baseMode != BaseMode.AllOpponentDots
+    return !rules.captureByBorder && rules.baseMode != BaseMode.OnlyOpponentDots
 }

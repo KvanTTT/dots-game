@@ -329,7 +329,7 @@ enum class BaseMode {
      * It doesn't imply inner holes since they could be encountered only in a case
      * when an inner empty base is surrounded by an outer inner base.
      * The case is very rare and generally in this case there is no sense to place dot inside such territories.
-     * That's why inner base holes are not implied and surroundings are always created by a minimal territory
+     * That's why inner base holes are not implied, and surroundings are always created by a minimal territory
      * excluding inner holes.
      * Also, the dots game format is surrounding-based unlike go-format that is more filling-based
      * (it affects algorithms for searching surroundings).
@@ -348,5 +348,5 @@ enum class BaseMode {
      * Inner holes are possible because it removes game state contradictions and makes the game more attractive for
      * go players that used to play in this way.
      */
-    AllOpponentDots;
+    OnlyOpponentDots;
 }

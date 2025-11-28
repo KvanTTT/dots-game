@@ -12,8 +12,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class FieldWithAllOpponentDotsAndBorderTests : FieldTests() {
-    override val baseMode: BaseMode = BaseMode.AllOpponentDots
+class FieldWithOnlyOpponentDotsAndBorderTests : FieldTests() {
+    override val baseMode: BaseMode = BaseMode.OnlyOpponentDots
     override val captureByBorder: Boolean = true
     override val suicideAllowed: Boolean = false
 
@@ -129,8 +129,8 @@ class FieldWithAllOpponentDotsAndBorderTests : FieldTests() {
     }
 }
 
-class FieldWithAllOpponentDotsAndNoBorderTests : FieldTests() {
-    override val baseMode: BaseMode = BaseMode.AllOpponentDots
+class FieldWithOnlyOpponentDotsAndNoBorderTests : FieldTests() {
+    override val baseMode: BaseMode = BaseMode.OnlyOpponentDots
     override val captureByBorder: Boolean = false
     override val suicideAllowed: Boolean = false
 

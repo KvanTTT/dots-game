@@ -16,7 +16,6 @@ object EnglishStrings : Strings {
     override val settings = "Settings"
     override val open = "Open"
     override val browse = "Browse"
-    override val create = "Create"
     override val aiSettings = "AI Settings"
 
     // Game info
@@ -34,7 +33,7 @@ object EnglishStrings : Strings {
     override val captureByBorder = "Capture by border"
     override val suicideAllowed = "Suicide allowed"
     override val drawIsAllowed = "Draw is allowed"
-    override val createNewGame = "Create new game"
+    override val createNewGame = "Create game"
     override val randomStartPosition = "Random start position"
 
     override fun initPosTypeLabel(type: InitPosType): String = when (type) {
@@ -49,7 +48,7 @@ object EnglishStrings : Strings {
     override fun baseModeLabel(mode: BaseMode): String = when (mode) {
         BaseMode.AtLeastOneOpponentDot -> "At Least One Opponent Dot"
         BaseMode.AnySurrounding -> "Any Surrounding"
-        BaseMode.AllOpponentDots -> "All Opponent Dots"
+        BaseMode.OnlyOpponentDots -> "Only Opponent Dots (like Go game)"
     }
 
     // Open Dialog

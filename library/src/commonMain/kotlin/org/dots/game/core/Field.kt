@@ -309,7 +309,7 @@ class Field {
             /**
              * Optimization: no need to check if the suicide is allowed
              * or the position inside a valid empty position
-             * TODO: currently empty territory isn't supported only for [BaseMode.AllOpponentDots]
+             * TODO: currently empty territory isn't supported only for [BaseMode.OnlyOpponentDots]
              * If they are implemented for this mode, the base mode check can be removed
              */
             return position
@@ -354,7 +354,7 @@ class Field {
 
         // Handle possible suicidal moves.
         if (bases.isEmpty()) {
-            resultBases = if (rules.baseMode != BaseMode.AllOpponentDots) {
+            resultBases = if (rules.baseMode != BaseMode.OnlyOpponentDots) {
                 val oppositePlayer = currentPlayer.opposite()
                 if (originalState.getEmptyTerritoryPlayer() == oppositePlayer) {
                     if (rules.suicideAllowed) {
@@ -395,7 +395,7 @@ class Field {
             emptyBaseInvalidatePositions = PositionsList.EMPTY // Not used in `AllOpponentDots` mode
         } else {
             resultBases = bases
-            emptyBaseInvalidatePositions = if (rules.baseMode != BaseMode.AllOpponentDots &&
+            emptyBaseInvalidatePositions = if (rules.baseMode != BaseMode.OnlyOpponentDots &&
                 originalState.isWithinEmptyTerritory(currentPlayer.opposite())
             ) {
                 // Invalidate empty territory of the opposite player in case of capturing that is more prioritized
@@ -436,8 +436,8 @@ class Field {
 
         val gameResult = when (externalFinishReason) {
             ExternalFinishReason.Grounding -> {
-                require(rules.baseMode != BaseMode.AllOpponentDots) {
-                    "${BaseMode.AllOpponentDots::class.simpleName} is not yet supported (it requires handling of immortal groups that have two or more eyes)"
+                require(rules.baseMode != BaseMode.OnlyOpponentDots) {
+                    "${BaseMode.OnlyOpponentDots::class.simpleName} is not yet supported (it requires handling of immortal groups that have two or more eyes)"
                 }
                 require(!rules.captureByBorder) {
                     "${rules.captureByBorder::class.simpleName} is not yet supported"
@@ -551,7 +551,7 @@ class Field {
     }
 
     private fun tryCapture(position: Position, player: Player, emptyBaseCapturing: Boolean): List<Base> {
-        return if (rules.baseMode != BaseMode.AllOpponentDots) {
+        return if (rules.baseMode != BaseMode.OnlyOpponentDots) {
             getUnconnectedPositions(position, player)
 
             // Optimization: in a regular case it should be at least 2 connection dots, otherwise there is no surrounding.
@@ -839,7 +839,7 @@ class Field {
         player: Player,
         capturingByOppositePlayer: Boolean,
     ): BaseWithRollbackInfo? {
-        require(rules.baseMode == BaseMode.AllOpponentDots)
+        require(rules.baseMode == BaseMode.OnlyOpponentDots)
 
         val oppositePlayer = player.opposite()
 
@@ -934,7 +934,7 @@ class Field {
                 atLeastOneCapturedDot
             }
             BaseMode.AnySurrounding -> true
-            BaseMode.AllOpponentDots -> error("The mode ${BaseMode.AllOpponentDots.name} is handled by ${::tryGetBaseForAllOpponentDotsMode.name}")
+            BaseMode.OnlyOpponentDots -> error("The mode ${BaseMode.OnlyOpponentDots.name} is handled by ${::tryGetBaseForAllOpponentDotsMode.name}")
         }
 
         return createBaseAndUpdateStates(player, closurePositions, isReal)

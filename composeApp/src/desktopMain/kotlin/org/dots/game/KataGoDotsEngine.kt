@@ -185,7 +185,7 @@ actual class KataGoDotsEngine private constructor(
     suspend fun getSyncType(field: Field): SyncType {
         val rules = field.rules
 
-        if (rules.captureByBorder || rules.baseMode == BaseMode.AllOpponentDots) {
+        if (rules.captureByBorder || rules.baseMode == BaseMode.OnlyOpponentDots) {
             return UnsupportedRules
         }
 
@@ -220,7 +220,7 @@ actual class KataGoDotsEngine private constructor(
                     val isSame = when (rules.baseMode) {
                         BaseMode.AtLeastOneOpponentDot -> !engineCaptureEmptyBase
                         BaseMode.AnySurrounding -> engineCaptureEmptyBase
-                        BaseMode.AllOpponentDots -> return UnsupportedRules
+                        BaseMode.OnlyOpponentDots -> return UnsupportedRules
                     }
                     if (!isSame) {
                         return FullSync

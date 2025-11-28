@@ -548,7 +548,7 @@ class SgfConverterTests {
         val rules = checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[Border,Suicide=0,BaseMode=2,StartIsRandom=1,,])").single().rules
         assertTrue(rules.captureByBorder)
         assertFalse(rules.suicideAllowed)
-        assertEquals(BaseMode.AllOpponentDots, rules.baseMode)
+        assertEquals(BaseMode.OnlyOpponentDots, rules.baseMode)
         assertTrue(rules.initPosIsRandom)
     }
 

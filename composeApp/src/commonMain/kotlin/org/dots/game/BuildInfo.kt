@@ -21,13 +21,16 @@ data class BuildInfo(val majorVersion: Int, val minorVersion: Int, val number: I
     val version: String
         get() = "$majorVersion.$minorVersion.$number"
 
-    val date: String
-        get() = dateTime.toString().substringBefore('T')
+    val dateTimeString: String by lazy { dateTime.toString() }
+
+    val date: String by lazy { dateTimeString.substringBefore('T') }
+
+    val dateTimeShort: String by lazy { dateTimeString.substringBefore('.') }
 
     override fun toString(): String {
         return buildString {
             append("${BuildInfo::version.name}: $version, ")
-            append("${BuildInfo::dateTime.name}: ${dateTime}, ")
+            append("${BuildInfo::dateTime.name}: $dateTimeShort, ")
             append("${BuildInfo::hash.name}: ${hash.ifEmpty { "local" }}")
         }
     }

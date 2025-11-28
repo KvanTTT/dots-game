@@ -43,8 +43,8 @@ fun NewGameDialog(
     var komiRange by remember { mutableStateOf(calculateKomiRange()) }
 
     var integerKomi by remember { mutableStateOf(
-            // Only negative Komi makes sense for a single initial pos
-            // Otherise, it allows instant grounding move that makes the game senseless because the first player always wins
+        // Only negative Komi makes sense for a single initial pos
+        // Otherise, it allows instant grounding move that makes the game senseless because the first player always wins
         (when {
                 uiSettings.developerMode -> rules.komi
                 rules.initPosType == InitPosType.Single -> {
@@ -83,7 +83,7 @@ fun NewGameDialog(
                 }
                 ModeConfig(
                     baseMode,
-                    ignoredEntries = if (!uiSettings.experimentalMode) setOf(BaseMode.AllOpponentDots) else emptySet(),
+                    ignoredEntries = if (!uiSettings.experimentalMode) setOf(BaseMode.OnlyOpponentDots) else emptySet(),
                     nameRenderer = { strings.baseMode },
                     valueRenderer = { strings.baseModeLabel(it) }
                 ) {

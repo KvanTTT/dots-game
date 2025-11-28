@@ -77,7 +77,7 @@ fun Field.getPositionsOfConnection(position: Position, diagonalConnections: Bool
  */
 fun Base.getSortedClosurePositions(field: Field, considerTerritoryPositions: Boolean = false): ExtendedClosureInfo {
     val baseMode = field.rules.baseMode
-    if (baseMode != BaseMode.AllOpponentDots && !considerTerritoryPositions) {
+    if (baseMode != BaseMode.OnlyOpponentDots && !considerTerritoryPositions) {
         return ExtendedClosureInfo(closurePositions.toList(), emptyList())
     } else {
         val closureSet = (if (considerTerritoryPositions) rollbackPositions else closurePositions).toHashSet()
