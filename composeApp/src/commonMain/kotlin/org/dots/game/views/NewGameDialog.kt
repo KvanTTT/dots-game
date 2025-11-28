@@ -88,7 +88,7 @@ fun NewGameDialog(
                             integerKomi = it
                         }
                     } else {
-                        Text(strings.roundDraw, Modifier.fillMaxWidth(configKeyTextFraction))
+                        Text(strings.drawIsAllowed, Modifier.fillMaxWidth(configKeyTextFraction))
                         Checkbox(integerKomi == 0, onCheckedChange = { integerKomi = if (it) 0 else 1  })
                     }
                 }

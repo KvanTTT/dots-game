@@ -3,6 +3,7 @@ package org.dots.game.localization
 import org.dots.game.core.BaseMode
 import org.dots.game.core.InitPosType
 import org.dots.game.views.ConnectionDrawMode
+import org.dots.game.views.KataGoDotsSettingsFileType
 import org.dots.game.views.PolygonDrawMode
 
 object RussianStrings : Strings {
@@ -23,13 +24,15 @@ object RussianStrings : Strings {
     override val move = "Ход"
     override val game = "Игра"
     override val komi = "Коми"
+    override val firstPlayerDefaultName = "Первый"
+    override val secondPlayerDefaultName = "Второй"
 
     // New Game Dialog
     override val initPosType = "Стартовая позиция"
-    override val baseMode = "Режим баз"
+    override val baseMode = "Режим захвата"
     override val captureByBorder = "Захват через край"
     override val suicideAllowed = "Самоубийство разрешено"
-    override val roundDraw = "Возможность ничьи"
+    override val drawIsAllowed = "Возможность ничьи"
     override val createNewGame = "Создать новую игру"
     override val randomStartPosition = "Случайная стартовая позиция"
 
@@ -62,7 +65,10 @@ object RussianStrings : Strings {
     override val printCoordinates = "Печатать координаты"
     override val debugInfo = "Отладочная информация"
     override val padding = "Отступ"
+    override val path = "Путь"
+    override fun saveDialogTitle(isSgf: Boolean) = "Сохранить игру в .${if (isSgf) "sgf" else "txt"}"
 
+    // Settings
     override val connectionDrawMode = "Отрисовка соединений"
     override val polygonDrawMode = "Отрисовка окружений"
     override val diagonalConnections = "Диагональные соединения"
@@ -70,6 +76,17 @@ object RussianStrings : Strings {
     override val surroundings = "Области под угрозой"
     override val developerMode = "Режим разработчика"
     override val version: String = "Версия"
+
+    // AI Settings
+    override fun aiSettingsFilePath(fileType: KataGoDotsSettingsFileType): String {
+        return "Путь к .$fileType файлу"
+    }
+    override fun aiSettingsSelectFile(fileType: KataGoDotsSettingsFileType): String {
+        return "Выберите .$fileType файл"
+    }
+    override val default: String = "По-умолчанию"
+    override val checking: String = "Проверка..."
+    override val check: String = "Проверить"
 
     override fun connectionDrawModeLabel(mode: ConnectionDrawMode): String = when (mode) {
         ConnectionDrawMode.None -> "Нет"
@@ -97,4 +114,5 @@ object RussianStrings : Strings {
     override val previousGame = "Предыдущая игра"
     override val aiMove = "Ход бота"
     override val aiThinking = "Бот думает..."
+    override val autoMove = "Авто"
 }

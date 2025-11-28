@@ -3,6 +3,7 @@ package org.dots.game.localization
 import org.dots.game.core.BaseMode
 import org.dots.game.core.InitPosType
 import org.dots.game.views.ConnectionDrawMode
+import org.dots.game.views.KataGoDotsSettingsFileType
 import org.dots.game.views.PolygonDrawMode
 
 object EnglishStrings : Strings {
@@ -23,13 +24,15 @@ object EnglishStrings : Strings {
     override val move = "Move"
     override val game = "Game"
     override val komi = "Komi"
+    override val firstPlayerDefaultName = "First"
+    override val secondPlayerDefaultName = "Second"
 
     // New Game Dialog
     override val initPosType = "Init Pos Type"
     override val baseMode = "Base Mode"
     override val captureByBorder = "Capture by border"
     override val suicideAllowed = "Suicide allowed"
-    override val roundDraw = "Round Draw"
+    override val drawIsAllowed = "Draw is allowed"
     override val createNewGame = "Create new game"
     override val randomStartPosition = "Random start position"
 
@@ -62,6 +65,8 @@ object EnglishStrings : Strings {
     override val printCoordinates = "Print coordinates"
     override val debugInfo = "Debug info"
     override val padding = "Padding"
+    override val path = "Path"
+    override fun saveDialogTitle(isSgf: Boolean) = "Save game to .${if (isSgf) "sgf" else "txt"}"
 
     // Settings Dialog
     override val connectionDrawMode = "Connection Draw Mode"
@@ -71,6 +76,17 @@ object EnglishStrings : Strings {
     override val surroundings = "Surroundings"
     override val developerMode = "Developer Mode"
     override val version: String = "Version"
+
+    // AI Settings
+    override fun aiSettingsFilePath(fileType: KataGoDotsSettingsFileType): String {
+        return fileType.toString().replaceFirstChar { it.uppercase() } + " path"
+    }
+    override fun aiSettingsSelectFile(fileType: KataGoDotsSettingsFileType): String {
+        return "Select .$fileType file"
+    }
+    override val default: String = "Default"
+    override val checking: String = "Checking"
+    override val check: String = "Check"
 
     override fun connectionDrawModeLabel(mode: ConnectionDrawMode): String = when (mode) {
         ConnectionDrawMode.None -> "None"
@@ -97,5 +113,6 @@ object EnglishStrings : Strings {
     override val nextGame = "Next game"
     override val previousGame = "Previous game"
     override val aiMove = "AI move"
-    override val aiThinking = "AI Thinking..."
+    override val aiThinking = "AI is thinking..."
+    override val autoMove = "Auto"
 }

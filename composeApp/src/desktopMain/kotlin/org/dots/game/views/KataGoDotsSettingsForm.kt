@@ -16,11 +16,13 @@ import org.dots.game.KataGoDotsEngine
 import org.dots.game.KataGoDotsSettings
 import org.dots.game.OS
 import org.dots.game.OpenFileDialog
+import org.dots.game.localization.Strings
 import org.dots.game.platform
 
 @Composable
 actual fun KataGoDotsSettingsForm(
     kataGoDotsSettings: KataGoDotsSettings,
+    strings: Strings,
     onSettingsChange: (KataGoDotsEngine) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -32,27 +34,27 @@ actual fun KataGoDotsSettingsForm(
     var kataGoDotsEngine by remember { mutableStateOf<KataGoDotsEngine?>(null) }
     var engineIsInitializing by remember { mutableStateOf(false) }
     var messages by remember { mutableStateOf(listOf<Diagnostic>()) }
-    var selectedFileMode by remember { mutableStateOf<FileMode?>(null) }
+    var selectedFileType by remember { mutableStateOf<KataGoDotsSettingsFileType?>(null) }
 
     var maxTimeSeconds by remember { mutableStateOf(kataGoDotsSettings.maxTime) }
     var maxVisits by remember { mutableStateOf(kataGoDotsSettings.maxVisits) }
     var maxPlayouts by remember { mutableStateOf(kataGoDotsSettings.maxPlayouts) }
 
-    fun invalidatePath(newPath: String, mode: FileMode) {
+    fun invalidatePath(newPath: String, mode: KataGoDotsSettingsFileType) {
         when (mode) {
-            FileMode.Exe -> {
+            KataGoDotsSettingsFileType.Exe -> {
                 if (exePath != newPath) {
                     exePath = newPath
                     kataGoDotsEngine = null
                 }
             }
-            FileMode.Model -> {
+            KataGoDotsSettingsFileType.Model -> {
                 if (modelPath != newPath) {
                     modelPath = newPath
                     kataGoDotsEngine = null
                 }
             }
-            FileMode.Config -> {
+            KataGoDotsSettingsFileType.Config -> {
                 if (configPath != newPath) {
                     configPath = newPath
                     kataGoDotsEngine = null
@@ -78,24 +80,24 @@ actual fun KataGoDotsSettingsForm(
         messages = newMessages
     }
 
-    if (selectedFileMode != null) {
-        val allowedExtensions = when (selectedFileMode) {
-            FileMode.Exe -> listOf(if (platform.os == OS.Windows) "exe" else "")
-            FileMode.Model -> listOf("bin.gz")
-            FileMode.Config -> listOf("cfg")
+    if (selectedFileType != null) {
+        val allowedExtensions = when (selectedFileType) {
+            KataGoDotsSettingsFileType.Exe -> listOf(if (platform.os == OS.Windows) "exe" else "")
+            KataGoDotsSettingsFileType.Model -> listOf("bin.gz")
+            KataGoDotsSettingsFileType.Config -> listOf("cfg")
             null -> emptyList() // TODO: it shouldn't be a warning, see KT-82211
         }
-        val selectedFile = when (selectedFileMode) {
-            FileMode.Exe -> exePath
-            FileMode.Model -> modelPath
-            FileMode.Config -> configPath
+        val selectedFile = when (selectedFileType) {
+            KataGoDotsSettingsFileType.Exe -> exePath
+            KataGoDotsSettingsFileType.Model -> modelPath
+            KataGoDotsSettingsFileType.Config -> configPath
             null -> null // TODO: it shouldn't be a warning, see KT-82211
         }
-        OpenFileDialog("Select ${selectedFileMode!!.name.lowercase()} file", selectedFile, allowedExtensions) {
+        OpenFileDialog(strings.aiSettingsSelectFile(selectedFileType!!), selectedFile, allowedExtensions) {
             if (it != null) {
-                invalidatePath(it, selectedFileMode!!)
+                invalidatePath(it, selectedFileType!!)
             }
-            selectedFileMode = null
+            selectedFileType = null
         }
     }
 
@@ -103,12 +105,12 @@ actual fun KataGoDotsSettingsForm(
         Card(modifier = Modifier.width(800.dp).wrapContentHeight()) {
             Column(modifier = Modifier.padding(20.dp)) {
                 @Composable
-                fun FileSelector(path: String, fileMode: FileMode) {
+                fun FileSelector(path: String, fileType: KataGoDotsSettingsFileType) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("$fileMode path", Modifier.fillMaxWidth(0.3f))
+                        Text(strings.aiSettingsFilePath(fileType), Modifier.fillMaxWidth(0.3f))
                         TextField(
                             path, {
-                                invalidatePath(it, fileMode)
+                                invalidatePath(it, fileType)
                             },
                             modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 10.dp),
                             maxLines = 1,
@@ -116,7 +118,7 @@ actual fun KataGoDotsSettingsForm(
                             enabled = !engineIsInitializing,
                         )
                         Button(
-                            onClick = { selectedFileMode = fileMode },
+                            onClick = { selectedFileType = fileType },
                             Modifier.padding(horizontal = 10.dp),
                             enabled = !engineIsInitializing,
                         ) {
@@ -125,9 +127,9 @@ actual fun KataGoDotsSettingsForm(
                     }
                 }
 
-                FileSelector(exePath, FileMode.Exe)
-                FileSelector(modelPath, FileMode.Model)
-                FileSelector(configPath, FileMode.Config)
+                FileSelector(exePath, KataGoDotsSettingsFileType.Exe)
+                FileSelector(modelPath, KataGoDotsSettingsFileType.Model)
+                FileSelector(configPath, KataGoDotsSettingsFileType.Config)
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     DiscreteSliderConfig("Max time (sec)", maxTimeSeconds, 0, 60, enabled = !engineIsInitializing,
@@ -179,18 +181,12 @@ actual fun KataGoDotsSettingsForm(
                     enabled = !engineIsInitializing,
                 ) {
                     Text(if (kataGoDotsEngine == null) {
-                        if (engineIsInitializing) "Checking..." else "Check"
+                        if (engineIsInitializing) strings.checking else strings.check
                     } else {
-                        "Save"
+                        strings.save
                     })
                 }
             }
         }
     }
-}
-
-private enum class FileMode {
-    Exe,
-    Model,
-    Config,
 }

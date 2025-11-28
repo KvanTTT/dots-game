@@ -3,6 +3,7 @@ package org.dots.game.localization
 import org.dots.game.core.BaseMode
 import org.dots.game.core.InitPosType
 import org.dots.game.views.ConnectionDrawMode
+import org.dots.game.views.KataGoDotsSettingsFileType
 import org.dots.game.views.PolygonDrawMode
 
 interface Strings {
@@ -23,13 +24,15 @@ interface Strings {
     val move: String
     val game: String
     val komi: String
+    val firstPlayerDefaultName: String
+    val secondPlayerDefaultName: String
 
     // New Game Dialog
     val initPosType: String
     val baseMode: String
     val captureByBorder: String
     val suicideAllowed: String
-    val roundDraw: String
+    val drawIsAllowed: String
     val createNewGame: String
     val randomStartPosition: String
 
@@ -53,6 +56,8 @@ interface Strings {
     val printCoordinates: String
     val debugInfo: String
     val padding: String
+    val path: String
+    fun saveDialogTitle(isSgf: Boolean): String
 
     // Settings Dialog
     val connectionDrawMode: String
@@ -62,6 +67,13 @@ interface Strings {
     val surroundings: String
     val developerMode: String
     val version: String
+
+    // AI Settings
+    fun aiSettingsFilePath(fileType: KataGoDotsSettingsFileType): String
+    fun aiSettingsSelectFile(fileType: KataGoDotsSettingsFileType): String
+    val default: String
+    val checking: String
+    val check: String
 
     fun connectionDrawModeLabel(mode: ConnectionDrawMode): String
     fun polygonDrawModeLabel(mode: PolygonDrawMode): String
@@ -80,4 +92,5 @@ interface Strings {
     val previousGame: String
     val aiMove: String
     val aiThinking: String
+    val autoMove: String
 }
