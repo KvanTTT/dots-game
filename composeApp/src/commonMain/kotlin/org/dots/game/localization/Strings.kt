@@ -69,4 +69,15 @@ interface Strings {
     // Language settings
     val language: String
     val languageName: String
+
+    // Controls
+    val nextPlayer: String
+    val firstPlayer: String
+    val secondPlayer: String
+    val ground: String
+    val resign: String
+    val nextGame: String
+    val previousGame: String
+    val aiMove: String
+    val aiThinking: String
 }

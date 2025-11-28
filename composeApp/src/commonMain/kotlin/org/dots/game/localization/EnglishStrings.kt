@@ -88,4 +88,14 @@ object EnglishStrings : Strings {
 
     override val language = "Language"
     override val languageName = "English"
+
+    override val nextPlayer = "Next player"
+    override val firstPlayer = "Player 1"
+    override val secondPlayer = "Player 2"
+    override val ground = "Ground"
+    override val resign = "Resign"
+    override val nextGame = "Next game"
+    override val previousGame = "Previous game"
+    override val aiMove = "AI move"
+    override val aiThinking = "AI Thinking..."
 }

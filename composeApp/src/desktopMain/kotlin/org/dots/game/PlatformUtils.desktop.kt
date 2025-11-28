@@ -1,13 +1,20 @@
 package org.dots.game
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.HorizontalScrollbar
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -188,4 +195,25 @@ actual val platform: Platform = run {
         else -> OS.Unknown
     }
     Desktop(os)
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+actual fun Tooltip(
+    text: String,
+    content: @Composable () -> Unit
+) {
+    TooltipArea(
+        tooltip = {
+            Surface(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(4.dp),
+                color = Color.DarkGray
+            ) {
+                Text(text, modifier = Modifier.padding(10.dp), color = Color.White)
+            }
+        }
+    ) {
+        content()
+    }
 }

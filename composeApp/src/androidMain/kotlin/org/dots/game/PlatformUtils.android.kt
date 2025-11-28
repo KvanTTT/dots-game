@@ -164,3 +164,8 @@ private object AndroidPickedFiles {
 object Android : Platform(OS.Android)
 
 actual val platform: Platform = Android
+
+@Composable
+actual fun Tooltip(text: String, content: @Composable (() -> Unit)) {
+    content()
+}

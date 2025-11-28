@@ -33,6 +33,12 @@ expect fun OpenFileDialog(
     onFileSelected: (String?) -> Unit,
 )
 
+@Composable
+expect fun Tooltip(
+    text: String,
+    content: @Composable () -> Unit
+)
+
 enum class OS {
     Windows,
     MacOS,

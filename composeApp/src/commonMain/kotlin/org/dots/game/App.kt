@@ -35,6 +35,8 @@ import dotsgame.composeapp.generated.resources.ic_ai_settings
 import dotsgame.composeapp.generated.resources.ic_ground
 import dotsgame.composeapp.generated.resources.ic_load_game
 import dotsgame.composeapp.generated.resources.ic_new_game
+import dotsgame.composeapp.generated.resources.ic_next
+import dotsgame.composeapp.generated.resources.ic_previous
 import dotsgame.composeapp.generated.resources.ic_reset
 import dotsgame.composeapp.generated.resources.ic_resign
 import dotsgame.composeapp.generated.resources.ic_save_game
@@ -338,7 +340,6 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                 }
             }
             Column(Modifier.padding(start = 5.dp)) {
-                val controlButtonModifier = Modifier.padding(end = 5.dp)
                 val rowModifier = Modifier.padding(bottom = 5.dp)
                 val playerColorIconModifier =
                     Modifier.size(16.dp).border(1.dp, Color.White, CircleShape).clip(CircleShape)
@@ -346,24 +347,24 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
 
                 Row(rowModifier) {
                     with (strings) {
-                        IconButton(Res.drawable.ic_new_game, controlButtonModifier) {
+                        IconButton(Res.drawable.ic_new_game) {
                             showNewGameDialog = true
                         }
-                        IconButton(Res.drawable.ic_reset, controlButtonModifier) {
+                        IconButton(Res.drawable.ic_reset) {
                             reset(newGame = false)
                         }
-                        IconButton(Res.drawable.ic_load_game, controlButtonModifier) {
+                        IconButton(Res.drawable.ic_load_game) {
                             openGameDialog = true
                         }
-                        IconButton(Res.drawable.ic_save_game, controlButtonModifier) {
+                        IconButton(Res.drawable.ic_save_game) {
                             showSaveGameDialog = true
                         }
-                        IconButton(Res.drawable.ic_settings, controlButtonModifier) {
+                        IconButton(Res.drawable.ic_settings) {
                             showUiSettingsForm = true
                         }
 
                         if (KataGoDotsEngine.IS_SUPPORTED) {
-                            IconButton(Res.drawable.ic_ai_settings, controlButtonModifier) {
+                            IconButton(Res.drawable.ic_ai_settings) {
                                 showKataGoDotsSettingsForm = true
                             }
                         }
@@ -371,59 +372,68 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                 }
 
                 Row(rowModifier) {
-                    Button(
-                        onClick = {
-                            moveMode = MoveMode.Next
-                            focusRequester.requestFocus()
-                        },
-                        controlButtonModifier,
-                        colors = if (moveMode == MoveMode.Next) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
-                    ) {
-                        Box {
+                    Tooltip(strings.nextPlayer) {
+                        Button(
+                            onClick = {
+                                moveMode = MoveMode.Next
+                                focusRequester.requestFocus()
+                            },
+                            defaultButtonModifier,
+                            colors = if (moveMode == MoveMode.Next) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
+                        ) {
+                            Box {
+                                Box(
+                                    modifier = Modifier.offset((-5).dp).size(16.dp)
+                                        .border(1.dp, Color.White, CircleShape).clip(CircleShape)
+                                        .background(uiSettings.playerFirstColor)
+                                )
+                                Box(
+                                    modifier = Modifier.offset(5.dp).size(16.dp).border(1.dp, Color.White, CircleShape)
+                                        .clip(CircleShape).background(uiSettings.playerSecondColor)
+                                )
+                            }
+                        }
+                    }
+                    Tooltip(strings.firstPlayer) {
+                        Button(
+                            onClick = {
+                                moveMode = MoveMode.First
+                                focusRequester.requestFocus()
+                            },
+                            defaultButtonModifier,
+                            colors = if (moveMode == MoveMode.First) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
+                        ) {
                             Box(
-                                modifier = Modifier.offset((-5).dp).size(16.dp)
-                                    .border(1.dp, Color.White, CircleShape).clip(CircleShape)
-                                    .background(uiSettings.playerFirstColor)
-                            )
-                            Box(
-                                modifier = Modifier.offset(5.dp).size(16.dp).border(1.dp, Color.White, CircleShape)
-                                    .clip(CircleShape).background(uiSettings.playerSecondColor)
+                                modifier = playerColorIconModifier.background(uiSettings.playerFirstColor)
                             )
                         }
                     }
-                    Button(
-                        onClick = {
-                            moveMode = MoveMode.First
-                            focusRequester.requestFocus()
-                        },
-                        controlButtonModifier,
-                        colors = if (moveMode == MoveMode.First) ButtonDefaults.buttonColors(selectedModeButtonColor) else ButtonDefaults.buttonColors(),
-                    ) {
-                        Box(
-                            modifier = playerColorIconModifier.background(uiSettings.playerFirstColor)
-                        )
-                    }
-                    Button(
-                        onClick = {
-                            moveMode = MoveMode.Second
-                            focusRequester.requestFocus()
-                        },
-                        controlButtonModifier,
-                        colors = if (moveMode == MoveMode.Second) ButtonDefaults.buttonColors(
-                            selectedModeButtonColor
-                        ) else ButtonDefaults.buttonColors(),
-                    ) {
-                        Box(
-                            modifier = playerColorIconModifier.background(uiSettings.playerSecondColor)
-                        )
+                    Tooltip(strings.secondPlayer) {
+                        Button(
+                            onClick = {
+                                moveMode = MoveMode.Second
+                                focusRequester.requestFocus()
+                            },
+                            defaultButtonModifier,
+                            colors = if (moveMode == MoveMode.Second) ButtonDefaults.buttonColors(
+                                selectedModeButtonColor
+                            ) else ButtonDefaults.buttonColors(),
+                        ) {
+                            Box(
+                                modifier = playerColorIconModifier.background(uiSettings.playerSecondColor)
+                            )
+                        }
                     }
 
                     @Composable
                     fun EndMoveButton(isGrounding: Boolean) {
-                        Button(
-                            onClick = {
+                        with(strings) {
+                            IconButton(
+                                if (isGrounding) Res.drawable.ic_ground else Res.drawable.ic_resign,
+                                enabled = !getField().isGameOver() && !engineIsCalculating,
+                            ) {
                                 // Check for game over just in case
-                                if (getField().isGameOver()) return@Button
+                                if (getField().isGameOver()) return@IconButton
 
                                 getGameTree().addChild(
                                     MoveInfo.createFinishingMove(
@@ -436,15 +446,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                                 )
                                 updateFieldAndGameTree()
                                 focusRequester.requestFocus()
-                            },
-                            controlButtonModifier,
-                            enabled = !getField().isGameOver() && !engineIsCalculating
-                        ) {
-                            Icon(
-                                painter = painterResource(if (isGrounding) Res.drawable.ic_ground else Res.drawable.ic_resign),
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            }
                         }
                     }
 
@@ -454,13 +456,16 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                     if (games.size > 1) {
                         @Composable
                         fun SwitchGame(next: Boolean) {
-                            Button(onClick = {
-                                var currentGameIndex = games.indexOf(currentGame)
-                                currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
-                                currentGameSettings.currentNodeNumber = -1
-                                switchGame(currentGameIndex)
-                            }, controlButtonModifier, enabled = !engineIsCalculating) {
-                                Text(if (next) ">>" else "<<")
+                            with (strings) {
+                                IconButton(
+                                    if (next) Res.drawable.ic_next else Res.drawable.ic_previous,
+                                    enabled = !engineIsCalculating,
+                                ) {
+                                    var currentGameIndex = games.indexOf(currentGame)
+                                    currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
+                                    currentGameSettings.currentNodeNumber = -1
+                                    switchGame(currentGameIndex)
+                                }
                             }
                         }
                         SwitchGame(next = false)
@@ -470,21 +475,25 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
 
                 kataGoDotsEngine?.let {
                     Row(rowModifier) {
-                        Button(
-                            onClick = { makeAIMove() },
-                            controlButtonModifier,
-                            enabled = !getField().isGameOver() && !engineIsCalculating && doesKataSupportRules(getField().rules)
-                        ) {
-                            if (engineIsCalculating) {
-                                CircularProgressIndicator(
-                                    Modifier.size(20.dp) // "Thinking..."
+                        Tooltip(if (engineIsCalculating) strings.aiThinking else strings.aiMove) {
+                            Button(
+                                onClick = { makeAIMove() },
+                                defaultButtonModifier,
+                                enabled = !getField().isGameOver() && !engineIsCalculating && doesKataSupportRules(
+                                    getField().rules
                                 )
-                            } else {
-                                Icon(
-                                    painterResource(Res.drawable.ic_ai_move),
-                                    contentDescription = "AI Move",
-                                    modifier = Modifier.size(20.dp)
-                                )
+                            ) {
+                                if (engineIsCalculating) {
+                                    CircularProgressIndicator(
+                                        Modifier.size(20.dp) // "Thinking..."
+                                    )
+                                } else {
+                                    Icon(
+                                        painterResource(Res.drawable.ic_ai_move),
+                                        contentDescription = strings.aiMove,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
 
