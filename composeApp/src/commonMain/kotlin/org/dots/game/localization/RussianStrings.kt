@@ -80,10 +80,14 @@ object RussianStrings : Strings {
 
     // AI Settings
     override fun aiSettingsFilePath(fileType: KataGoDotsSettingsFileType): String {
-        return "Путь к .$fileType файлу"
+        return when (fileType) {
+            KataGoDotsSettingsFileType.Exe -> "Исполняемый файл"
+            KataGoDotsSettingsFileType.Model -> "Файл модели"
+            KataGoDotsSettingsFileType.Config -> "Файл конфигурации"
+        }
     }
     override fun aiSettingsSelectFile(fileType: KataGoDotsSettingsFileType): String {
-        return "Выберите .$fileType файл"
+        return "Выберите${fileType.extensions.filter { it.isNotEmpty() }.joinToString(",") { " .${it}" }} файл"
     }
     override val default: String = "По-умолчанию"
     override val checking: String = "Проверка..."

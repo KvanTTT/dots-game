@@ -84,22 +84,15 @@ actual fun KataGoDotsSettingsForm(
         messages = newMessages
     }
 
-    if (selectedFileType != null) {
-        val allowedExtensions = when (selectedFileType) {
-            KataGoDotsSettingsFileType.Exe -> listOf(if (platform.os == OS.Windows) "exe" else "")
-            KataGoDotsSettingsFileType.Model -> listOf("bin.gz")
-            KataGoDotsSettingsFileType.Config -> listOf("cfg")
-            null -> emptyList() // TODO: it shouldn't be a warning, see KT-82211
-        }
-        val selectedFile = when (selectedFileType) {
+    selectedFileType?.let { fileType ->
+        val selectedFile = when (fileType) {
             KataGoDotsSettingsFileType.Exe -> exePath
             KataGoDotsSettingsFileType.Model -> modelPath
             KataGoDotsSettingsFileType.Config -> configPath
-            null -> null // TODO: it shouldn't be a warning, see KT-82211
         }
-        OpenFileDialog(strings.aiSettingsSelectFile(selectedFileType!!), selectedFile, allowedExtensions) {
+        OpenFileDialog(strings.aiSettingsSelectFile(fileType), selectedFile, fileType.extensions) {
             if (it != null) {
-                invalidatePath(it, selectedFileType!!)
+                invalidatePath(it, fileType)
             }
             selectedFileType = null
         }

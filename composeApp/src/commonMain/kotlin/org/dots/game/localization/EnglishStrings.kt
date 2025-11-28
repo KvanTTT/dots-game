@@ -80,10 +80,10 @@ object EnglishStrings : Strings {
 
     // AI Settings
     override fun aiSettingsFilePath(fileType: KataGoDotsSettingsFileType): String {
-        return fileType.toString().replaceFirstChar { it.uppercase() } + " path"
+        return "$fileType file"
     }
     override fun aiSettingsSelectFile(fileType: KataGoDotsSettingsFileType): String {
-        return "Select .$fileType file"
+        return "Select${fileType.extensions.filter { it.isNotEmpty() }.joinToString(",") { " .${it}" }} file"
     }
     override val default: String = "Default"
     override val checking: String = "Checking"
