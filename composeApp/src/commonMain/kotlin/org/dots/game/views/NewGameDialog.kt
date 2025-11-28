@@ -30,12 +30,17 @@ fun NewGameDialog(
     var initPosIsRandom by remember { mutableStateOf(rules.initPosIsRandom) }
     var baseMode by remember { mutableStateOf(EnumMode(selected = rules.baseMode)) }
     var suicideAllowed by remember { mutableStateOf(rules.suicideAllowed) }
-    val normalizedKomi = when {
-        uiSettings.developerMode -> rules.komi
-        rules.komi <= 0.0 -> 0.0
-        else -> 0.5
+    var integerKomi by remember { mutableStateOf(
+            // Only negative Komi makes sense for a single initial pos
+            // Otherise, it allows instant grounding move that makes the game senseless because the first player always wins
+            when {
+                uiSettings.developerMode -> (rules.komi * 2).toInt()
+                rules.initPosType == InitPosType.Single -> -1
+                else -> 1
+            }
+        )
     }
-    var integerKomi by remember { mutableStateOf((normalizedKomi * 2).toInt()) }
+    var drawIsAllowed by remember { mutableStateOf(integerKomi == 0) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(470.dp).wrapContentHeight()) {
@@ -89,7 +94,7 @@ fun NewGameDialog(
                         }
                     } else {
                         Text(strings.drawIsAllowed, Modifier.fillMaxWidth(configKeyTextFraction))
-                        Checkbox(integerKomi == 0, onCheckedChange = { integerKomi = if (it) 0 else 1  })
+                        Checkbox(drawIsAllowed, onCheckedChange = { drawIsAllowed = it })
                     }
                 }
 
@@ -104,7 +109,15 @@ fun NewGameDialog(
                                 suicideAllowed,
                                 initPosType.selected,
                                 Random.takeIf { initPosIsRandom },
-                                (integerKomi.toDouble() / 2.0)
+                                if (uiSettings.developerMode) {
+                                    integerKomi.toDouble() / 2.0
+                                } else {
+                                    when {
+                                        drawIsAllowed -> 0.0
+                                        initPosType.selected == InitPosType.Single -> -0.5
+                                        else -> 0.5
+                                    }
+                                }
                             )
                         )
                     },
