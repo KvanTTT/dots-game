@@ -49,7 +49,11 @@ jobs:
             -PbuildDateTime="$(date +'%Y-%m-%dT%H:%M:%SZ')" -PbuildHash="${{ github.sha }}"
 
       - name: Build WasmJS Distribution
-        run: ./gradlew :composeApp:wasmJsBrowserDistribution --no-daemon --stacktrace
+        shell: bash
+        run: | 
+          ./gradlew :composeApp:wasmJsBrowserDistribution --no-daemon \
+            -PmajorVersion="${{ env.MAJOR_VERSION }}" -PminorVersion="${{ env.MINOR_VERSION }}" -PbuildNumber="${{ github.run_number }}" \
+            -PbuildDateTime="$(date +'%Y-%m-%dT%H:%M:%SZ')" -PbuildHash="${{ github.sha }}"
 
       - name: Publish to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -108,7 +112,7 @@ jobs:
       - name: Build Desktop Distribution
         shell: bash
         run: |
-          ./gradlew :composeApp:${{ matrix.task }} --no-daemon --stacktrace \
+          ./gradlew :composeApp:${{ matrix.task }} --no-daemon \
             -PmajorVersion="${{ env.MAJOR_VERSION }}" -PminorVersion="${{ env.MINOR_VERSION }}" -PbuildNumber="${{ github.run_number }}" \
             -PbuildDateTime="$(date +'%Y-%m-%dT%H:%M:%SZ')" -PbuildHash="${{ github.sha }}"
 
