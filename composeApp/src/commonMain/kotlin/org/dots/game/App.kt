@@ -39,7 +39,7 @@ import dotsgame.composeapp.generated.resources.ic_next
 import dotsgame.composeapp.generated.resources.ic_previous
 import dotsgame.composeapp.generated.resources.ic_reset
 import dotsgame.composeapp.generated.resources.ic_resign
-import dotsgame.composeapp.generated.resources.ic_save_game
+import dotsgame.composeapp.generated.resources.ic_save_as
 import dotsgame.composeapp.generated.resources.ic_settings
 import org.dots.game.dump.DumpParameters
 
@@ -356,7 +356,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                         IconButton(Res.drawable.ic_load_game) {
                             openGameDialog = true
                         }
-                        IconButton(Res.drawable.ic_save_game) {
+                        IconButton(Res.drawable.ic_save_as) {
                             showSaveGameDialog = true
                         }
                         IconButton(Res.drawable.ic_settings) {
@@ -484,9 +484,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                                 )
                             ) {
                                 if (engineIsCalculating) {
-                                    CircularProgressIndicator(
-                                        Modifier.size(20.dp) // "Thinking..."
-                                    )
+                                    CircularProgressIndicator(Modifier.size(20.dp))
                                 } else {
                                     Icon(
                                         painterResource(Res.drawable.ic_ai_move),

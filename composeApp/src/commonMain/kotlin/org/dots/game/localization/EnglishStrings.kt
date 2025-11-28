@@ -12,6 +12,7 @@ object EnglishStrings : Strings {
     override val reset = "Reset"
     override val load = "Load"
     override val save = "Save"
+    override val saveAs = "Save As"
     override val settings = "Settings"
     override val open = "Open"
     override val browse = "Browse"

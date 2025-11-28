@@ -12,6 +12,7 @@ object RussianStrings : Strings {
     override val reset = "Сбросить"
     override val load = "Загрузить"
     override val save = "Сохранить"
+    override val saveAs = "Сохранить как"
     override val settings = "Настройки"
     override val open = "Открыть"
     override val browse = "Обзор"

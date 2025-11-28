@@ -12,6 +12,7 @@ interface Strings {
     val reset: String
     val load: String
     val save: String
+    val saveAs: String
     val settings: String
     val open: String
     val browse: String

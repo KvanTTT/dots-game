@@ -10,6 +10,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import dotsgame.composeapp.generated.resources.Res
+import dotsgame.composeapp.generated.resources.ic_save
+import org.dots.game.IconButton
 import org.dots.game.SaveFileDialog
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
@@ -156,15 +159,14 @@ fun SaveDialog(
                     TextField(path, {
                         path = it
                     },
-                    modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 10.dp),
+                    modifier = Modifier.fillMaxWidth(0.8f).padding(end = 5.dp),
                         maxLines = 1,
                         singleLine = true,
                     )
-                    Button(
-                        onClick = { showSaveDialog = true },
-                        Modifier.padding(horizontal = 10.dp),
-                    ) {
-                        Text(strings.save)
+                    with(strings) {
+                        IconButton(Res.drawable.ic_save) {
+                            showSaveDialog = true
+                        }
                     }
                 }
             }

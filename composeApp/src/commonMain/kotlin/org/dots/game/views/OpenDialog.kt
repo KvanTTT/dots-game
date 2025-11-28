@@ -30,9 +30,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import dotsgame.composeapp.generated.resources.Res
+import dotsgame.composeapp.generated.resources.ic_browse
 import kotlinx.coroutines.launch
 import org.dots.game.Diagnostic
 import org.dots.game.GameLoader
+import org.dots.game.IconButton
 import org.dots.game.InputType
 import org.dots.game.LoadResult
 import org.dots.game.buildLineOffsets
@@ -123,11 +126,10 @@ fun OpenDialog(
                             textStyle = TextStyle(fontFamily = FontFamily.Monospace),
                             placeholder = { Text(strings.pathOrContentPlaceholder) }
                         )
-                        Button(
-                            onClick = { showFileDialog = true },
-                            modifier = Modifier.padding(0.dp)
-                        ) {
-                            Text(strings.browse)
+                        with (strings) {
+                            IconButton(Res.drawable.ic_browse) {
+                                showFileDialog = true
+                            }
                         }
                     }
                 }

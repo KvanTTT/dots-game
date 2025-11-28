@@ -3,6 +3,7 @@ package org.dots.game.views
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Card
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
@@ -10,8 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import dotsgame.composeapp.generated.resources.Res
+import dotsgame.composeapp.generated.resources.ic_browse
 import kotlinx.coroutines.launch
 import org.dots.game.Diagnostic
+import org.dots.game.IconButton
 import org.dots.game.KataGoDotsEngine
 import org.dots.game.KataGoDotsSettings
 import org.dots.game.OS
@@ -107,22 +111,20 @@ actual fun KataGoDotsSettingsForm(
                 @Composable
                 fun FileSelector(path: String, fileType: KataGoDotsSettingsFileType) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(strings.aiSettingsFilePath(fileType), Modifier.fillMaxWidth(0.3f))
+                        Text(strings.aiSettingsFilePath(fileType), Modifier.fillMaxWidth(0.35f))
                         TextField(
                             path, {
                                 invalidatePath(it, fileType)
                             },
-                            modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 10.dp),
+                            modifier = Modifier.fillMaxWidth(0.8f).padding(top = 5.dp, bottom = 5.dp, end = 5.dp),
                             maxLines = 1,
                             singleLine = true,
                             enabled = !engineIsInitializing,
                         )
-                        Button(
-                            onClick = { selectedFileType = fileType },
-                            Modifier.padding(horizontal = 10.dp),
-                            enabled = !engineIsInitializing,
-                        ) {
-                            Text("...")
+                        with (strings) {
+                            IconButton(Res.drawable.ic_browse, enabled = !engineIsInitializing) {
+                                selectedFileType = fileType
+                            }
                         }
                     }
                 }
@@ -180,11 +182,11 @@ actual fun KataGoDotsSettingsForm(
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 10.dp),
                     enabled = !engineIsInitializing,
                 ) {
-                    Text(if (kataGoDotsEngine == null) {
-                        if (engineIsInitializing) strings.checking else strings.check
+                    if (engineIsInitializing) {
+                        CircularProgressIndicator(Modifier.size(20.dp))
                     } else {
-                        strings.save
-                    })
+                        Text(if (kataGoDotsEngine == null) strings.check else strings.save)
+                    }
                 }
             }
         }
