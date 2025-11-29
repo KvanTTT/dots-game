@@ -550,6 +550,11 @@ class SgfConverterTests {
         assertFalse(rules.suicideAllowed)
         assertEquals(BaseMode.OnlyOpponentDots, rules.baseMode)
         assertTrue(rules.initPosIsRandom)
+
+        // Check there is no random initial pos contradiction warning for unknown apps
+        val unknownAppRules = checkParseAndUnparse("(;GM[40]FF[4]AP[SomeApp]RU[]SZ[39:32]AB[nj][ok][xk][yl][wv][xw][lu][mv]AW[oj][nk][yk][xl][xv][ww][mu][lv])").single().rules
+        // However, the initial pos is detected as random
+        assertTrue(unknownAppRules.initPosIsRandom)
     }
 
     @Test

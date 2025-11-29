@@ -74,7 +74,7 @@ class Rules private constructor(
             suicideAllowed: Boolean,
             initialMoves: List<MoveInfo>,
             komi: Double,
-            specifiedInitPosIsRandom: Boolean = false,
+            specifiedInitPosIsRandom: Boolean? = null,
         ): RulesExtra {
             val (initPosType, refinedInitialMoves, isRandomized, remainingInitMoves) = recognizeInitPosType(initialMoves, width, height)
             return RulesExtra(
@@ -87,10 +87,12 @@ class Rules private constructor(
                     refinedInitialMoves,
                     initPosType,
                     remainingInitMoves,
-                    isRandomized || specifiedInitPosIsRandom, // In rare cases random position matches strict position
+                    // In rare cases random position matches strict position
+                    // That's why we also should check if the randomization is specified somehow externally
+                    isRandomized || specifiedInitPosIsRandom == true,
                     komi
                 ),
-                specifiedRandomizationContradictsRecognition = isRandomized && !specifiedInitPosIsRandom
+                specifiedRandomizationContradictsRecognition = isRandomized && specifiedInitPosIsRandom == false
             )
         }
     }

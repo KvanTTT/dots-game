@@ -319,7 +319,7 @@ class SgfConverter(
             suicideAllowed = sgfExtraRules?.suicideAllowed ?: Rules.Standard.suicideAllowed,
             initialMoves = initialMoves,
             komi = gameProperties[Game::komi]?.value as? Double ?: 0.0,
-            specifiedInitPosIsRandom = sgfExtraRules?.startPosIsRandom ?: Rules.Standard.initPosIsRandom,
+            specifiedInitPosIsRandom = sgfExtraRules?.startPosIsRandom,
         )
         if (specifiedRandomizationContradictsRecognition) {
             rulesProperty?.info?.reportPropertyDiagnostic(
