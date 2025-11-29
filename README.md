@@ -1,6 +1,6 @@
 # Dots game
 
-[![Build & Test](https://github.com/nikitos4683/dots-game/actions/workflows/gradle.yml/badge.svg)](https://github.com/nikitos4683/dots-game/actions/workflows/gradle.yml)
+[![Build & Test](https://github.com/KvanTTT/dots-game/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/KvanTTT/dots-game/actions/workflows/build-and-test.yml)
 
 *The project's title is working and will be changed later.*
 
