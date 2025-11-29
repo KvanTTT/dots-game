@@ -1,5 +1,5 @@
 [versions]
-agp = "8.12.3"
+androidGradlePlugin = "8.13.0"
 android-compileSdk = "36"
 android-minSdk = "24"
 android-targetSdk = "35"
@@ -31,8 +31,8 @@ ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "co
 ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
 
 [plugins]
-androidApplication = { id = "com.android.application", version.ref = "agp" }
-androidLibrary = { id = "com.android.library", version.ref = "agp" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "androidGradlePlugin" }
+androidApplication = { id = "com.android.application", version.ref = "androidGradlePlugin" }
