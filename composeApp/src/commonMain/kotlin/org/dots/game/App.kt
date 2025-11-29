@@ -23,11 +23,11 @@ import androidx.compose.ui.input.pointer.isBackPressed
 import androidx.compose.ui.input.pointer.isForwardPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.dots.game.core.*
 import org.dots.game.views.*
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.jetbrains.compose.resources.painterResource
 import dotsgame.composeapp.generated.resources.Res
 import dotsgame.composeapp.generated.resources.ic_ai_move
