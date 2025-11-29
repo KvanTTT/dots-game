@@ -86,8 +86,8 @@ object EnglishStrings : Strings {
         return "Select${fileType.extensions.filter { it.isNotEmpty() }.joinToString(",") { " .${it}" }} file"
     }
     override val default: String = "Default"
-    override val checking: String = "Checking"
-    override val check: String = "Check"
+    override val initialization: String = "Initialization..."
+    override val initialize: String = "Initialize"
 
     override fun connectionDrawModeLabel(mode: ConnectionDrawMode): String = when (mode) {
         ConnectionDrawMode.None -> "None"

@@ -73,8 +73,8 @@ interface Strings {
     fun aiSettingsFilePath(fileType: KataGoDotsSettingsFileType): String
     fun aiSettingsSelectFile(fileType: KataGoDotsSettingsFileType): String
     val default: String
-    val checking: String
-    val check: String
+    val initialization: String
+    val initialize: String
 
     fun connectionDrawModeLabel(mode: ConnectionDrawMode): String
     fun polygonDrawModeLabel(mode: PolygonDrawMode): String

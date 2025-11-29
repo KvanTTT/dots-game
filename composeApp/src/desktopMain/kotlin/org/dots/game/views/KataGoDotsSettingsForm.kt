@@ -1,6 +1,8 @@
 package org.dots.game.views
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
@@ -9,6 +11,8 @@ import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dotsgame.composeapp.generated.resources.Res
@@ -18,10 +22,9 @@ import org.dots.game.Diagnostic
 import org.dots.game.IconButton
 import org.dots.game.KataGoDotsEngine
 import org.dots.game.KataGoDotsSettings
-import org.dots.game.OS
 import org.dots.game.OpenFileDialog
+import org.dots.game.Tooltip
 import org.dots.game.localization.Strings
-import org.dots.game.platform
 
 @Composable
 actual fun KataGoDotsSettingsForm(
@@ -37,51 +40,53 @@ actual fun KataGoDotsSettingsForm(
 
     var kataGoDotsEngine by remember { mutableStateOf<KataGoDotsEngine?>(null) }
     var engineIsInitializing by remember { mutableStateOf(false) }
-    var messages by remember { mutableStateOf(listOf<Diagnostic>()) }
+    val messages = remember { mutableStateListOf<Diagnostic>() }
     var selectedFileType by remember { mutableStateOf<KataGoDotsSettingsFileType?>(null) }
 
     var maxTimeSeconds by remember { mutableStateOf(kataGoDotsSettings.maxTime) }
     var maxVisits by remember { mutableStateOf(kataGoDotsSettings.maxVisits) }
     var maxPlayouts by remember { mutableStateOf(kataGoDotsSettings.maxPlayouts) }
 
+    fun clearEngineAndMessages() {
+        kataGoDotsEngine = null
+        messages.clear()
+    }
+
     fun invalidatePath(newPath: String, mode: KataGoDotsSettingsFileType) {
         when (mode) {
             KataGoDotsSettingsFileType.Exe -> {
                 if (exePath != newPath) {
                     exePath = newPath
-                    kataGoDotsEngine = null
+                    clearEngineAndMessages()
                 }
             }
             KataGoDotsSettingsFileType.Model -> {
                 if (modelPath != newPath) {
                     modelPath = newPath
-                    kataGoDotsEngine = null
+                    clearEngineAndMessages()
                 }
             }
             KataGoDotsSettingsFileType.Config -> {
                 if (configPath != newPath) {
                     configPath = newPath
-                    kataGoDotsEngine = null
+                    clearEngineAndMessages()
                 }
             }
         }
     }
 
     suspend fun validateAndInitialize() {
-        val newMessages = mutableListOf<Diagnostic>()
-
-        messages = mutableListOf()
+        messages.clear()
 
         engineIsInitializing = true
         kataGoDotsEngine = KataGoDotsEngine.initialize(
             KataGoDotsSettings(exePath, modelPath, configPath, maxTimeSeconds, maxVisits, maxPlayouts),
             logger = {
-                newMessages.add(it)
+                messages.add(it)
             }
         )
-        engineIsInitializing = false
 
-        messages = newMessages
+        engineIsInitializing = false
     }
 
     selectedFileType?.let { fileType ->
@@ -130,7 +135,7 @@ actual fun KataGoDotsSettingsForm(
                     DiscreteSliderConfig("Max time (sec)", maxTimeSeconds, 0, 60, enabled = !engineIsInitializing,
                         valueRenderer = { if (it == 0) "Default" else it.toString()}) {
                         maxTimeSeconds = it
-                        kataGoDotsEngine = null
+                        clearEngineAndMessages()
                     }
                 }
 
@@ -138,7 +143,7 @@ actual fun KataGoDotsSettingsForm(
                     DiscreteSliderConfig("Max visits", maxVisits, 0, 3000, step = 100, enabled = !engineIsInitializing,
                         valueRenderer = { if (it == 0) "Default" else it.toString() }) {
                         maxVisits = it
-                        kataGoDotsEngine = null
+                        clearEngineAndMessages()
                     }
                 }
 
@@ -146,19 +151,27 @@ actual fun KataGoDotsSettingsForm(
                     DiscreteSliderConfig("Max playouts", maxPlayouts, 0, 3000, step = 100, enabled = !engineIsInitializing,
                         valueRenderer = { if (it == 0) "Default" else it.toString() }) {
                         maxPlayouts = it
-                        kataGoDotsEngine = null
+                        clearEngineAndMessages()
                     }
                 }
 
-                if (messages.isNotEmpty() && kataGoDotsEngine != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                if (messages.isNotEmpty()) {
+                    val vScroll = rememberScrollState()
+
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(max = 300.dp).verticalScroll(vScroll)) {
+                        var value by remember(messages.size) { mutableStateOf(messages.joinToString("\n")) }
+                        var textFieldValue by remember(messages.size) { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+
                         TextField(
-                            messages.joinToString("\n"),
-                            {},
+                            textFieldValue,
+                            { textFieldValue = it },
                             Modifier.fillMaxWidth(),
                             readOnly = true,
-                            maxLines = 10,
                         )
+                    }
+
+                    LaunchedEffect(messages.size) {
+                        vScroll.animateScrollTo(vScroll.maxValue)
                     }
                 }
 
@@ -176,9 +189,11 @@ actual fun KataGoDotsSettingsForm(
                     enabled = !engineIsInitializing,
                 ) {
                     if (engineIsInitializing) {
-                        CircularProgressIndicator(Modifier.size(20.dp))
+                        Tooltip(strings.initialization) {
+                            CircularProgressIndicator(Modifier.size(20.dp))
+                        }
                     } else {
-                        Text(if (kataGoDotsEngine == null) strings.check else strings.save)
+                        Text(if (kataGoDotsEngine == null) strings.initialize else strings.save)
                     }
                 }
             }

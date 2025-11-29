@@ -90,8 +90,8 @@ object RussianStrings : Strings {
         return "Выберите${fileType.extensions.filter { it.isNotEmpty() }.joinToString(",") { " .${it}" }} файл"
     }
     override val default: String = "По-умолчанию"
-    override val checking: String = "Проверка..."
-    override val check: String = "Проверить"
+    override val initialization: String = "Инициализация..."
+    override val initialize: String = "Инициализировать"
 
     override fun connectionDrawModeLabel(mode: ConnectionDrawMode): String = when (mode) {
         ConnectionDrawMode.None -> "Нет"
