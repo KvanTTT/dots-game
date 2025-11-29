@@ -242,7 +242,7 @@ actual class KataGoDotsEngine private constructor(
         val startPositionMoves = toMovesSequence(sendMessage("get_position").message, field)
 
         // The order of start moves doesn't matter
-        if (rules.initialMoves.toSortedSet(MoveInfo.IgnoreParseNodeComparator) != startPositionMoves.toSortedSet(MoveInfo.IgnoreParseNodeComparator)) {
+        if (rules.initialMoves.toSortedSet(IgnoreParseNodeComparator) != startPositionMoves.toSortedSet(IgnoreParseNodeComparator)) {
             return FullSync
         }
 
@@ -255,7 +255,7 @@ actual class KataGoDotsEngine private constructor(
         val minSize = minOf(refinedMoves.size, engineMoves.size)
         var firstDistinctIndex = minSize
         for (index in 0 until minSize) {
-            if (MoveInfo.IgnoreParseNodeComparator.compare(refinedMoves[index], engineMoves[index]) != 0) {
+            if (!refinedMoves[index].equalsIgnoringParseNode(engineMoves[index])) {
                 firstDistinctIndex = index
                 break
             }

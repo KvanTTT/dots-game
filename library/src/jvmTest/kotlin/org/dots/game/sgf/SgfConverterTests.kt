@@ -12,10 +12,10 @@ import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Games
 import org.dots.game.core.InitPosType
 import org.dots.game.core.MoveInfo
-import org.dots.game.core.MoveInfo.Companion.IgnoreParseNodeComparator
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
+import org.dots.game.core.equalsIgnoringParseNode
 import org.dots.game.toLineColumnDiagnostic
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -463,7 +463,7 @@ class SgfConverterTests {
         val gameTree = checkParseAndUnparse("(;GM[40]FF[4]SZ[20]AB[jj][kk][bb]AW[kj][jk])").single().gameTree
         val field = gameTree.field
         assertEquals(4, field.rules.initialMoves.size)
-        assertEquals(0, IgnoreParseNodeComparator.compare(MoveInfo(PositionXY(2, 2,), Player.First), field.rules.remainingInitMoves.single()))
+        assertTrue(MoveInfo(PositionXY(2, 2,), Player.First).equalsIgnoringParseNode(field.rules.remainingInitMoves.single()))
 
         // Check the remaining init dot is placed
         with(field) {
@@ -624,8 +624,8 @@ internal fun GameTreeNode.getNextNode(x: Int, y: Int, player: Player): GameTreeN
     val moveInfo = MoveInfo(PositionXY(x, y), player)
 
     for (child in children) {
-        if (player == Player.First && child.player1Moves?.singleOrNull()?.let { IgnoreParseNodeComparator.compare(moveInfo, it) == 0 } == true ||
-            player == Player.Second && child.player2Moves?.singleOrNull()?.let { IgnoreParseNodeComparator.compare(moveInfo, it) == 0 } == true
+        if (player == Player.First && child.player1Moves?.singleOrNull()?.let { moveInfo.equalsIgnoringParseNode(it) } == true ||
+            player == Player.Second && child.player2Moves?.singleOrNull()?.let { moveInfo.equalsIgnoringParseNode(it) } == true
         ) {
             return child
         }

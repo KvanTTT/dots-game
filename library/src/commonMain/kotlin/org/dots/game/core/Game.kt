@@ -183,24 +183,6 @@ data class MoveInfo internal constructor(
     val parsedNode: ParsedNode? = null,
 ) {
     companion object {
-        val IgnoreParseNodeComparator = object : Comparator<MoveInfo> {
-            override fun compare(a: MoveInfo, b: MoveInfo): Int {
-                ((a.positionXY?.position ?: 0) - (b.positionXY?.position ?: 0)).let {
-                    if (it != 0) return it
-                }
-
-                (a.player.value - b.player.value).let {
-                    if (it != 0) return it
-                }
-
-                ((a.externalFinishReason?.ordinal ?: 0) - (b.externalFinishReason?.ordinal ?: 0)).let {
-                    if (it != 0) return it
-                }
-
-                return 0
-            }
-        }
-
         fun createFinishingMove(player: Player, externalFinishReason: ExternalFinishReason, parsedNode: ParsedNode? = null): MoveInfo {
             return MoveInfo(positionXY = null, player, externalFinishReason, parsedNode)
         }
@@ -221,6 +203,28 @@ data class MoveInfo internal constructor(
     init {
         require(positionXY == null && externalFinishReason != null || positionXY != null && externalFinishReason == null)
     }
+}
+
+val IgnoreParseNodeComparator = object : Comparator<MoveInfo> {
+    override fun compare(a: MoveInfo, b: MoveInfo): Int {
+        ((a.positionXY?.position ?: 0) - (b.positionXY?.position ?: 0)).let {
+            if (it != 0) return it
+        }
+
+        (a.player.value - b.player.value).let {
+            if (it != 0) return it
+        }
+
+        ((a.externalFinishReason?.ordinal ?: 0) - (b.externalFinishReason?.ordinal ?: 0)).let {
+            if (it != 0) return it
+        }
+
+        return 0
+    }
+}
+
+fun MoveInfo.equalsIgnoringParseNode(other: MoveInfo): Boolean {
+    return IgnoreParseNodeComparator.compare(this, other) == 0
 }
 
 data class Label(val positionXY: PositionXY, val text: String)
