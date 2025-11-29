@@ -133,7 +133,7 @@ fun NewGameDialog(
                                 baseMode.selected,
                                 suicideAllowed,
                                 initPosType.selected,
-                                Random.takeIf { initPosIsRandom },
+                                Random.takeIf { initPosIsRandom && initPosType.selected == InitPosType.QuadrupleCross },
                                 if (uiSettings.developerMode) {
                                     integerKomi.intKomiToDouble()
                                 } else {
