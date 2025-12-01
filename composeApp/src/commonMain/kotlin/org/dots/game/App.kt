@@ -430,7 +430,9 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                         with(strings) {
                             IconButton(
                                 if (isGrounding) Res.drawable.ic_ground else Res.drawable.ic_resign,
-                                enabled = !getField().isGameOver() && !engineIsCalculating,
+                                enabled = getField().let { !it.isGameOver() &&
+                                        it.getPositionRestriction(moveMode.getMovePlayer(it)) == PositionRestriction.NoRestriction
+                                } && !engineIsCalculating
                             ) {
                                 // Check for game over just in case
                                 if (getField().isGameOver()) return@IconButton

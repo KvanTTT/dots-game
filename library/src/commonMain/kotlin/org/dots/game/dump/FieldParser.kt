@@ -24,7 +24,8 @@ object FieldParser {
                 suicideAllowed = Rules.Standard.suicideAllowed,
                 initPosType = InitPosType.Empty,
                 random = Rules.Standard.random,
-                komi = Rules.Standard.komi
+                komi = Rules.Standard.komi,
+                firstMovesRestriction = false,
             )
         }, diagnosticReporter)
     }
@@ -40,7 +41,8 @@ object FieldParser {
                 suicideAllowed = Rules.Standard.suicideAllowed,
                 initPosType = Rules.Standard.initPosType,
                 random = Rules.Standard.random,
-                komi = Rules.Standard.komi
+                komi = Rules.Standard.komi,
+                firstMovesRestriction = false,
             )
         },
         diagnosticReporter: (Diagnostic) -> Unit = { error(it.toString()) },
@@ -52,7 +54,7 @@ object FieldParser {
         }).apply {
             for ((number, move) in allMoves) {
                 val (x, y) = move.positionXY
-                val position = getPositionIfWithinBounds(x, y)
+                val position = getPositionIfWithinBounds(x, y, move.player)
                 if (position == null) {
                     diagnosticReporter(Diagnostic("The position ${move.positionXY} at number #$number is out of bound ($width, $height)", move.textSpan))
                     continue

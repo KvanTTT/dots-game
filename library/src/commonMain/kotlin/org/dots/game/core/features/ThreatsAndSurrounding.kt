@@ -9,9 +9,10 @@ fun Field.getOneMoveCapturingAndBasePositions(): OneMoveCapturingAndBasePosition
     val oneMoveCapturingPositions = hashMapOf<Position, Player>()
     val oneMoveBasePositions = hashMapOf<Position, Player>()
 
+    val currentPlayer = getCurrentPlayer()
     for (x in 1..width) {
         for (y in 1..height) {
-            val position = getPositionIfWithinBounds(x, y) ?: continue
+            val position = getPositionIfWithinBounds(x, y, currentPlayer) ?: continue
 
             fun collectCapturingAndPotentiallyBasePositions(player: Player) {
                 with (this) {

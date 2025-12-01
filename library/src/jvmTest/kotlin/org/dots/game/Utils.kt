@@ -16,6 +16,7 @@ fun createStandardRules(
         suicideAllowed = Rules.Standard.suicideAllowed,
         initPosType = initPosType,
         random = Rules.Standard.random,
-        komi = Rules.Standard.komi
+        komi = Rules.Standard.komi,
+        firstMovesRestriction = false,
     )
 }

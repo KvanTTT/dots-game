@@ -234,6 +234,7 @@ val ruleExtraPropertyToName: Map<KProperty1<Rules, *>, String> = buildMap {
     this[Rules::baseMode] = "BaseMode"
     this[Rules::suicideAllowed] = "Suicide"
     this[Rules::initPosIsRandom] = "StartIsRandom"
+    this[Rules::firstMovesRestriction] = "FirstMovesInCenter"
 }
 
 val ruleExtraPropertyToKataGoName: Map<KProperty1<Rules, *>, String> = buildMap {

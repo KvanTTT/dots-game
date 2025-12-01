@@ -21,6 +21,7 @@ class Rules private constructor(
     val remainingInitMoves: List<MoveInfo>,
     val initPosIsRandom: Boolean,
     val komi: Double,
+    val firstMovesRestriction: Boolean,
 ) : ClassSettings<Rules>() {
     val random: Random?
         get() = Random.takeIf { initPosIsRandom }
@@ -37,8 +38,12 @@ class Rules private constructor(
             suicideAllowed = true,
             initPosType = Cross,
             random = null,
-            komi = 0.0
+            komi = 0.0,
+            firstMovesRestriction = false,
         )
+
+        const val FIRST_MOVE_DISTANCE_FROM_CENTER_X_RATIO = 3.0 / 20.0
+        const val FIRST_MOVE_DISTANCE_FROM_CENTER_Y_RATIO = 3.0 / 20.0
 
         fun create(
             width: Int,
@@ -49,6 +54,7 @@ class Rules private constructor(
             initPosType: InitPosType,
             random: Random?,
             komi: Double,
+            firstMovesRestriction: Boolean? = null,
         ): Rules {
             return Rules(
                 width,
@@ -60,7 +66,8 @@ class Rules private constructor(
                 initPosType = initPosType,
                 remainingInitMoves = emptyList(),
                 initPosIsRandom = random != null,
-                komi = komi
+                komi = komi,
+                firstMovesRestriction = firstMovesRestriction ?: (initPosType == Empty),
             )
         }
 
@@ -75,6 +82,7 @@ class Rules private constructor(
             initialMoves: List<MoveInfo>,
             komi: Double,
             specifiedInitPosIsRandom: Boolean? = null,
+            firstMovesRestriction: Boolean? = null,
         ): RulesExtra {
             val (initPosType, refinedInitialMoves, isRandomized, remainingInitMoves) = recognizeInitPosType(initialMoves, width, height)
             return RulesExtra(
@@ -90,7 +98,8 @@ class Rules private constructor(
                     // In rare cases random position matches strict position
                     // That's why we also should check if the randomization is specified somehow externally
                     isRandomized || specifiedInitPosIsRandom == true,
-                    komi
+                    komi,
+                    firstMovesRestriction = firstMovesRestriction ?: (initPosType == Empty),
                 ),
                 specifiedRandomizationContradictsRecognition = isRandomized && specifiedInitPosIsRandom == false
             )

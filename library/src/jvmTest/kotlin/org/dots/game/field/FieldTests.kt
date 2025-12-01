@@ -15,6 +15,7 @@ abstract class FieldTests {
     open val captureByBorder: Boolean = Rules.Standard.captureByBorder
     open val baseMode: BaseMode = Rules.Standard.baseMode
     open val suicideAllowed: Boolean = Rules.Standard.suicideAllowed
+    open val firstMovesRestriction: Boolean = false
 
     fun initRules(width: Int, height: Int): Rules = Rules.create(
         width,
@@ -24,7 +25,8 @@ abstract class FieldTests {
         suicideAllowed,
         InitPosType.Empty,
         random = Rules.Standard.random,
-        komi = Rules.Standard.komi
+        komi = Rules.Standard.komi,
+        firstMovesRestriction = firstMovesRestriction,
     )
 
     fun testFieldWithTransformsAndRollback(fieldData: String, check: (field: Field, transformFunc: (x: Int, y: Int) -> PositionXY) -> Unit) {

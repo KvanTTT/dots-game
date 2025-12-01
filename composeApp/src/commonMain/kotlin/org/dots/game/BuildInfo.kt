@@ -29,9 +29,11 @@ data class BuildInfo(val majorVersion: Int, val minorVersion: Int, val number: I
 
     override fun toString(): String {
         return buildString {
-            append("${BuildInfo::version.name}: $version, ")
-            append("${BuildInfo::dateTime.name}: $dateTimeShort, ")
-            append("${BuildInfo::hash.name}: ${hash.ifEmpty { "local" }}")
+            append("${BuildInfo::version.name}: $version")
+            append(", ${BuildInfo::dateTime.name}: $dateTimeShort")
+            if (hash.isNotEmpty()) {
+                append(", ${BuildInfo::hash.name}: $hash")
+            }
         }
     }
 }

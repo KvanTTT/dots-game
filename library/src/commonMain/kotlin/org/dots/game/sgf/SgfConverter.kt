@@ -320,6 +320,7 @@ class SgfConverter(
             initialMoves = initialMoves,
             komi = gameProperties[Game::komi]?.value as? Double ?: 0.0,
             specifiedInitPosIsRandom = sgfExtraRules?.startPosIsRandom,
+            firstMovesRestriction = false,
         )
         if (specifiedRandomizationContradictsRecognition) {
             rulesProperty?.info?.reportPropertyDiagnostic(
@@ -984,7 +985,8 @@ class SgfConverter(
             when (subProperty) {
                 Rules::captureByBorder,
                 Rules::suicideAllowed,
-                Rules::initPosIsRandom -> {
+                Rules::initPosIsRandom,
+                Rules::firstMovesRestriction -> {
                     if (equalsIndex != -1) {
                         when (subPropertyValue) {
                             "0", "1" -> {

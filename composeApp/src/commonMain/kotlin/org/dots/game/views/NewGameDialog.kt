@@ -70,11 +70,7 @@ fun NewGameDialog(
 
                 ModeConfig(
                     initPosType,
-                    ignoredEntries = buildSet {
-                        add(InitPosType.Custom)
-                        if (!uiSettings.experimentalMode)
-                            add(InitPosType.Empty)
-                    },
+                    ignoredEntries = setOf(InitPosType.Custom),
                     nameRenderer = { strings.initPosType },
                     valueRenderer = { strings.initPosTypeLabel(it) }
                 ) {
@@ -134,7 +130,7 @@ fun NewGameDialog(
                                 suicideAllowed,
                                 initPosType.selected,
                                 Random.takeIf { initPosIsRandom && initPosType.selected == InitPosType.QuadrupleCross },
-                                if (uiSettings.developerMode) {
+                                komi = if (uiSettings.developerMode) {
                                     integerKomi.intKomiToDouble()
                                 } else {
                                     when {
@@ -142,7 +138,8 @@ fun NewGameDialog(
                                         initPosType.selected == InitPosType.Single -> -0.5
                                         else -> 0.5
                                     }
-                                }
+                                },
+                                firstMovesRestriction = initPosType.selected == InitPosType.Empty,
                             )
                         )
                     },

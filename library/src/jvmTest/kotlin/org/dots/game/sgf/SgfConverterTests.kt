@@ -467,7 +467,7 @@ class SgfConverterTests {
 
         // Check the remaining init dot is placed
         with(field) {
-            assertEquals(Player.First, field.getPositionIfWithinBounds(2, 2)!!.getState().getActivePlayer())
+            assertEquals(Player.First, field.getPositionIfWithinBounds(2, 2, Player.First)!!.getState().getActivePlayer())
         }
 
         // Check there are no real moves
@@ -545,11 +545,12 @@ class SgfConverterTests {
         assertEquals(Rules.Standard.baseMode, defaultRules.baseMode)
         assertEquals(Rules.Standard.initPosIsRandom, defaultRules.initPosIsRandom)
 
-        val rules = checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[Border,Suicide=0,BaseMode=2,StartIsRandom=1,,])").single().rules
+        val rules = checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[Border,Suicide=0,BaseMode=2,StartIsRandom=1,FirstMoveInCenter=1,])").single().rules
         assertTrue(rules.captureByBorder)
         assertFalse(rules.suicideAllowed)
         assertEquals(BaseMode.OnlyOpponentDots, rules.baseMode)
         assertTrue(rules.initPosIsRandom)
+        assertTrue(rules.firstMovesRestriction)
 
         // Check there is no random initial pos contradiction warning for unknown apps
         val unknownAppRules = checkParseAndUnparse("(;GM[40]FF[4]AP[SomeApp]RU[]SZ[39:32]AB[nj][ok][xk][yl][wv][xw][lu][mv]AW[oj][nk][yk][xl][xv][ww][mu][lv])").single().rules

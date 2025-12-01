@@ -6,6 +6,7 @@ import org.dots.game.core.GameResult.UnknownWin
 import org.dots.game.core.PositionXY.Companion.COORDINATE_BITS_COUNT
 import org.dots.game.dump.DumpParameters
 import org.dots.game.dump.render
+import kotlin.math.round
 
 class Field {
     companion object {
@@ -22,7 +23,7 @@ class Field {
                 for (moveInfo in rules.initialMoves + rules.remainingInitMoves) {
                     val position = if (moveInfo.positionXY != null) {
                         val (x, y) = moveInfo.positionXY
-                        getPositionIfWithinBounds(x, y)
+                        getPositionIfWithinBounds(x, y, moveInfo.player)
                     } else {
                         Position.GAME_OVER
                     }
@@ -228,7 +229,9 @@ class Field {
         val position = if (positionXY == null) {
             Position.GAME_OVER
         } else {
-            getPositionIfWithinBounds(positionXY.x, positionXY.y) ?: return PosOutOfBoundsIllegalMove(positionXY, player ?: getCurrentPlayer())
+            val currentPlayer = player ?: getCurrentPlayer()
+            getPositionIfWithinBounds(positionXY.x, positionXY.y, currentPlayer) ?:
+                return PosOutOfBoundsIllegalMove(positionXY, currentPlayer)
         }
         return makeMoveUnsafe(position, player, externalFinishReason)
     }
@@ -238,19 +241,12 @@ class Field {
      * `0` is reserved for the initial position (cross, empty or other).
      */
     fun makeMove(x: Int, y: Int, player: Player? = null, externalFinishReason: ExternalFinishReason? = null): MoveResult {
-        val position = getPositionIfWithinBounds(x, y)
+        val currentPlayer = player ?: getCurrentPlayer()
+        val position = getPositionIfWithinBounds(x, y, currentPlayer)
         return if (position != null) {
             makeMoveUnsafe(position, player, externalFinishReason)
         } else {
-            PosOutOfBoundsIllegalMove(PositionXY(x, y), player ?: getCurrentPlayer())
-        }
-    }
-
-    fun getPositionIfWithinBounds(x: Int, y: Int): Position? {
-        return if (x >= OFFSET && x < width + OFFSET && y >= OFFSET && y < height + OFFSET) {
-            Position(x, y, realWidth)
-        } else {
-            null
+            PosOutOfBoundsIllegalMove(PositionXY(x, y), currentPlayer)
         }
     }
 
@@ -297,10 +293,10 @@ class Field {
 
     fun getPositionIfValid(x: Int, y: Int, player: Player?): Position? {
         if (gameResult != null) return null
-        val position = getPositionIfWithinBounds(x, y) ?: return null
+        val currentPlayer = player ?: getCurrentPlayer()
+        val position = getPositionIfWithinBounds(x, y, currentPlayer) ?: return null
 
         val state = position.getState()
-        val currentPlayer = player ?: getCurrentPlayer()
         if (state.getActivePlayer() == Player.None &&
             (rules.suicideAllowed ||
                     rules.baseMode == BaseMode.AtLeastOneOpponentDot &&
@@ -326,6 +322,46 @@ class Field {
         }
     }
 
+    fun getPositionIfWithinBounds(x: Int, y: Int, player: Player): Position? {
+        if (x >= OFFSET && x < width + OFFSET && y >= OFFSET && y < height + OFFSET) {
+            val positionRestriction = getPositionRestriction(player)
+            if (positionRestriction is PositionRestriction.RectRestriction) {
+                if (positionRestriction.disallowed ||
+                    x < positionRestriction.x || y < positionRestriction.y ||
+                    x >= (positionRestriction.x + positionRestriction.width) || y >= (positionRestriction.y + positionRestriction.height)
+                ) {
+                    return null
+                }
+            }
+
+            return Position(x, y, realWidth)
+        }
+
+        return null
+    }
+
+    fun getPositionRestriction(player: Player): PositionRestriction {
+        if (!rules.firstMovesRestriction || rules.initPosType != InitPosType.Empty || legalMoves.size >= 2) {
+            return PositionRestriction.NoRestriction
+        }
+
+        // Obey https://logic-games.spb.ru/dots/ implementation but extrapolate the restriction on all field sizes
+        val centerX = width / 2 + 0.5
+        val centerY = height / 2 + 0.5
+
+        val maxDistanceX = Rules.FIRST_MOVE_DISTANCE_FROM_CENTER_X_RATIO * (if (width >= 20) 20.0 else width.toDouble())
+        val maxDistanceY = Rules.FIRST_MOVE_DISTANCE_FROM_CENTER_Y_RATIO * (if (height >= 20) 20.0 else height.toDouble())
+
+        val x = (centerX - maxDistanceX).toInt() + 1
+        val y = (centerY - maxDistanceY).toInt() + 1
+        val rectWidth = round(maxDistanceX * 2).toInt()
+        val rectHeight = round(maxDistanceY * 2).toInt()
+
+        val disallowed = legalMoves.isEmpty() && player != Player.First ||
+                legalMoves.size == 1 && player != Player.Second
+        return PositionRestriction.RectRestriction(x, y, rectWidth, rectHeight, disallowed)
+    }
+
     fun makeMoveUnsafe(position: Position, player: Player? = null, externalFinishReason: ExternalFinishReason? = null): MoveResult {
         val currentPlayer = player ?: getCurrentPlayer()
 
@@ -333,7 +369,11 @@ class Field {
 
         if (position == Position.GAME_OVER) {
             require(externalFinishReason != null)
-            return finishGame(externalFinishReason, currentPlayer)
+            val positionRestriction = getPositionRestriction(currentPlayer)
+            return if (positionRestriction is PositionRestriction.RectRestriction)
+                GameOverMoveIsProhibited(currentPlayer)
+            else
+                finishGame(externalFinishReason, currentPlayer)
         }
 
         val originalState: DotState = position.getState()
@@ -1127,6 +1167,8 @@ class SuicidalIllegalMove(position: Position, player: Player) : IllegalMove(posi
 
 class PosOutOfBoundsIllegalMove(val positionXY: PositionXY, player: Player) : IllegalMove(null, player)
 
+class GameOverMoveIsProhibited(player: Player) : IllegalMove(null, player)
+
 object NoLegalMoves : IllegalMove(position = null, Player.None)
 
 open class LegalMove(
@@ -1290,4 +1332,9 @@ sealed class GameResult(
             }
         }
     }
+}
+
+sealed class PositionRestriction {
+    object NoRestriction : PositionRestriction()
+    data class RectRestriction(val x: Int, val y: Int, val width: Int, val height: Int, val disallowed: Boolean) : PositionRestriction()
 }

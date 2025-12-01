@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
@@ -37,6 +38,7 @@ import org.dots.game.core.GameResult
 import org.dots.game.core.MoveMode
 import org.dots.game.core.Player
 import org.dots.game.core.Position
+import org.dots.game.core.PositionRestriction
 import org.dots.game.core.features.getOneMoveCapturingAndBasePositions
 import org.dots.game.core.features.getPositionsAtDistance
 import org.dots.game.core.features.squareDistances
@@ -72,6 +74,8 @@ private val maxDistanceId = 2
 
 private val capturingMoveMarkerSize = cellSize * 0.35f
 private val capturingBaseMoveMarkerSize = cellSize * 0.2f
+
+val fadingColor = Color(0, 0, 0, 50)
 
 enum class ConnectionDrawMode {
     None,
@@ -173,7 +177,7 @@ fun FieldView(
             }
     ) {
         Grid(field, uiSettings)
-        Moves(updateFieldObject, field, uiSettings)
+        Fading(updateFieldObject, moveMode, field, uiSettings)
         if (!field.isGameOver()) {
             if (uiSettings.showDiagonalConnections) {
                 AllConnections(updateFieldObject, field, uiSettings)
@@ -183,7 +187,50 @@ fun FieldView(
                 ThreatsAndSurroundings(updateFieldObject, field, uiSettings)
             }
         }
+        Moves(updateFieldObject, field, uiSettings)
         Pointer(pointerFieldPosition, moveMode, field, uiSettings)
+    }
+}
+
+@Composable
+private fun Fading(updateFieldObject: Any?, moveMode: MoveMode, field: Field, uiSettings: UiSettings) {
+    val positionRestriction = field.getPositionRestriction(moveMode.getMovePlayer(field))
+    if (positionRestriction is PositionRestriction.RectRestriction) {
+        with(LocalDensity.current) {
+            Canvas(Modifier.fillMaxSize().graphicsLayer()) {
+                val outerPath = Path().apply {
+                    addRect(Rect(
+                        (Field.OFFSET - 0.5f).coordinateToPx(this@with),
+                        (Field.OFFSET - 0.5f).coordinateToPx(this@with),
+                        (field.width + 0.5f).coordinateToPx(this@with),
+                        (field.height + 0.5f).coordinateToPx(this@with)
+                    ))
+                }
+
+                val (x, y, width, height) = positionRestriction
+
+                val innerPath = Path().apply {
+                    addRect(
+                        Rect(
+                            left = (x - 0.5f).coordinateToPx(this@with),
+                            top = (y - 0.5f).coordinateToPx(this@with),
+                            right = (x + width - 0.5f).coordinateToPx(this@with),
+                            bottom = (y + height - 0.5f).coordinateToPx(this@with),
+                        )
+                    )
+                }
+
+                val combinedPath = Path().apply {
+                    op(outerPath, innerPath, PathOperation.Difference)
+                }
+
+                drawPath(
+                    path = combinedPath,
+                    color = fadingColor
+                )
+            }
+        }
+        updateFieldObject
     }
 }
 
