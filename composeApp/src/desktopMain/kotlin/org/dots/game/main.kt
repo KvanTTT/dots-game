@@ -23,7 +23,7 @@ fun main() = application {
     Window(
         onCloseRequest = {
             saveWindowsState(windowState)
-            saveClassSettings(currentGameSettings, games)
+            saveClassSettings(currentGameSettings.update(games))
             exitApplication()
         },
         title = "Dots Game",

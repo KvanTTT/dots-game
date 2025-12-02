@@ -35,7 +35,7 @@ class SettingsTests {
         assertEquals(OpenGameSettings.Default.pathOrContent, defaultOpenGameSettings.pathOrContent)
 
         val defaultCurrentGameSettings = loadClassSettings(CurrentGameSettings.Default, directory = TEMP_DIRECTORY)
-        assertEquals(CurrentGameSettings.Default.content, defaultCurrentGameSettings.content)
+        assertEquals(CurrentGameSettings.Default.sgfContent, defaultCurrentGameSettings.sgfContent)
 
         val defaultKataGoDotsSettings = loadClassSettings(KataGoDotsSettings.Default, directory = TEMP_DIRECTORY)
         assertEquals(KataGoDotsSettings.Default.exePath, defaultKataGoDotsSettings.exePath)
@@ -86,7 +86,7 @@ class SettingsTests {
 
         val newGameSettings = loadClassSettings(CurrentGameSettings.Default, directory = TEMP_DIRECTORY)
 
-        assertEquals(bigString, newGameSettings.content)
+        assertEquals(bigString, newGameSettings.sgfContent)
     }
 
     @AfterEach

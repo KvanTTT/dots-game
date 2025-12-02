@@ -12,24 +12,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dotsgame.composeapp.generated.resources.Res
 import dotsgame.composeapp.generated.resources.ic_save
+import org.dots.game.CurrentGameSettings
 import org.dots.game.IconButton
 import org.dots.game.SaveFileDialog
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
-import org.dots.game.core.Games
 import org.dots.game.dump.render
-import org.dots.game.sgf.SgfWriter
 
 @Composable
 fun SaveDialog(
-    games: Games,
     field: Field,
-    path: String?,
+    currentGameSettings: CurrentGameSettings,
     dumpParameters: DumpParameters,
     uiSettings: UiSettings,
     onDismiss: (dumpParameters: DumpParameters, newPath: String?) -> Unit,
 ) {
     val strings by remember { mutableStateOf(uiSettings.language.getStrings()) }
+    val sgfContent = currentGameSettings.sgfContent
     var minX = field.realWidth - 1
     var maxX = 0
     var minY = field.realHeight - 1
@@ -60,7 +59,7 @@ fun SaveDialog(
     var isSgf by remember { mutableStateOf(dumpParameters.isSgf) }
     var fieldRepresentation by remember { mutableStateOf("") }
 
-    var path by remember { mutableStateOf(path ?: "") }
+    var path by remember { mutableStateOf(currentGameSettings.path ?: "") }
     var showSaveDialog by remember { mutableStateOf(false) }
 
     fun createDumpParameters(): DumpParameters {
@@ -90,14 +89,20 @@ fun SaveDialog(
     }
 
     fun updateFieldRepresentation() {
-        fieldRepresentation = field.render(DumpParameters(
-            printNumbers = printNumbers,
-            padding = padding,
-            printCoordinates = printCoordinates,
-            printBorders = false,
-            debugInfo = debugInfo,
-            isSgf = isSgf,
-        ))
+        fieldRepresentation = if (isSgf && sgfContent != null) {
+            sgfContent
+        } else {
+            field.render(
+                DumpParameters(
+                    printNumbers = printNumbers,
+                    padding = padding,
+                    printCoordinates = printCoordinates,
+                    printBorders = false,
+                    debugInfo = debugInfo,
+                    isSgf = isSgf,
+                )
+            )
+        }
     }
 
     updateFieldRepresentation()

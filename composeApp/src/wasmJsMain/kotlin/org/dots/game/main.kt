@@ -22,7 +22,7 @@ fun main() {
         var games: Games? by remember { mutableStateOf(null) }
 
         window.addEventListener("beforeunload") { _ ->
-            saveClassSettings(currentGameSettings, games)
+            saveClassSettings(currentGameSettings.update(games))
         }
 
         App(currentGameSettings) {

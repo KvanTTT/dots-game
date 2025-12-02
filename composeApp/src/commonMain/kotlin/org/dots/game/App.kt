@@ -123,7 +123,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
         fun reset(newGame: Boolean) {
             if (newGame)
                 currentGameSettings.path = null
-            currentGameSettings.content = null
+            currentGameSettings.sgfContent = null
             currentGameSettings.currentGameNumber = 0
             currentGameSettings.currentNodeNumber = -1
             reset = true
@@ -146,7 +146,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
         }
 
         if (start || reset) {
-            val contentOrPath = currentGameSettings.content ?: currentGameSettings.path
+            val contentOrPath = currentGameSettings.sgfContent ?: currentGameSettings.path
 
             if (contentOrPath == null) {
                 games = Games.fromField(Field.create(newGameDialogRules))
@@ -200,7 +200,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                     openGameSettings = newOpenGameSettings
                     saveClassSettings(openGameSettings)
                     currentGameSettings.path = path
-                    currentGameSettings.content = content
+                    currentGameSettings.sgfContent = content
                     currentGameSettings.currentGameNumber = 0
                     currentGameSettings.currentNodeNumber = -1
                     games = newGames
@@ -212,9 +212,8 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
 
         if (showSaveGameDialog) {
             SaveDialog(
-                games,
                 getField(),
-                currentGameSettings.path,
+                currentGameSettings.update(games),
                 dumpParameters,
                 uiSettings,
                 onDismiss = { newDumpParameters, newPath ->
@@ -226,7 +225,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                         openGameSettings = openGameSettings.copy(pathOrContent = newPath)
                         saveClassSettings(openGameSettings)
                         currentGameSettings.path = newPath
-                        saveClassSettings(currentGameSettings, games)
+                        saveClassSettings(currentGameSettings.update(games))
                     }
                 })
         }

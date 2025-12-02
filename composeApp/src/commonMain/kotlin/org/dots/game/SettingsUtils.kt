@@ -7,9 +7,7 @@ import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import com.russhwolf.settings.set
 import org.dots.game.core.ClassSettings
-import org.dots.game.core.Games
 import org.dots.game.core.Rules
-import org.dots.game.sgf.SgfWriter
 import org.dots.game.views.OpenGameSettings
 import kotlin.random.Random
 import kotlin.reflect.KClass
@@ -28,7 +26,7 @@ expect class SettingsWrapper<T : ClassSettings<T>> {
     fun save()
 }
 
-fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, extraObj: Any? = null, directory: String? = null): Boolean {
+fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? = null): Boolean {
     try {
         val settingsWrapper = SettingsWrapper.initialize(settingsObj, directory, loading = false)
         val settings = settingsWrapper.settings ?: return false
@@ -76,17 +74,9 @@ fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, extraObj: Any? = nu
                 }
             }
             is CurrentGameSettings -> {
-                val games = extraObj as? Games
-                if (games != null) {
-                    settingsObj.content = SgfWriter.write(games)
-                    val currentGame = games.elementAtOrNull(settingsObj.currentGameNumber)
-                    if (currentGame != null) {
-                        settingsObj.currentNodeNumber = currentGame.gameTree.getCurrentNodeDepthFirstIndex()
-                    }
-                }
                 context(settings, settingsObj) {
                     setSetting(CurrentGameSettings::path)
-                    setSetting(CurrentGameSettings::content)
+                    setSetting(CurrentGameSettings::sgfContent)
                     setSetting(CurrentGameSettings::currentGameNumber)
                     setSetting(CurrentGameSettings::currentNodeNumber)
                 }
@@ -175,7 +165,7 @@ fun <T : ClassSettings<T>> loadClassSettings(defaultSettingsObj: T, directory: S
                 context(settings, defaultSettingsObj) {
                     CurrentGameSettings(
                         path = getSetting(CurrentGameSettings::path),
-                        content = getSetting(CurrentGameSettings::content),
+                        sgfContent = getSetting(CurrentGameSettings::sgfContent),
                         currentGameNumber = getSetting(CurrentGameSettings::currentGameNumber),
                         currentNodeNumber = getSetting(CurrentGameSettings::currentNodeNumber),
                     )
