@@ -172,7 +172,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                 println("Detected platform: $platform")
 
                 coroutineScope.launch {
-                    println("Build Info: " + getBuildInfo())
+                    println("Build Info: $buildInfo")
 
                     if (KataGoDotsEngine.IS_SUPPORTED) {
                         kataGoDotsEngine = KataGoDotsEngine.initialize(kataGoDotsSettings) {

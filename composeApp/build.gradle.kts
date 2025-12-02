@@ -3,6 +3,8 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 import java.util.Properties
 
 plugins {
@@ -19,15 +21,20 @@ val minorVersion = (project.findProperty("minorVersion") as? String)?.toInt() ?:
 val buildNumber = (project.findProperty("buildNumber") as? String)?.toInt() ?: localBuildNumber
 
 val generateBuildConstants by tasks.registering {
-    val outputDir = layout.projectDirectory.dir("src/commonMain/composeResources/files")
+    val outputDir = layout.projectDirectory.dir("src/commonMain/kotlin/org/dots/game")
     outputs.dir(outputDir)
 
     doLast {
-        val file = outputDir.asFile.resolve("build_info")
+        val file = outputDir.asFile.resolve("BuildInfo.gen.kt")
         file.parentFile.mkdirs()
-        val buildDateTime = project.findProperty("buildDateTime") as? String ?: ""
-        val buildCommit = project.findProperty("buildHash") as? String ?: ""
-        file.writeText("$majorVersion,$minorVersion,$buildNumber,$buildDateTime,$buildCommit")
+        file.writeText("""package org.dots.game
+
+const val majorVersion = $majorVersion
+const val minorVersion = $minorVersion
+const val buildNumber = $buildNumber
+val buildDateTime = kotlin.time.Instant.parse("${project.findProperty("buildDateTime") as? String ?: DateTimeFormatter.ISO_INSTANT.format(Instant.now())}")
+const val buildHash = "${project.findProperty("buildHash") as? String ?: ""}"
+""")
     }
 }
 
