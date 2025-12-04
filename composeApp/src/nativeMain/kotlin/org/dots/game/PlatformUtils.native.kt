@@ -6,6 +6,11 @@ import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import platform.Foundation.NSCharacterSet
+import platform.Foundation.NSString
+import platform.Foundation.URLQueryAllowedCharacterSet
+import platform.Foundation.stringByAddingPercentEncodingWithAllowedCharacters
+import platform.Foundation.stringByRemovingPercentEncoding
 
 @Composable
 actual fun HorizontalScrollbar(
@@ -53,4 +58,18 @@ actual val platform: Platform = Native
 @Composable
 actual fun Tooltip(text: String, content: @Composable (() -> Unit)) {
     content()
+}
+
+actual object UrlEncoderDecoder {
+    actual fun encode(value: String): String {
+        @Suppress("CAST_NEVER_SUCCEEDS")
+        return (value as NSString).stringByAddingPercentEncodingWithAllowedCharacters(
+            NSCharacterSet.URLQueryAllowedCharacterSet
+        )!!
+    }
+
+    actual fun decode(value: String): String {
+        @Suppress("CAST_NEVER_SUCCEEDS")
+        return (value as NSString).stringByRemovingPercentEncoding()!!
+    }
 }

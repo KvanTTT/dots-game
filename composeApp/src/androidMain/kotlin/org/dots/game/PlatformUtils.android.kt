@@ -15,6 +15,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URI
 import androidx.core.net.toUri
+import java.net.URLDecoder
+import java.net.URLEncoder
 
 /** Provides access to application context for non-composable platform calls. */
 object AndroidContextHolder {
@@ -168,4 +170,14 @@ actual val platform: Platform = Android
 @Composable
 actual fun Tooltip(text: String, content: @Composable (() -> Unit)) {
     content()
+}
+
+actual object UrlEncoderDecoder {
+    actual fun encode(value: String): String {
+        return URLEncoder.encode(value, "utf-8")
+    }
+
+    actual fun decode(value: String): String {
+        return URLDecoder.decode(value, "utf-8")
+    }
 }

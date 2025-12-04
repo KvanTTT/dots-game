@@ -29,6 +29,8 @@ import java.awt.Frame
 import java.io.File
 import java.io.FilenameFilter
 import java.net.URI
+import java.net.URLDecoder
+import java.net.URLEncoder
 
 @Composable
 actual fun HorizontalScrollbar(
@@ -215,5 +217,15 @@ actual fun Tooltip(
         }
     ) {
         content()
+    }
+}
+
+actual object UrlEncoderDecoder {
+    actual fun encode(value: String): String {
+        return URLEncoder.encode(value, "utf-8")
+    }
+
+    actual fun decode(value: String): String {
+        return URLDecoder.decode(value, "utf-8")
     }
 }

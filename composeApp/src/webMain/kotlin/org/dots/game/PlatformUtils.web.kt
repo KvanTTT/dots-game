@@ -35,12 +35,6 @@ import org.w3c.dom.HTMLInputElement
 import org.w3c.files.FileReader
 import org.w3c.fetch.Response
 
-/**
- * External JavaScript function to encode a URI component.
- * Used for properly encoding file content in data URLs.
- */
-external fun encodeURIComponent(value: String): String
-
 @Composable
 actual fun HorizontalScrollbar(
     scrollState: ScrollState,
@@ -279,4 +273,17 @@ actual val platform: Platform = run {
         else -> OS.Native
     }
     Web(os)
+}
+
+external fun encodeURIComponent(uriComponent: String): String
+external fun decodeURIComponent(uriComponent: String): String
+
+actual object UrlEncoderDecoder {
+    actual fun encode(value: String): String {
+        return encodeURIComponent(value)
+    }
+
+    actual fun decode(value: String): String {
+        return decodeURIComponent(value)
+    }
 }
