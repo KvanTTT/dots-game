@@ -10,6 +10,10 @@ import org.dots.game.sgf.Sgf
 import org.dots.game.sgf.SgfParser
 
 object GameLoader {
+    data class GameLoaderDiagnostic(val diagnostic: Diagnostic, val isContent: Boolean) {
+        override fun toString(): String = diagnostic.toString()
+    }
+
     /**
      * [rules] can be used when parsing raw fields that don't have extra info about rules.
      */
@@ -17,7 +21,7 @@ object GameLoader {
         pathOrContent: String,
         rules: Rules?,
         addFinishingMove: Boolean,
-        diagnosticReporter: ((Diagnostic) -> Unit) = { println(it) }
+        diagnosticReporter: ((GameLoaderDiagnostic) -> Unit) = { println(it) }
     ): LoadResult {
         try {
             val inputType = getInputType(pathOrContent)
@@ -37,7 +41,9 @@ object GameLoader {
                                 initialMoves = emptyList(),
                                 komi = Rules.Standard.komi,
                             ).rules
-                        }, diagnosticReporter
+                        }, diagnosticReporter = {
+                            diagnosticReporter(GameLoaderDiagnostic(it, isContent = true))
+                        }
                     )
                     return LoadResult(inputType, content = pathOrContent, Games.fromField(field))
                 }
@@ -48,70 +54,109 @@ object GameLoader {
 
                 is InputType.SgfFile -> {
                     sgfContent = if (inputType.isIncorrect) {
-                        diagnosticReporter(Diagnostic("Incorrect file `${inputType.name}`. The only .sgf and .sgfs files are supported", textSpan = null))
+                        diagnosticReporter(
+                            GameLoaderDiagnostic(
+                                Diagnostic("Incorrect file `${inputType.name}`. The only .sgf and .sgfs files are supported", textSpan = null),
+                                isContent = false
+                            )
+                        )
                         null
                     } else {
                         readFileText(inputType.refinedPath)
                     }
                 }
 
-                is InputType.SgfUrl -> {
-                    sgfContent = if (inputType.isIncorrect) {
-                        diagnosticReporter(Diagnostic("Incorrect url. The only `$zagramLinkPrefix` is supported", textSpan = null))
-                        null
-                    } else {
-                        downloadFileText(inputType.refinedPath)
+                is InputType.SgfServerUrl -> {
+                    sgfContent = downloadFileText(inputType.refinedPath)
+                }
+
+                is InputType.SgfClientUrl -> {
+                    val gameSettings = GameSettings.parseUrlParams(inputType.name, inputType.paramsOffset) {
+                        diagnosticReporter(GameLoaderDiagnostic(it, isContent = false))
                     }
+                    sgfContent = gameSettings.sgf
+                }
+
+                is InputType.OtherUrl -> {
+                    diagnosticReporter(
+                        GameLoaderDiagnostic(Diagnostic("Incorrect url. The only `$ZAGRAM_LINK_PREFIX` and `$THIS_APP_SERVER_URL` are supported", textSpan = null), isContent = false))
+                    sgfContent = null
                 }
 
                 is InputType.Empty -> {
-                    diagnosticReporter(Diagnostic("Insert a path to .sgf(s) file or a link to zagram.org game", textSpan = null))
+                    diagnosticReporter(
+                        GameLoaderDiagnostic(Diagnostic("Insert a path to .sgf(s) file or a link to zagram.org game", textSpan = null), isContent = false))
                     sgfContent = null
                 }
 
                 is InputType.Other -> {
-                    diagnosticReporter(Diagnostic("Unrecognized input type. Insert a path to .sgf(s) file or a link to zagram.org game", textSpan = null))
+                    diagnosticReporter(
+                        GameLoaderDiagnostic(Diagnostic("Unrecognized input type. Insert a path to .sgf(s) file or a link to zagram.org game", textSpan = null), isContent = false))
                     sgfContent = null
                 }
             }
 
             return LoadResult(inputType, sgfContent, sgfContent?.let {
-                Sgf.parseAndConvert(it, onlySingleGameSupported = false, addFinishingMove = addFinishingMove, diagnosticReporter)
+                Sgf.parseAndConvert(it, onlySingleGameSupported = false, addFinishingMove = addFinishingMove, diagnosticReporter = { diagnostic ->
+                    diagnosticReporter(GameLoaderDiagnostic(diagnostic, isContent = true))
+                })
             } ?: Games())
         } catch (e: Exception) {
-            diagnosticReporter(Diagnostic(e.message ?: e.toString(), textSpan = null, DiagnosticSeverity.Critical))
+            diagnosticReporter(
+                GameLoaderDiagnostic(Diagnostic(e.message ?: e.toString(), textSpan = null, DiagnosticSeverity.Critical), isContent = false)
+            )
         }
         return LoadResult(InputType.Other, pathOrContent, Games())
     }
 
-    private const val zagramLinkPrefix = "https://zagram.org/eidokropki/"
-    private const val zagramDownloadLinkPrefix = zagramLinkPrefix + "backend/download.py?id="
-    private const val zagramIdGroupName = "id"
+    private const val ZAGRAM_LINK_PREFIX = "https://zagram.org/eidokropki/"
+    private const val ZAGRAM_DOWNLOAD_LINK_PREFIX = ZAGRAM_LINK_PREFIX + "backend/download.py?id="
+    private const val ID_GROUP_NAME = "id"
+    private const val URL_GROUP_NAME = "url"
+    private const val URL_PARAMS_GROUP_NAME = "params"
     private val zagramIdRegex = Regex("""zagram\d+""")
-    private val zagramDownloadLinkRegex = Regex(Regex.escape(zagramDownloadLinkPrefix) + """(?<$zagramIdGroupName>${zagramIdRegex.pattern})""")
-    private val zagramGameViewLinkRegex = Regex(Regex.escape(zagramLinkPrefix) + """index\.html#url:(?<$zagramIdGroupName>${zagramIdRegex.pattern})""")
+    private val zagramDownloadLinkRegex = Regex(Regex.escape(ZAGRAM_DOWNLOAD_LINK_PREFIX) + """(?<$ID_GROUP_NAME>${zagramIdRegex.pattern})""")
+    private val zagramGameViewLinkRegex = Regex(Regex.escape(ZAGRAM_LINK_PREFIX) + """index\.html#url:(?<$ID_GROUP_NAME>${zagramIdRegex.pattern})""")
+    private val thisAppLinkRegex = Regex("""(?<$URL_GROUP_NAME>((${Regex.escape(THIS_APP_LOCAL_URL)}|${Regex.escape(THIS_APP_SERVER_URL)})/?))(?<$URL_PARAMS_GROUP_NAME>\?.+)?""")
+    private val nameInParamsRegex = Regex("""${GameSettings::path.name}=(?<$ID_GROUP_NAME>[^&]+)""")
     private val filePathRegex = Regex(""".*[\\/](?!.*[\\/])(.*)""")
+    private val httpRegex = Regex("https?://")
 
     internal fun getInputType(input: String): InputType {
         if (input.isBlank()) return InputType.Empty
 
-        if (input.startsWith("https://")) {
+        if (httpRegex.matchAt(input, 0) != null) {
             val zagramDownloadLinkMatch = zagramDownloadLinkRegex.matchEntire(input)
             if (zagramDownloadLinkMatch != null) {
-                return InputType.SgfUrl(input, zagramDownloadLinkMatch.groups[zagramIdGroupName]!!.value)
+                return InputType.SgfServerUrl(input, zagramDownloadLinkMatch.groups[ID_GROUP_NAME]!!.value)
             }
 
             val zagramGameViewLinkMatch = zagramGameViewLinkRegex.matchEntire(input)
             if (zagramGameViewLinkMatch != null) {
-                val id = zagramGameViewLinkMatch.groups[zagramIdGroupName]!!.value
-                return InputType.SgfUrl(zagramDownloadLinkPrefix + id, id)
+                val id = zagramGameViewLinkMatch.groups[ID_GROUP_NAME]!!.value
+                return InputType.SgfServerUrl(ZAGRAM_DOWNLOAD_LINK_PREFIX + id, id)
             }
 
-            return InputType.SgfUrl(input, "", isIncorrect = true)
+            val thisAppLinkMatch = thisAppLinkRegex.matchEntire(input)
+            if (thisAppLinkMatch != null) {
+                val path = thisAppLinkMatch.groups[URL_GROUP_NAME]!!.value
+                val paramsGroup = thisAppLinkMatch.groups[URL_PARAMS_GROUP_NAME]
+                val urlEncodedName = paramsGroup?.let {
+                    nameInParamsRegex.findAll(it.value).firstOrNull()?.groups?.get(ID_GROUP_NAME)?.value
+                } ?: ""
+                val name = try {
+                    UrlEncoderDecoder.decode(urlEncodedName)
+                } catch (_: Exception) {
+                    ""
+                }
+                return InputType.SgfClientUrl(input, name, paramsGroup?.value ?: "", path.length)
+            }
+
+            return InputType.OtherUrl(input)
         }
 
         if (zagramIdRegex.matchEntire(input) != null) {
-            return InputType.SgfUrl(zagramDownloadLinkPrefix + input, input)
+            return InputType.SgfServerUrl(ZAGRAM_DOWNLOAD_LINK_PREFIX + input, input)
         }
 
         fun extractFileName(filePath: String): String {
@@ -196,7 +241,24 @@ sealed class InputType {
     }
 
     class SgfFile(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
-    class SgfUrl(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
+
+    sealed class Url(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
+    class SgfServerUrl(refinedPath: String, name: String, isIncorrect: Boolean = false) : Url(refinedPath, name, isIncorrect)
+    class SgfClientUrl(refinedPath: String, name: String, val params: String, val paramsOffset: Int, isIncorrect: Boolean = false) : Url(refinedPath, name, isIncorrect) {
+        override fun equals(other: Any?): Boolean {
+            if (!super.equals(other)) return false
+            other as SgfClientUrl
+            return params == other.params && paramsOffset == other.paramsOffset
+        }
+
+        override fun hashCode(): Int {
+            var result = super.hashCode()
+            result = 31 * result + params.hashCode()
+            result = 31 * result + paramsOffset.hashCode()
+            return result
+        }
+    }
+    class OtherUrl(path: String) : Url(path, "", true)
 
     object Empty : InputType()
     object Other : InputType()

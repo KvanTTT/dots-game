@@ -30,3 +30,10 @@ val buildInfo: BuildInfo = BuildInfo(
     buildDateTime,
     buildHash,
 )
+
+const val THIS_APP_LOCAL_URL = "http://localhost:8080"
+const val THIS_APP_SERVER_URL = "https://kvanttt.github.io/dots-game"
+
+val thisAppUrl by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    if (buildInfo.isLocal) THIS_APP_LOCAL_URL else THIS_APP_SERVER_URL
+}

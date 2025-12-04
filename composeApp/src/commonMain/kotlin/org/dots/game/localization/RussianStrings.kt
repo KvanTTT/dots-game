@@ -66,6 +66,7 @@ object RussianStrings : Strings {
     override val debugInfo = "Отладочная информация"
     override val padding = "Отступ"
     override val path = "Путь"
+    override val link = "Ссылка"
     override fun saveDialogTitle(isSgf: Boolean) = "Сохранить игру в .${if (isSgf) "sgf" else "txt"}"
 
     // Settings

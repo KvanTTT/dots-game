@@ -73,12 +73,12 @@ fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? 
                     setSetting(OpenGameSettings::addFinishingMove)
                 }
             }
-            is CurrentGameSettings -> {
+            is GameSettings -> {
                 context(settings, settingsObj) {
-                    setSetting(CurrentGameSettings::path)
-                    setSetting(CurrentGameSettings::sgfContent)
-                    setSetting(CurrentGameSettings::currentGameNumber)
-                    setSetting(CurrentGameSettings::currentNodeNumber)
+                    setSetting(GameSettings::path)
+                    setSetting(GameSettings::sgf)
+                    setSetting(GameSettings::game)
+                    setSetting(GameSettings::node)
                 }
             }
             is KataGoDotsSettings -> {
@@ -161,13 +161,13 @@ fun <T : ClassSettings<T>> loadClassSettings(defaultSettingsObj: T, directory: S
                     )
                 }
             }
-            is CurrentGameSettings -> {
+            is GameSettings -> {
                 context(settings, defaultSettingsObj) {
-                    CurrentGameSettings(
-                        path = getSetting(CurrentGameSettings::path),
-                        sgfContent = getSetting(CurrentGameSettings::sgfContent),
-                        currentGameNumber = getSetting(CurrentGameSettings::currentGameNumber),
-                        currentNodeNumber = getSetting(CurrentGameSettings::currentNodeNumber),
+                    GameSettings(
+                        path = getSetting(GameSettings::path),
+                        sgf = getSetting(GameSettings::sgf),
+                        game = getSetting(GameSettings::game),
+                        node = getSetting(GameSettings::node),
                     )
                 }
             }

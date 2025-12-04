@@ -17,19 +17,19 @@ fun main() = application {
         size = previousWindowsState.size,
     )
 
-    val currentGameSettings by remember { mutableStateOf(loadClassSettings(CurrentGameSettings.Default)) }
+    val gameSettings by remember { mutableStateOf(loadClassSettings(GameSettings.Default)) }
     var games: Games? by remember { mutableStateOf(null) }
 
     Window(
         onCloseRequest = {
             saveWindowsState(windowState)
-            saveClassSettings(currentGameSettings.update(games))
+            saveClassSettings(gameSettings.update(games))
             exitApplication()
         },
         title = "Dots Game",
         state = windowState
     ) {
-        App(currentGameSettings) {
+        App(gameSettings) {
             games = it
         }
     }

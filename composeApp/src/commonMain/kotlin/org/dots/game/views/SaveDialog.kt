@@ -12,23 +12,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dotsgame.composeapp.generated.resources.Res
 import dotsgame.composeapp.generated.resources.ic_save
-import org.dots.game.CurrentGameSettings
+import org.dots.game.GameSettings
 import org.dots.game.IconButton
 import org.dots.game.SaveFileDialog
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
 import org.dots.game.dump.render
+import org.dots.game.thisAppUrl
 
 @Composable
 fun SaveDialog(
     field: Field,
-    currentGameSettings: CurrentGameSettings,
+    gameSettings: GameSettings,
     dumpParameters: DumpParameters,
     uiSettings: UiSettings,
     onDismiss: (dumpParameters: DumpParameters, newPath: String?) -> Unit,
 ) {
     val strings by remember { mutableStateOf(uiSettings.language.getStrings()) }
-    val sgfContent = currentGameSettings.sgfContent
+    val sgfContent = gameSettings.sgf
     var minX = field.realWidth - 1
     var maxX = 0
     var minY = field.realHeight - 1
@@ -58,8 +59,9 @@ fun SaveDialog(
 
     var isSgf by remember { mutableStateOf(dumpParameters.isSgf) }
     var fieldRepresentation by remember { mutableStateOf("") }
+    var path by remember { mutableStateOf(gameSettings.path ?: "") }
+    val link by remember(path) { mutableStateOf(thisAppUrl + gameSettings.toUrlParams()) }
 
-    var path by remember { mutableStateOf(currentGameSettings.path ?: "") }
     var showSaveDialog by remember { mutableStateOf(false) }
 
     fun createDumpParameters(): DumpParameters {
@@ -163,7 +165,7 @@ fun SaveDialog(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(strings.path, Modifier.fillMaxWidth(0.1f))
+                    Text(strings.path, Modifier.fillMaxWidth(0.2f))
                     TextField(path, {
                         path = it
                     },
@@ -176,6 +178,15 @@ fun SaveDialog(
                             showSaveDialog = true
                         }
                     }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(strings.link, Modifier.fillMaxWidth(0.2f))
+                    TextField(
+                        link, { },
+                        modifier = Modifier.fillMaxWidth(0.8f).padding(end = 5.dp),
+                        readOnly = true,
+                        singleLine = true
+                    )
                 }
             }
         }

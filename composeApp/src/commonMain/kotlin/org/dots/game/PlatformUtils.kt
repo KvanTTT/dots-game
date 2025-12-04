@@ -16,6 +16,11 @@ expect fun fileExists(filePath: String): Boolean
 
 expect suspend fun downloadFileText(fileUrl: String): String
 
+expect object UrlEncoderDecoder {
+    fun encode(value: String): String
+    fun decode(value: String): String
+}
+
 @Composable
 expect fun SaveFileDialog(
     title: String?,

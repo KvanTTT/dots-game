@@ -18,14 +18,23 @@ fun main() {
     }
 
     ComposeViewport(document.body!!) {
-        val currentGameSettings by remember { mutableStateOf(loadClassSettings(CurrentGameSettings.Default)) }
+        val gameSettings by remember { mutableStateOf(loadClassSettings(GameSettings.Default)) }
+
+        val gameSettingsFromUrl = GameSettings.parseUrlParams(window.location.search, 0)
+        with(gameSettingsFromUrl) {
+            path?.let { gameSettings.path = it }
+            sgf?.let { gameSettings.sgf = it }
+            game?.let { gameSettings.game = it }
+            node?.let { gameSettings.node = it }
+        }
+
         var games: Games? by remember { mutableStateOf(null) }
 
         window.addEventListener("beforeunload") { _ ->
-            saveClassSettings(currentGameSettings.update(games))
+            saveClassSettings(gameSettings.update(games))
         }
 
-        App(currentGameSettings) {
+        App(gameSettings) {
             games = it
         }
     }

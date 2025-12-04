@@ -66,6 +66,7 @@ object EnglishStrings : Strings {
     override val debugInfo = "Debug info"
     override val padding = "Padding"
     override val path = "Path"
+    override val link = "Link"
     override fun saveDialogTitle(isSgf: Boolean) = "Save game to .${if (isSgf) "sgf" else "txt"}"
 
     // Settings Dialog

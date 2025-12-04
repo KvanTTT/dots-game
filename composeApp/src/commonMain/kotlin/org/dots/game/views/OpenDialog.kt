@@ -59,7 +59,7 @@ fun OpenDialog(
     var pathOrContentTextFieldValue by remember { mutableStateOf(TextFieldValue(openGameSettings.pathOrContent ?: "")) }
     var contentTextFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     var previousInput: String by remember { mutableStateOf("") }
-    var diagnostics by remember { mutableStateOf<List<Diagnostic>>(listOf()) }
+    var diagnostics by remember { mutableStateOf<List<GameLoader.GameLoaderDiagnostic>>(listOf()) }
     var loadResult by remember { mutableStateOf<LoadResult?>(null) }
     var rewindToEnd by remember { mutableStateOf(openGameSettings.rewindToEnd) }
     var addFinishingMove by remember { mutableStateOf(openGameSettings.addFinishingMove) }
@@ -161,23 +161,33 @@ fun OpenDialog(
                     }
                 }
 
-                fun getContentTextFieldValue() = if (loadResult?.inputType is InputType.InputTypeWithPath) contentTextFieldValue else pathOrContentTextFieldValue
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp).padding(vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val lineOffsets by lazy(LazyThreadSafetyMode.NONE) { getContentTextFieldValue().text.buildLineOffsets() }
+                        val contentLineOffsets by lazy(LazyThreadSafetyMode.NONE) { contentTextFieldValue.text.buildLineOffsets() }
+                        val pathOrContentLineOffsets by lazy(LazyThreadSafetyMode.NONE) { pathOrContentTextFieldValue.text.buildLineOffsets() }
                         items(diagnostics.size) { index ->
-                            val diagnostic = diagnostics[index]
+                            val gameLoaderDiagnostic =  diagnostics[index]
+                            val diagnostic = gameLoaderDiagnostic.diagnostic
                             var cardModifier = Modifier.fillMaxWidth()
                             val textSpan = diagnostic.textSpan
+                            val isContentTextField = loadResult?.inputType is InputType.InputTypeWithPath && gameLoaderDiagnostic.isContent
                             if (textSpan != null) {
                                 cardModifier = cardModifier.then(Modifier.clickable(onClick = {
                                     val start = textSpan.start
                                     val end = textSpan.end
-                                    val textFieldValue = getContentTextFieldValue()
+                                    val textFieldValue: TextFieldValue
+                                    val otherTextFieldValue: TextFieldValue
+                                    if (isContentTextField) {
+                                        textFieldValue = contentTextFieldValue
+                                        otherTextFieldValue = pathOrContentTextFieldValue
+                                    }
+                                    else {
+                                        textFieldValue = pathOrContentTextFieldValue
+                                        otherTextFieldValue = contentTextFieldValue
+                                    }
                                     val newTextFieldValue = textFieldValue.copy(selection = TextRange(start,
                                         if (end == start) {
                                             if (end < textFieldValue.text.length - 1)
@@ -190,9 +200,12 @@ fun OpenDialog(
                                             end
                                         }
                                     ))
-                                    if (loadResult?.inputType is InputType.InputTypeWithPath) {
+                                    val newOtherTextFieldValue = otherTextFieldValue.copy(selection = TextRange(otherTextFieldValue.selection.start))
+                                    if (isContentTextField) {
                                         contentTextFieldValue = newTextFieldValue
+                                        pathOrContentTextFieldValue = newOtherTextFieldValue
                                     } else {
+                                        contentTextFieldValue = newOtherTextFieldValue
                                         pathOrContentTextFieldValue = newTextFieldValue
                                     }
                                 }))
@@ -202,7 +215,12 @@ fun OpenDialog(
                                 elevation = 4.dp
                             ) {
                                 Text(
-                                    text = diagnostic.toLineColumnDiagnostic(lineOffsets).toString(),
+                                    text = diagnostic.toLineColumnDiagnostic(
+                                        if (isContentTextField)
+                                            contentLineOffsets
+                                        else
+                                            pathOrContentLineOffsets
+                                    ).toString(),
                                     style = MaterialTheme.typography.body1,
                                     modifier = Modifier
                                         .padding(16.dp)

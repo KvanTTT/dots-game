@@ -45,7 +45,7 @@ import org.dots.game.dump.DumpParameters
 
 @Composable
 @Preview
-fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGameSettings.Default), onGamesChange: (games: Games?) -> Unit = { }) {
+fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), onGamesChange: (games: Games?) -> Unit = { }) {
     MaterialTheme {
         var uiSettings by remember { mutableStateOf(loadClassSettings(UiSettings.Standard)) }
         var strings by remember { mutableStateOf(uiSettings.language.getStrings()) }
@@ -103,16 +103,17 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
             gameTreeViewData = GameTreeViewData(getGameTree())
         }
 
-        fun switchGame(gameNumber: Int) {
-            currentGameSettings.currentGameNumber = gameNumber
-            currentGame = games.elementAtOrNull(gameNumber) ?: games[0]
+        fun switchGame(gameNumber: Int?) {
+            gameSettings.game = gameNumber
+            currentGame = gameNumber?.let { games.elementAtOrNull(it) } ?: games[0]
+            val node = gameSettings.node
 
-            if (currentGame.initialization && currentGameSettings.currentNodeNumber == -1) {
+            if (currentGame.initialization && node == null) {
                 if (openGameSettings.rewindToEnd) {
                     currentGame.gameTree.rewindToEnd()
                 }
-            } else {
-                currentGame.gameTree.switchToDepthFirstIndex(currentGameSettings.currentNodeNumber)
+            } else if (node != null) {
+                currentGame.gameTree.switchToDepthFirstIndex(node)
             }
             currentGame.initialization = false
             currentGame.gameTree.memoizePaths = true
@@ -122,10 +123,10 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
 
         fun reset(newGame: Boolean) {
             if (newGame)
-                currentGameSettings.path = null
-            currentGameSettings.sgfContent = null
-            currentGameSettings.currentGameNumber = 0
-            currentGameSettings.currentNodeNumber = -1
+                gameSettings.path = null
+            gameSettings.sgf = null
+            gameSettings.game = null
+            gameSettings.node = null
             reset = true
         }
 
@@ -146,7 +147,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
         }
 
         if (start || reset) {
-            val contentOrPath = currentGameSettings.sgfContent ?: currentGameSettings.path
+            val contentOrPath = gameSettings.sgf ?: gameSettings.path
 
             if (contentOrPath == null) {
                 games = Games.fromField(Field.create(newGameDialogRules))
@@ -163,7 +164,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                     if (loadResult.games.isNotEmpty()) {
                         games = loadResult.games
                         onGamesChange(games)
-                        switchGame(currentGameSettings.currentGameNumber)
+                        switchGame(gameSettings.game)
                     }
                 }
             }
@@ -199,13 +200,13 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                     openGameDialog = false
                     openGameSettings = newOpenGameSettings
                     saveClassSettings(openGameSettings)
-                    currentGameSettings.path = path
-                    currentGameSettings.sgfContent = content
-                    currentGameSettings.currentGameNumber = 0
-                    currentGameSettings.currentNodeNumber = -1
+                    gameSettings.path = path
+                    gameSettings.sgf = content
+                    gameSettings.game = null
+                    gameSettings.node = null
                     games = newGames
                     onGamesChange(games)
-                    switchGame(currentGameSettings.currentGameNumber)
+                    switchGame(gameSettings.game)
                 }
             )
         }
@@ -213,7 +214,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
         if (showSaveGameDialog) {
             SaveDialog(
                 getField(),
-                currentGameSettings.update(games),
+                gameSettings.update(games),
                 dumpParameters,
                 uiSettings,
                 onDismiss = { newDumpParameters, newPath ->
@@ -224,8 +225,8 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                     if (newPath != null) {
                         openGameSettings = openGameSettings.copy(pathOrContent = newPath)
                         saveClassSettings(openGameSettings)
-                        currentGameSettings.path = newPath
-                        saveClassSettings(currentGameSettings.update(games))
+                        gameSettings.path = newPath
+                        saveClassSettings(gameSettings.update(games))
                     }
                 })
         }
@@ -462,7 +463,7 @@ fun App(currentGameSettings: CurrentGameSettings = loadClassSettings(CurrentGame
                                 ) {
                                     var currentGameIndex = games.indexOf(currentGame)
                                     currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
-                                    currentGameSettings.currentNodeNumber = -1
+                                    gameSettings.node = null
                                     switchGame(currentGameIndex)
                                 }
                             }
