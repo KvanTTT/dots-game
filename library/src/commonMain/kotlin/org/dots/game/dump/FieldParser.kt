@@ -1,6 +1,7 @@
 package org.dots.game.dump
 
 import org.dots.game.Diagnostic
+import org.dots.game.DiagnosticSeverity
 import org.dots.game.core.EMPTY_POSITION_MARKER
 import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Field
@@ -131,7 +132,8 @@ object FieldParser {
                                 diagnosticReporter(
                                     Diagnostic(
                                         "The move with number $parsedMoveNumber is already in use.",
-                                        textSpan = TextSpan.fromBounds(charIndex, digitIndex)
+                                        textSpan = TextSpan.fromBounds(charIndex, digitIndex),
+                                        severity = DiagnosticSeverity.Warning,
                                     )
                                 )
                                 move
@@ -178,6 +180,10 @@ object FieldParser {
             }
         }
 
+        if (currentWidth > maxWidth) {
+            maxWidth = currentWidth
+        }
+
         if (currentWidth > 0) {
             lineIndex++
         }
@@ -207,16 +213,16 @@ object FieldParser {
                         this[insertedMoveNumber++] = unnumberedMoves[moveNumberInUnnumberedMoves++]
                     }
                     if (moveNumber - insertedMoveNumber > 0) {
-                        var reportError = true
+                        var reportMissingMoves = true
                         val singleValueOrRange = if (size == moveNumber - 1) {
-                            reportError = isNotEmpty() // Allow moves sequence to start both since `0` and `1`
+                            reportMissingMoves = isNotEmpty() // Allow moves sequence to start both since `0` and `1`
                             size
                         } else {
                             IntRange(size, moveNumber - 1)
                         }
-                        if (reportError) {
+                        if (reportMissingMoves) {
                             diagnosticReporter(
-                                Diagnostic("The following moves are missing: $singleValueOrRange", textSpan = null)
+                                Diagnostic("The following moves are missing: $singleValueOrRange", textSpan = null, severity = DiagnosticSeverity.Warning)
                             )
                         }
                     }

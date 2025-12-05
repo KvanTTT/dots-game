@@ -1,8 +1,5 @@
 package org.dots.game
 
-import org.dots.game.core.EMPTY_POSITION_MARKER
-import org.dots.game.core.FIRST_PLAYER_MARKER
-import org.dots.game.core.SECOND_PLAYER_MARKER
 import org.dots.game.dump.FieldParser
 import org.dots.game.sgf.SgfParser
 
@@ -12,35 +9,24 @@ object InputTypeDetector {
     private const val ID_GROUP_NAME = "id"
     private const val URL_GROUP_NAME = "url"
     private const val URL_PARAMS_GROUP_NAME = "params"
+
     private val zagramIdRegex = Regex("""zagram\d+""")
-    private val zagramDownloadLinkRegex = Regex(Regex.escape(ZAGRAM_DOWNLOAD_LINK_PREFIX) + """(?<$ID_GROUP_NAME>${zagramIdRegex.pattern})""")
-    private val zagramGameViewLinkRegex = Regex(Regex.escape(ZAGRAM_LINK_PREFIX) + """index\.html#url:(?<$ID_GROUP_NAME>${zagramIdRegex.pattern})""")
-    private val thisAppLinkRegex = Regex("""(?<$URL_GROUP_NAME>((${Regex.escape(THIS_APP_LOCAL_URL)}|${Regex.escape(THIS_APP_SERVER_URL)})/?))(?<$URL_PARAMS_GROUP_NAME>\?.+)?""")
-    private val nameInParamsRegex = Regex("""${GameSettings::path.name}=(?<$ID_GROUP_NAME>[^&]+)""")
+    private val zagramDownloadLinkRegex = Regex("""\s*""" + Regex.escape(ZAGRAM_DOWNLOAD_LINK_PREFIX) + """(?<$ID_GROUP_NAME>${zagramIdRegex.pattern})\s*""")
+    private val zagramGameViewLinkRegex = Regex("""\s*""" + Regex.escape(ZAGRAM_LINK_PREFIX) + """index\.html#url:(?<$ID_GROUP_NAME>${zagramIdRegex.pattern})\s*""")
+    private val thisAppLinkRegex = Regex("""\s*(?<$URL_GROUP_NAME>((${Regex.escape(THIS_APP_LOCAL_URL)}|${Regex.escape(THIS_APP_SERVER_URL)})/?))(?<$URL_PARAMS_GROUP_NAME>\?\S*)?\s*""")
     private val filePathRegex = Regex(""".*[\\/](?!.*[\\/])(.*)""")
-    private val httpRegex = Regex("https?://")
-    val sgfExtensionRegex = Regex(""".*\.sgfs?$""")
+
+    private val nameInParamsRegex = Regex("""${GameSettings::path.name}=(?<$ID_GROUP_NAME>[^&]+)""")
+    private val httpRegex = Regex("""\s*https?://""")
+    val sgfExtensionRegex = Regex(""".*\.sgfs?\s*$""")
 
     internal fun getInputType(input: String): InputType {
         if (input.isBlank()) return InputType.Empty
 
-        if (tryParseField(input)) return InputType.FieldContent
         if (tryParseSgf(input)) return InputType.SgfContent
+        if (tryParseField(input)) return InputType.FieldContent
 
         tryGetInputTypeForPath(input)?.let { return it }
-
-        var notWhitespaceCharIndex = 0
-        while (notWhitespaceCharIndex < input.length && input[notWhitespaceCharIndex].isWhitespace()) {
-            notWhitespaceCharIndex++
-        }
-
-        if (input.elementAtOrNull(notWhitespaceCharIndex).let { it == FIRST_PLAYER_MARKER || it == SECOND_PLAYER_MARKER || it == EMPTY_POSITION_MARKER }) {
-            return InputType.FieldContent
-        }
-
-        if (notWhitespaceCharIndex + 2 <= input.length && input.subSequence(notWhitespaceCharIndex, notWhitespaceCharIndex + 2) == "(;") {
-            return InputType.SgfContent
-        }
 
         return InputType.Other
     }
@@ -51,7 +37,7 @@ object InputTypeDetector {
         if (httpRegex.matchAt(input, 0) != null) {
             val zagramDownloadLinkMatch = zagramDownloadLinkRegex.matchEntire(input)
             if (zagramDownloadLinkMatch != null) {
-                return InputType.SgfServerUrl(input, zagramDownloadLinkMatch.groups[ID_GROUP_NAME]!!.value)
+                return InputType.SgfServerUrl(input.trim(), zagramDownloadLinkMatch.groups[ID_GROUP_NAME]!!.value)
             }
 
             val zagramGameViewLinkMatch = zagramGameViewLinkRegex.matchEntire(input)
@@ -72,7 +58,7 @@ object InputTypeDetector {
                 } catch (_: Exception) {
                     ""
                 }
-                return InputType.SgfClientUrl(input, name, paramsGroup?.value ?: "", path.length)
+                return InputType.SgfClientUrl(input.trim(), name, paramsGroup?.value ?: "", path.length)
             }
 
             return InputType.OtherUrl(input)
@@ -86,14 +72,14 @@ object InputTypeDetector {
             return filePath.substring(filePath.lastIndexOfAny(charArrayOf('/', '\\')) + 1)
         }
 
-        val refinedPath = input.removeSurrounding("\"")
+        val refinedPath = input.trim().removeSurrounding("\"")
         val lower = refinedPath.lowercase()
         if (sgfExtensionRegex.matches(lower)) {
             return InputType.SgfFile(refinedPath, extractFileName(refinedPath))
         }
 
         if (fileExists(refinedPath) || filePathRegex.matchEntire(refinedPath) != null) {
-            return InputType.SgfFile(refinedPath, extractFileName(refinedPath), isIncorrect = true)
+            return InputType.OtherFile(refinedPath, extractFileName(refinedPath))
         }
 
         return null
@@ -112,13 +98,13 @@ object InputTypeDetector {
     }
 
     private fun tryParseField(input: String): Boolean {
-        var fieldContainsAError = false
+        var fieldContainsError = false
 
         val _ = FieldParser.parse(input) {
-            fieldContainsAError = fieldContainsAError || it.severity >= DiagnosticSeverity.Error
+            fieldContainsError = fieldContainsError || it.severity >= DiagnosticSeverity.Error
         }
 
-        return !fieldContainsAError
+        return !fieldContainsError
     }
 }
 
@@ -143,7 +129,9 @@ sealed class InputType {
         }
     }
 
+    sealed class File(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
     class SgfFile(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
+    class OtherFile(refinedPath: String, name: String) : File(refinedPath, name, true)
 
     sealed class Url(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
     class SgfServerUrl(refinedPath: String, name: String, isIncorrect: Boolean = false) : Url(refinedPath, name, isIncorrect)

@@ -49,17 +49,17 @@ object GameLoader {
                 }
 
                 is InputType.SgfFile -> {
-                    sgfContent = if (inputType.isIncorrect) {
-                        diagnosticReporter(
-                            GameLoaderDiagnostic(
-                                Diagnostic("Incorrect file `${inputType.name}`. The only .sgf and .sgfs files are supported", textSpan = null),
-                                isContent = false
-                            )
+                    sgfContent = readFileText(inputType.refinedPath)
+                }
+
+                is InputType.OtherFile -> {
+                    diagnosticReporter(
+                        GameLoaderDiagnostic(
+                            Diagnostic("Incorrect file `${inputType.name}`. The only .sgf and .sgfs files are supported", textSpan = null),
+                            isContent = false
                         )
-                        null
-                    } else {
-                        readFileText(inputType.refinedPath)
-                    }
+                    )
+                    sgfContent = null
                 }
 
                 is InputType.SgfServerUrl -> {

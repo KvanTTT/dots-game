@@ -125,7 +125,7 @@ class FieldParserTests {
             +1 *2
         """
         assertEquals(
-            "Error at [32..33): The move with number 1 is already in use.",
+            "Warning at [32..33): The move with number 1 is already in use.",
             assertFails { FieldParser.parseAndConvertWithNoInitialMoves(field) }.message
         )
     }
@@ -137,7 +137,7 @@ class FieldParserTests {
             +4 *5
         """
         assertEquals(
-            "Error: The following moves are missing: 2..3",
+            "Warning: The following moves are missing: 2..3",
             assertFails { FieldParser.parseAndConvertWithNoInitialMoves(field) }.message
         )
     }
