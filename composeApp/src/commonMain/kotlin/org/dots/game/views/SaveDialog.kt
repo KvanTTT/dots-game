@@ -14,6 +14,8 @@ import dotsgame.composeapp.generated.resources.Res
 import dotsgame.composeapp.generated.resources.ic_save
 import org.dots.game.GameSettings
 import org.dots.game.IconButton
+import org.dots.game.InputType
+import org.dots.game.InputTypeDetector
 import org.dots.game.SaveFileDialog
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
@@ -59,8 +61,39 @@ fun SaveDialog(
 
     var isSgf by remember { mutableStateOf(dumpParameters.isSgf) }
     var fieldRepresentation by remember { mutableStateOf("") }
-    var path by remember { mutableStateOf(gameSettings.path ?: "") }
-    val link by remember(path) { mutableStateOf(thisAppUrl + gameSettings.toUrlParams()) }
+
+    val inputTypeForGameSettings by remember { mutableStateOf(InputTypeDetector.tryGetInputTypeForPath(gameSettings.path ?: "")) }
+
+    val refinedLink by remember {
+        val refinedGameSettings = when (val inputType = inputTypeForGameSettings) {
+            // Extract refined path for client URL
+            is InputType.SgfClientUrl -> gameSettings.copy(path = inputType.refinedPath)
+            else -> gameSettings
+        }
+        mutableStateOf(thisAppUrl + refinedGameSettings.toUrlParams())
+    }
+
+    var path by remember {
+        val refinedPath = when (val inputType = inputTypeForGameSettings) {
+            // Don't use a link as a file name because it's useless
+            is InputType.Url -> {
+                inputType.name + if (!InputTypeDetector.sgfExtensionRegex.matches(inputType.name) && isSgf) ".sgf" else ""
+            }
+            is InputType.InputTypeWithPath -> inputType.refinedPath
+            else -> ""
+        }
+        mutableStateOf(refinedPath)
+    }
+
+    val link by remember(path) {
+        val inputTypeWithPath = InputTypeDetector.tryGetInputTypeForPath(path)
+        val newLink = when (inputTypeWithPath) {
+            // Don't use a local absolute path for links
+            is InputType.SgfFile -> thisAppUrl + gameSettings.copy(path = inputTypeWithPath.name).toUrlParams()
+            else -> refinedLink
+        }
+        mutableStateOf(newLink)
+    }
 
     var showSaveDialog by remember { mutableStateOf(false) }
 

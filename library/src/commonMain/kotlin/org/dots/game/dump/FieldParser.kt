@@ -75,8 +75,7 @@ object FieldParser {
         var lineIndex = 0
 
         while (charIndex < data.length) {
-            val char = data[charIndex]
-            when (char) {
+            when (val char = data[charIndex]) {
                 ' ', '\t' -> {
                     charIndex++
                 }
