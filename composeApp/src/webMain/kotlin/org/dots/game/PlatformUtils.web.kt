@@ -134,7 +134,7 @@ actual fun OpenFileDialog(
                 val reader = FileReader()
                 reader.onload = {
                     val result = reader.result
-                    val text = (result as? String) ?: result?.toString()
+                    val text = result?.toString()
                     if (text != null) {
                         // Store content in virtual FS and return unique file name for display
                         val displayPath = WasmVirtualFS.put(file.name, text)

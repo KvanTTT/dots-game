@@ -31,6 +31,12 @@ kotlin {
             }
         }
     }
+
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            "-Werror",
+        )
+    }
 }
 
 tasks.withType<Test> {

@@ -11,6 +11,12 @@ dependencies {
     implementation(libs.clikt)
 }
 
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Werror")
+    }
+}
+
 application {
     mainClass.set("MainKt")
 }

@@ -1,5 +1,4 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
@@ -40,9 +39,9 @@ const val buildHash = "${project.findProperty("buildHash") as? String ?: ""}"
 
 kotlin {
     androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
+            freeCompilerArgs.add("-Werror")
         }
     }
 
@@ -57,7 +56,11 @@ kotlin {
         }
     }
 
-    jvm("desktop")
+    jvm("desktop") {
+        compilerOptions {
+            freeCompilerArgs.add("-Werror")
+        }
+    }
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
@@ -72,6 +75,9 @@ kotlin {
                     static(projectDirPath)
                 }
             }
+        }
+        compilerOptions {
+            freeCompilerArgs.add("-Werror")
         }
         binaries.executable()
     }
@@ -109,6 +115,8 @@ kotlin {
         }
     }
     compilerOptions {
+        // Do not enforce -Werror globally to avoid failing iOS/native metadata compilation
+        // Retain other useful checks across all source sets
         freeCompilerArgs.addAll(
             listOf(
                 "-Xcontext-parameters",
