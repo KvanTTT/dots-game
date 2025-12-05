@@ -195,7 +195,7 @@ object GameLoader {
     private fun tryParseSgf(input: String): Boolean {
         var sgfContainsAError = false
 
-        SgfParser.parse(input) {
+        val _ = SgfParser.parse(input) {
             sgfContainsAError = sgfContainsAError || it.severity >= DiagnosticSeverity.Error
         }
 
@@ -205,7 +205,7 @@ object GameLoader {
     private fun tryParseField(input: String): Boolean {
         var fieldContainsAError = false
 
-        FieldParser.parse(input) {
+        val _ = FieldParser.parse(input) {
             fieldContainsAError = fieldContainsAError || it.severity >= DiagnosticSeverity.Error
         }
 

@@ -29,6 +29,7 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
         ExistingChild,
     }
 
+    @IgnorableReturnValue
     fun addChild(moveInfo: MoveInfo, moveReporter: (MoveInfo, MoveResult) -> Unit = { _, _ -> }): NodeKind {
         val properties = mutableMapOf<KProperty<*>, GameProperty<*>>().apply {
             val key = if (moveInfo.player == Player.First)
@@ -41,6 +42,7 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
         return addChild(properties, moveReporter = moveReporter)
     }
 
+    @IgnorableReturnValue
     fun addChild(properties: PropertiesMap, parsedNode: ParsedNode? = null, moveReporter: (MoveInfo, MoveResult) -> Unit = { _, _ -> }): NodeKind {
         var nodeKind = NodeKind.New
         var existingChild: GameTreeNode? = null
@@ -55,8 +57,10 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
         return nodeKind
     }
 
+    @IgnorableReturnValue
     fun rewindToBegin(): Boolean = switch(rootNode)
 
+    @IgnorableReturnValue
     fun rewindToEnd(): Boolean {
         var result = false
         while (next()) {
@@ -68,6 +72,7 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
     /**
      * @return `false` if the @property[currentNode] is root, otherwise move it to the previous nodes and returns `true`
      */
+    @IgnorableReturnValue
     fun back(count: Int = 1): Boolean {
         require(count >= 0) { "Count must be non-negative, got $count" }
 
@@ -83,6 +88,7 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
     /**
      * @return `false` if there are no next nodes, otherwise move it to the next nodes on the main line returns `true`
      */
+    @IgnorableReturnValue
     fun next(count: Int = 1): Boolean {
         require(count >= 0) { "Count must be non-negative, got $count" }
 
@@ -95,10 +101,12 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
         return true
     }
 
+    @IgnorableReturnValue
     fun prevSibling(): Boolean {
         return switchToSibling(next = false)
     }
 
+    @IgnorableReturnValue
     fun nextSibling(): Boolean {
         return switchToSibling(next = true)
     }
@@ -119,6 +127,7 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
      * @return `false` if @param[targetNode] is a @property[currentNode] or it's an unrelated node,
      * otherwise perform switching to the passed node and returns `true`
      */
+    @IgnorableReturnValue
     fun switch(targetNode: GameTreeNode?, moveReporter: (MoveInfo, MoveResult) -> Unit = { _, _ -> }): Boolean {
         if (disabled) return false
 
@@ -203,7 +212,8 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
         return true
     }
 
-    fun switchToDepthFirstIndex(index: Int): Boolean {
+    @IgnorableReturnValue
+    fun trySwitchingToDepthFirstIndex(index: Int): Boolean {
         var counter = 0
         forEachDepthFirst {
             if (counter == index) {
@@ -273,7 +283,7 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
     private fun GameTreeNode.unmakeMoves() {
         moveResults.forEach { moveResult ->
             if (moveResult is LegalMove) {
-                field.unmakeMove()
+                require(field.unmakeMove() is LegalMove)
             }
         }
     }

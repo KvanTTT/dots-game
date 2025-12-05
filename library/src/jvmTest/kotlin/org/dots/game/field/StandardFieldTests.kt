@@ -1,3 +1,5 @@
+@file:Suppress("RETURN_VALUE_NOT_USED") // TODO: remove after switching to a newer Kotlin version (KT-82363)
+
 package org.dots.game.field
 
 import org.dots.game.core.PosIsOccupiedIllegalMove
@@ -552,7 +554,7 @@ class StandardFieldTests : FieldTests() {
             * * * *
         """.trimIndent()) {
             assertNull(it.gameResult)
-            it.makeMove(2, 2, Player.Second)
+            assertIs<LegalMove>(it.makeMove(2, 2, Player.Second))
             val gameResult = it.gameResult as GameResult.ScoreWin
             assertEquals(EndGameKind.NoLegalMoves, gameResult.endGameKind)
             assertEquals(1.0, gameResult.score)

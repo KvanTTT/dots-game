@@ -1,3 +1,5 @@
+@file:Suppress("RETURN_VALUE_NOT_USED") // TODO: remove after switching to a newer Kotlin version (KT-82363)
+
 package org.dots.game.field
 
 import org.dots.game.core.LegalMove

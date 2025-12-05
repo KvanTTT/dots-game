@@ -113,7 +113,7 @@ actual class KataGoDotsEngine private constructor(
                 val message = "${property.name} = ${sendMessage("kata-get-param ${property.name}").message}"
                 onMessage(Diagnostic(message, severity = DiagnosticSeverity.Info))
             } else {
-                sendMessage("kata-set-param ${property.name} $intValue").message
+                require(!sendMessage("kata-set-param ${property.name} $intValue").isError)
             }
         }
 

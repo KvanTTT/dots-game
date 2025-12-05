@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
 import org.dots.game.core.GameResult
+import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveMode
 import org.dots.game.core.Player
 import org.dots.game.core.Position
@@ -125,7 +126,7 @@ fun FieldView(
     moveMode: MoveMode,
     field: Field,
     uiSettings: UiSettings,
-    onMovePlaced: (Position, Player) -> Unit = { pos, player -> field.makeMoveUnsafe(pos, player) }
+    onMovePlaced: (Position, Player) -> Unit = { pos, player -> require(field.makeMoveUnsafe(pos, player) is LegalMove) }
 ) {
     val currentDensity = LocalDensity.current
     var pointerFieldPosition: Position? by remember { mutableStateOf(null) }
@@ -254,8 +255,16 @@ private fun Moves(updateObject: Any?, field: Field, uiSettings: UiSettings) {
     Canvas(Modifier.fillMaxSize().graphicsLayer()) {
         val dotRadiusPx = dotRadius.toPx()
 
-        for (moveResult in field.moveSequence) {
-            fieldWithIncrementalUpdate.makeMoveUnsafe(moveResult.position, moveResult.player, (moveResult as? GameResult)?.toExternalFinishReason())
+        for ((index, moveResult = value) in field.moveSequence.withIndex()) {
+            if (index >= field.initialMovesCount) {
+                require(
+                    fieldWithIncrementalUpdate.makeMoveUnsafe(
+                        moveResult.position,
+                        moveResult.player,
+                        (moveResult as? GameResult)?.toExternalFinishReason()
+                    ) is LegalMove
+                )
+            }
 
             val moveResultPosition = moveResult.position.takeUnless { it.isGameOverMove } ?: continue
             val color = uiSettings.toColor(moveResult.player)

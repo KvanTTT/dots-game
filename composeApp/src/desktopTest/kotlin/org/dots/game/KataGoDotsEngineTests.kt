@@ -1,3 +1,5 @@
+@file:Suppress("RETURN_VALUE_NOT_USED") // TODO: remove after switching to a newer Kotlin version (KT-82363)
+
 package org.dots.game
 
 import kotlinx.coroutines.runBlocking
@@ -6,6 +8,7 @@ import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.Field
 import org.dots.game.core.GameResult
 import org.dots.game.core.InitPosType
+import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
@@ -111,7 +114,7 @@ class KataGoDotsEngineTests {
     @Test
     fun noSync() {
         runEngine {
-            it.makeMove(2, 2, Player.First)
+            assertIs<LegalMove>(it.makeMove(2, 2, Player.First))
             assertIs<MovesSync>(defaultEngine.sync(it))
             assertIs<NoSync>(defaultEngine.sync(it))
         }
@@ -121,14 +124,14 @@ class KataGoDotsEngineTests {
     fun singleMoveAndUndo() {
         runEngine {
             // Check a single move
-            it.makeMove(2, 2, Player.First)
+            assertIs<LegalMove>(it.makeMove(2, 2, Player.First))
             val syncTypeAfterFirstMove = assertIs<MovesSync>(defaultEngine.getSyncType(it))
             assertEquals(0, syncTypeAfterFirstMove.undoMovesCount)
             assertEquals(listOf(MoveInfo(PositionXY(2, 2), Player.First)), syncTypeAfterFirstMove.moves)
-            defaultEngine.sync(it)
+            assertIs<MovesSync>(defaultEngine.sync(it))
 
             // Check single undo
-            it.unmakeMove()
+            assertIs<LegalMove>(it.unmakeMove())
             val syncTypeAfterUndo = assertIs<MovesSync>(defaultEngine.getSyncType(it))
             assertEquals(1, syncTypeAfterUndo.undoMovesCount)
             assertTrue(syncTypeAfterUndo.moves.isEmpty())
@@ -140,9 +143,9 @@ class KataGoDotsEngineTests {
         runEngine {
             val field2 = it.clone()
             // Check undo + move
-            it.makeMove(2, 3, Player.First)
-            defaultEngine.sync(it)
-            field2.makeMove(2, 4, Player.First)
+            assertIs<LegalMove>(it.makeMove(2, 3, Player.First))
+            assertIs<MovesSync>(defaultEngine.sync(it))
+            assertIs<LegalMove>(field2.makeMove(2, 4, Player.First))
 
             val syncTypeWithUndoAndMove = assertIs<MovesSync>(defaultEngine.getSyncType(field2))
             assertEquals(1, syncTypeWithUndoAndMove.undoMovesCount)
@@ -155,15 +158,15 @@ class KataGoDotsEngineTests {
         runEngine {
             assertNull(defaultEngine.getGameResult())
 
-            it.makeMove(MoveInfo.createFinishingMove(Player.First, ExternalFinishReason.Grounding))
-            defaultEngine.sync(it)
+            assertIs<GameResult>(it.makeMove(MoveInfo.createFinishingMove(Player.First, ExternalFinishReason.Grounding)))
+            assertIs<MovesSync>(defaultEngine.sync(it))
             val engineGameResult = assertIs<GameResult.ScoreWin>(defaultEngine.getGameResult())
             val fieldGameResult = it.gameResult as GameResult.ScoreWin
             assertEquals(fieldGameResult.winner, engineGameResult.winner)
             assertEquals(fieldGameResult.score, engineGameResult.score)
 
-            it.unmakeMove()
-            defaultEngine.sync(it)
+            assertIs<GameResult>(it.unmakeMove())
+            assertIs<MovesSync>(defaultEngine.sync(it))
             assertNull(defaultEngine.getGameResult())
         }
     }
@@ -173,14 +176,14 @@ class KataGoDotsEngineTests {
         runEngine {
             assertNull(defaultEngine.getGameResult())
 
-            it.makeMove(MoveInfo.createFinishingMove(Player.First, ExternalFinishReason.Resign))
-            defaultEngine.sync(it)
+            assertIs<GameResult>(it.makeMove(MoveInfo.createFinishingMove(Player.First, ExternalFinishReason.Resign)))
+            assertIs<MovesSync>(defaultEngine.sync(it))
             val engineGameResult = assertIs<GameResult.ResignWin>(defaultEngine.getGameResult())
             val fieldGameResult = it.gameResult as GameResult.ResignWin
             assertEquals(fieldGameResult.winner, engineGameResult.winner)
 
-            it.unmakeMove()
-            defaultEngine.sync(it)
+            assertIs<GameResult>(it.unmakeMove())
+            assertIs<MovesSync>(defaultEngine.sync(it))
             assertNull(defaultEngine.getGameResult())
         }
     }
@@ -212,7 +215,7 @@ class KataGoDotsEngineTests {
                     komi = 0.0
                 )
             )
-            defaultEngine.sync(field)
+            assertIs<FullSync>(defaultEngine.sync(field))
             action(field)
         }
     }

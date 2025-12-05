@@ -35,6 +35,7 @@ kotlin {
     compilerOptions {
         freeCompilerArgs.addAll(
             "-Werror",
+            "-Xreturn-value-checker=full",
         )
     }
 }

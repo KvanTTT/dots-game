@@ -1,9 +1,12 @@
+@file:Suppress("RETURN_VALUE_NOT_USED") // TODO: remove after switching to a newer Kotlin version (KT-82363)
+
 package org.dots.game.field
 
 import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.Field
 import org.dots.game.core.GameResult
 import org.dots.game.core.InitPosType.Cross
+import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.core.PositionXY
@@ -13,6 +16,7 @@ import org.dots.game.createStandardRules
 import org.dots.game.dump.FieldParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -137,9 +141,9 @@ class FieldUtilsTests : FieldTests() {
         val rules = createStandardRules(width, height, initPosType = Cross)
         val field = Field.create(rules)
 
-        field.makeMove(2, 1, Player.Second)
-        field.makeMove(1, 2, Player.Second)
-        field.makeMove(positionXY = null, Player.Second, ExternalFinishReason.Resign)
+        assertIs<LegalMove>(field.makeMove(2, 1, Player.Second))
+        assertIs<LegalMove>(field.makeMove(1, 2, Player.Second))
+        assertIs<LegalMove>(field.makeMove(positionXY = null, Player.Second, ExternalFinishReason.Resign))
 
         val newField = field.clone()
         assertEquals(field.width, newField.width)

@@ -113,7 +113,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     currentGame.gameTree.rewindToEnd()
                 }
             } else if (node != null) {
-                currentGame.gameTree.switchToDepthFirstIndex(node)
+                currentGame.gameTree.trySwitchingToDepthFirstIndex(node)
             }
             currentGame.initialization = false
             currentGame.gameTree.memoizePaths = true

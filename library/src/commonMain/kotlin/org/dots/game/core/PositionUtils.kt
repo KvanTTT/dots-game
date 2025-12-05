@@ -25,6 +25,7 @@ fun Position.getSquare(other: Position, fieldStride: Int): Int {
     return (value / fieldStride) * (other.value % fieldStride) - (other.value / fieldStride) * (value % fieldStride)
 }
 
+@IgnorableReturnValue
 inline fun Position.forEachAdjacent(fieldStride: Int, action: (Position) -> Boolean): Boolean {
     if (!action(xym1(fieldStride))) return false
     if (!action(xp1y())) return false
@@ -48,6 +49,7 @@ inline fun Position.forEachAdjacent(fieldStride: Int, action: (Position) -> Bool
  *
  *  @return `true` if no predicate matches (typically, it's a single dot not linked to any other).
  */
+@IgnorableReturnValue
 internal inline fun Position.clockwiseBigJumpWalk(other: Position, fieldStride: Int, action: (Position) -> Boolean): Boolean {
     val initialIndex = getBigJumpInitialIndex(this, other, fieldStride)
     var index = initialIndex

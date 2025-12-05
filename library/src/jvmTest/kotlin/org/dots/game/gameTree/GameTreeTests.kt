@@ -21,7 +21,7 @@ class GameTreeTests : FieldTests() {
     @Test
     fun addChildBackNextCommands() {
         with(initializeGameTree()) {
-            assertEquals(NodeKind.New,makeMove(1, 1))
+            assertEquals(NodeKind.New, makeMove(1, 1))
             assertTrue(back())
             assertFalse(back()) // False because there are no more moves
             assertEquals(NodeKind.ExistingChild, makeMove(1, 1)) // False, because such a node already exists
@@ -48,15 +48,15 @@ class GameTreeTests : FieldTests() {
         with(initializeGameTree()) {
             this.loopedSiblingNavigation = loopedSiblingNavigation
 
-            assertEquals(NodeKind.New,makeMove(1, 1))
+            assertEquals(NodeKind.New, makeMove(1, 1))
             val firstNode = currentNode
             back()
 
-            assertEquals(NodeKind.New,makeMove(2, 1))
+            assertEquals(NodeKind.New, makeMove(2, 1))
             val secondNode = currentNode
             back()
 
-            assertEquals(NodeKind.New,makeMove(3, 1))
+            assertEquals(NodeKind.New, makeMove(3, 1))
             val thirdNode = currentNode
 
             assertTrue(prevSibling())
@@ -92,15 +92,15 @@ class GameTreeTests : FieldTests() {
         with(initializeGameTree()) {
             val initNode = currentNode
 
-            assertEquals(NodeKind.New,makeMove(1, 1))
+            assertEquals(NodeKind.New, makeMove(1, 1))
             back()
-            assertEquals(NodeKind.New,makeMove(2, 1))
+            assertEquals(NodeKind.New, makeMove(2, 1))
 
             val secondNode = currentNode
 
-            assertEquals(NodeKind.New,makeMove(2, 2))
+            assertEquals(NodeKind.New, makeMove(2, 2))
             back()
-            assertEquals(NodeKind.New,makeMove(3, 2))
+            assertEquals(NodeKind.New, makeMove(3, 2))
 
             val thirdNode = currentNode
 
@@ -115,22 +115,22 @@ class GameTreeTests : FieldTests() {
     @Test
     fun newNodeIfPlacedToTheSamePositionButByDifferentPlayers() {
         with(initializeGameTree()) {
-            assertEquals(NodeKind.New,makeMove(1, 1, Player.First))
+            assertEquals(NodeKind.New, makeMove(1, 1, Player.First))
             assertTrue(back())
-            assertEquals(NodeKind.ExistingChild,makeMove(1, 1, Player.First)) // False, because such a node already exists
+            assertEquals(NodeKind.ExistingChild, makeMove(1, 1, Player.First)) // False, because such a node already exists
             assertTrue(back())
-            assertEquals(NodeKind.New,makeMove(1, 1, Player.Second)) // True, same position, but player is another
+            assertEquals(NodeKind.New, makeMove(1, 1, Player.Second)) // True, same position, but player is another
         }
     }
 
     @Test
     fun incorrectMoves() {
         with (initializeGameTree()) {
-            assertEquals(NodeKind.New,makeMove(1, 1, Player.First))
+            assertEquals(NodeKind.New, makeMove(1, 1, Player.First))
             assertEquals(1,  currentNode.number)
             assertEquals(NodeKind.New, addChild(MoveInfo(PositionXY(100, 100), Player.None)))
             assertEquals(2,  currentNode.number)
-            assertEquals(NodeKind.New,makeMove(2, 2, Player.First))
+            assertEquals(NodeKind.New, makeMove(2, 2, Player.First))
             assertEquals(3,  currentNode.number)
 
             assertTrue(back())
@@ -146,7 +146,7 @@ class GameTreeTests : FieldTests() {
     fun switchOnTheSameNode() {
         val gameTree = initializeGameTree()
 
-        gameTree.makeMove(1, 1)
+        assertEquals(NodeKind.New, gameTree.makeMove(1, 1))
         val currentNode = gameTree.currentNode
         assertFalse(gameTree.switch(currentNode)) // No switch on the same node
     }
@@ -154,11 +154,11 @@ class GameTreeTests : FieldTests() {
     @Test
     fun switchOnPreviousAndNextNode() {
         with(initializeGameTree()) {
-            makeMove(1, 1)
+            assertEquals(NodeKind.New, makeMove(1, 1))
             val firstMoveNode = currentNode
 
-            makeMove(2, 1)
-            makeMove(2, 2)
+            assertEquals(NodeKind.New, makeMove(2, 1))
+            assertEquals(NodeKind.New, makeMove(2, 2))
             val lastMoveNode = currentNode
 
             assertTrue(switch(firstMoveNode)) // Only rollback 2 nodes
@@ -172,15 +172,15 @@ class GameTreeTests : FieldTests() {
     @Test
     fun switchOnDifferentBranches() {
         with (initializeGameTree()) {
-            makeMove(1, 1)
+            assertEquals(NodeKind.New, makeMove(1, 1))
             val firstMoveNode = currentNode
 
-            makeMove(2, 1)
+            assertEquals(NodeKind.New, makeMove(2, 1))
             back()
             back()
 
-            makeMove(2, 2)
-            makeMove(3, 3)
+            assertEquals(NodeKind.New, makeMove(2, 2))
+            assertEquals(NodeKind.New, makeMove(3, 3))
 
             assertTrue(switch(firstMoveNode)) // Rollback 2 nodes and add 1 one
             assertEquals(firstMoveNode, currentNode)
@@ -191,8 +191,8 @@ class GameTreeTests : FieldTests() {
     fun switchOnUnrelatedNode() {
         val gameTree = initializeGameTree()
 
-        gameTree.makeMove(1, 1)
-        gameTree.makeMove(2, 2)
+        assertEquals(NodeKind.New, gameTree.makeMove(1, 1))
+        assertEquals(NodeKind.New, gameTree.makeMove(2, 2))
 
         // Try switching to an unrelated node, no change
         assertFalse(gameTree.switch(GameTreeNode.createRoot(parsedNode = null)))
@@ -206,12 +206,12 @@ class GameTreeTests : FieldTests() {
     @Test
     fun removeBranch() {
         with(initializeGameTree()) {
-            makeMove(1, 1)
+            assertEquals(NodeKind.New, makeMove(1, 1))
             val nodeToRemove = currentNode
 
-            makeMove(2, 1)
+            assertEquals(NodeKind.New, makeMove(2, 1))
             back()
-            makeMove(2, 2)
+            assertEquals(NodeKind.New, makeMove(2, 2))
 
             assertTrue(switch(nodeToRemove))
 
@@ -224,7 +224,7 @@ class GameTreeTests : FieldTests() {
             assertFalse(removeCurrentBranch()) // Not possible to remove twice
 
             // The move doesn't exist after removing, adding should be successful
-            assertEquals(NodeKind.New,makeMove(1, 1))
+            assertEquals(NodeKind.New, makeMove(1, 1))
         }
     }
 

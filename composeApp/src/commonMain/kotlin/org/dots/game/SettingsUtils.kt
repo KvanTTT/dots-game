@@ -26,6 +26,7 @@ expect class SettingsWrapper<T : ClassSettings<T>> {
     fun save()
 }
 
+@IgnorableReturnValue
 fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? = null): Boolean {
     try {
         val settingsWrapper = SettingsWrapper.initialize(settingsObj, directory, loading = false)

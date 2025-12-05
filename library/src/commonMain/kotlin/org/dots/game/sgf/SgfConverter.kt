@@ -137,7 +137,7 @@ class SgfConverter(
             }
 
             for ((index, childGameTree) in sgfGameTree.childrenGameTrees.withIndex()) {
-                convertGameTree(
+                val _ = convertGameTree(
                     childGameTree,
                     mainBranch = mainBranch && index == 0,
                     initializedGame,

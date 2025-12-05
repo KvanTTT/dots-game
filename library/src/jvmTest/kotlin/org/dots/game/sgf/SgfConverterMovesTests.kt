@@ -396,11 +396,11 @@ class SgfConverterMovesTests {
         checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32];LB[aa])",
             listOf(
                 LineColumnDiagnostic("Property LB (Label) has unexpected separator ``", LineColumn(1, 29))
-            )).single().gameTree
+            ))
         checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32];LB[aa.])",
             listOf(
                 LineColumnDiagnostic("Property LB (Label) has unexpected separator `.`", LineColumn(1, 29))
-            )).single().gameTree
+            ))
     }
 
     @Test

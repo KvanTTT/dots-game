@@ -170,6 +170,7 @@ class SgfParserTests {
         parseAndCheck("(;CoPyright[Copyright (c)]Свойство[Свойство]0Prop[0Prop]財產[財產])")
     }
 
+    @IgnorableReturnValue
     private fun parseAndCheck(input: String, vararg expectedDiagnostics: LineColumnDiagnostic): SgfRoot {
         val lineOffsets by lazy(LazyThreadSafetyMode.NONE) { input.buildLineOffsets() }
         val actualDiagnostics = mutableListOf<LineColumnDiagnostic>()

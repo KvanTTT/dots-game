@@ -1,6 +1,9 @@
+@file:Suppress("RETURN_VALUE_NOT_USED") // TODO: remove after switching to a newer Kotlin version (KT-82363)
+
 package org.dots.game.field
 
 import org.dots.game.core.BaseMode
+import org.dots.game.core.GameResult
 import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
 import org.dots.game.core.Position
@@ -48,8 +51,8 @@ class FieldWithOnlyOpponentDotsAndBorderTests : FieldTests() {
             assertEquals(1, it.player1Score)
             assertEquals(0, it.player2Score)
 
-            it.makeMove(3, 4, Player.Second)
-            it.makeMove(2, 4, Player.First)
+            assertIs<LegalMove>(it.makeMove(3, 4, Player.Second))
+            assertIs<LegalMove>(it.makeMove(2, 4, Player.First))
             val base2 = assertIs<LegalMove>(it.makeMove(3, 3, Player.First)).bases.single()
 
             val (outerClosure2, innerClosure2) = base2.getSortedClosurePositions(it)

@@ -1,3 +1,5 @@
+@file:Suppress("RETURN_VALUE_NOT_USED") // TODO: remove after switching to a newer Kotlin version (KT-82363)
+
 package org.dots.game.field
 
 import org.dots.game.core.EndGameKind
@@ -31,13 +33,13 @@ class GameOverMoveTests : FieldTests() {
             assertEquals(0, it.player1Score)
             assertEquals(2, it.player2Score)
             assertEquals(GameResult.ScoreWin(2.0, EndGameKind.Grounding, Player.Second, Player.First), it.gameResult)
-            it.unmakeMove()
+            assertIs<GameResult.WinGameResult>(it.unmakeMove())
 
             assertIs<GameResult.WinGameResult>(it.makeMove(positionXY = null, Player.Second, ExternalFinishReason.Grounding))
             assertEquals(1, it.player1Score)
             assertEquals(0, it.player2Score)
             assertEquals(GameResult.ScoreWin(1.0, EndGameKind.Grounding, Player.First, Player.Second), it.gameResult)
-            it.unmakeMove()
+            assertIs<GameResult.WinGameResult>(it.unmakeMove())
         }
     }
 
@@ -51,13 +53,13 @@ class GameOverMoveTests : FieldTests() {
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
             assertEquals(GameResult.Draw(EndGameKind.Grounding, Player.First), it.gameResult)
-            it.unmakeMove()
+            assertIs<LegalMove>(it.unmakeMove())
 
-            it.makeMove(positionXY = null, player = Player.Second, ExternalFinishReason.Grounding)
+            assertIs<LegalMove>(it.makeMove(positionXY = null, player = Player.Second, ExternalFinishReason.Grounding))
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
             assertEquals(GameResult.Draw(EndGameKind.Grounding, Player.Second), it.gameResult)
-            it.unmakeMove()
+            assertIs<LegalMove>(it.unmakeMove())
         }
     }
 

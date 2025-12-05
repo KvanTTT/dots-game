@@ -256,7 +256,7 @@ class Field {
 
     fun unmakeAllMoves() {
         while (currentMoveNumber > 0) {
-            unmakeMove()
+            require(unmakeMove() is LegalMove)
         }
     }
 
@@ -318,7 +318,7 @@ class Field {
         // Otherwise we have to check the validity by emulating move placing and rollback afterward
         return makeMoveUnsafe(position, player).let { moveResult ->
             if (moveResult is LegalMove) {
-                unmakeMove()
+                require(unmakeMove() is LegalMove)
                 position
             } else {
                 null

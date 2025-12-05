@@ -121,6 +121,7 @@ kotlin {
             listOf(
                 "-Xcontext-parameters",
                 "-Xexpect-actual-classes",
+                "-Xreturn-value-checker=full",
             )
         )
     }

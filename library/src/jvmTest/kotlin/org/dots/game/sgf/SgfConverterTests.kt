@@ -420,7 +420,7 @@ class SgfConverterTests {
                     DiagnosticSeverity.Warning
                 ),
             )
-        ).single().result
+        )
     }
 
     @Test
@@ -439,7 +439,7 @@ class SgfConverterTests {
     fun handicapIncorrect() {
         checkParseAndUnparse("(;GM[40]FF[4]SZ[20]HA[x]AB[jj][kk]AW[kj][jk])", listOf(
             LineColumnDiagnostic("Property HA (Handicap) has incorrect format: `x`. Expected: Number.", LineColumn(1, 23), DiagnosticSeverity.Warning),
-        )).single()
+        ))
 
         // Handicap always starts with 2 dots (as for Go Game)
         val zeroHandicapAndEmpty = checkParseAndUnparse("(;GM[40]FF[4]SZ[20]HA[0];B[on];B[pq];W[ss])", listOf(
@@ -562,12 +562,12 @@ class SgfConverterTests {
         checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[IncorrectKey=1,Suicide=0,IncorrectKey2])", listOf(
             LineColumnDiagnostic("Property RU (Rules) has unrecognized or unspecified key `IncorrectKey`.", LineColumn(1, 38), DiagnosticSeverity.Error),
             LineColumnDiagnostic("Property RU (Rules) has unrecognized or unspecified key `IncorrectKey2`.", LineColumn(1, 63), DiagnosticSeverity.Error),
-        )).single().rules
+        ))
 
         checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[Suicide=IncorrectBooleanValue,Border=1,BaseMode=IncorrectIntValue])", listOf(
             LineColumnDiagnostic("Property RU (Rules) has key `Suicide` with invalid value `IncorrectBooleanValue`. Expected: `0` or `1`.", LineColumn(1, 46), DiagnosticSeverity.Error),
             LineColumnDiagnostic("Property RU (Rules) has key `BaseMode` with invalid or out of range value `IncorrectIntValue`. Expected: 0, 1, 2.", LineColumn(1, 86), DiagnosticSeverity.Error),
-        )).single().rules
+        ))
 
         checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[BaseMode=,Border=1])", listOf(
             LineColumnDiagnostic(
@@ -599,12 +599,14 @@ class SgfConverterTests {
     }
 }
 
+@IgnorableReturnValue
 internal fun checkParseAndUnparse(input: String, expectedDiagnostics: List<LineColumnDiagnostic> = emptyList(), warnOnMultipleGames: Boolean = false): Games {
     val games = parseConvertAndCheck(input, expectedDiagnostics, warnOnMultipleGames)
     assertEquals(input, SgfWriter.write(games))
     return games
 }
 
+@IgnorableReturnValue
 internal fun parseConvertAndCheck(input: String, expectedDiagnostics: List<LineColumnDiagnostic> = emptyList(), warnOnMultipleGames: Boolean = false): Games {
     val lineOffsets by lazy(LazyThreadSafetyMode.NONE) { input.buildLineOffsets() }
     val actualDiagnostics = mutableListOf<LineColumnDiagnostic>()

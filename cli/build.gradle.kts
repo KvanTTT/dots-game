@@ -13,7 +13,10 @@ dependencies {
 
 kotlin {
     compilerOptions {
-        freeCompilerArgs.add("-Werror")
+        freeCompilerArgs.addAll(
+            "-Werror",
+            "-Xreturn-value-checker=full",
+        )
     }
 }
 

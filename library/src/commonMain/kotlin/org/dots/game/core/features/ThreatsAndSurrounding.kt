@@ -26,7 +26,7 @@ fun Field.getOneMoveCapturingAndBasePositions(): OneMoveCapturingAndBasePosition
 
                     val moveResult = makeMoveUnsafe(position, player)
                     if (moveResult is LegalMove) {
-                        unmakeMove()
+                        require(unmakeMove() is LegalMove)
 
                         if (moveResult.bases.any { it.isReal && it.player == player }) {
                             oneMoveCapturingPositions[position] =

@@ -80,6 +80,7 @@ fun loadWindowsState(directory: String? = null): WindowState {
     }
 }
 
+@IgnorableReturnValue
 fun saveWindowsState(windowState: WindowState, directory: String? = null): Boolean {
     val settingsWrapper = SettingsWrapper.initialize(WindowSettings.DEFAULT, directory = directory, loading = false)
     val settings = settingsWrapper.settings ?: return false
