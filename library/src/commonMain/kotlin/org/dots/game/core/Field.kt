@@ -443,15 +443,15 @@ class Field {
                     "${rules.captureByBorder::class.simpleName} is not yet supported"
                 }
 
-                val (localResultBases, localEmptyBaseInvalidatePositions) = ground(currentPlayer)
+                val (bases, emptyBaseInvalidatePositions) = ground(currentPlayer)
 
                 calculateGameResult(
                     EndGameKind.Grounding,
                     currentPlayer,
                     Position.GAME_OVER,
                     Position.GAME_OVER.getState(),
-                    localEmptyBaseInvalidatePositions,
-                    localResultBases
+                    emptyBaseInvalidatePositions,
+                    bases
                 )
             }
             ExternalFinishReason.Draw -> GameResult.Draw(endGameKind = null, currentPlayer)
@@ -491,7 +491,9 @@ class Field {
         }
     }
 
-    private fun ground(player: Player): Pair<List<Base>, PositionsList> {
+    private data class GroundInfo(val bases: List<Base>, val emptyBaseInvalidatePositions: PositionsList)
+
+    private fun ground(player: Player): GroundInfo {
         val processedPositions = PositionsList(size, realWidth)
         val oppositePlayer = player.opposite()
         val emptyBaseInvalidatePositions = PositionsList(size, realWidth)
@@ -528,7 +530,7 @@ class Field {
 
         processedPositions.clearVisited()
 
-        return bases to emptyBaseInvalidatePositions
+        return GroundInfo(bases, emptyBaseInvalidatePositions)
     }
 
     private fun captureWhenEmptyTerritoryBecomesRealBase(initialPosition: Position, oppositePlayer: Player): Base {

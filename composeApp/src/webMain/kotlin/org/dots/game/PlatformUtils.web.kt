@@ -179,7 +179,7 @@ private object WasmVirtualFS {
 
         // Generate unique name by appending counter
         val dotIndex = baseName.lastIndexOf('.')
-        val (nameWithoutExt, extension) = if (dotIndex > 0) {
+        val (nameWithoutExt = first, extension = second) = if (dotIndex > 0) {
             baseName.substring(0, dotIndex) to baseName.substring(dotIndex)
         } else {
             baseName to ""

@@ -30,7 +30,7 @@ data class DumpParameters(
 }
 
 fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): String {
-    val (printNumbers, padding, printCoordinates, borders, debugInfo, isSgf) = dumpParameters
+    val (printNumbers, padding, printCoordinates, printBorders, debugInfo, isSgf) = dumpParameters
 
     if (isSgf) {
         return SgfWriter.write(Games.fromField(this))
@@ -168,7 +168,7 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
     val minCoordinate: Long
     val maxX: Long
     val maxY: Long
-    if (borders) {
+    if (printBorders) {
         minCoordinate = 0L
         maxX = realWidth.toLong()
         maxY = (realHeight - 1).toLong()

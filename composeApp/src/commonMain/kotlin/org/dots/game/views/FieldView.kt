@@ -384,7 +384,7 @@ private fun AllConnections(updateObject: Any?, field: Field, uiSettings: UiSetti
                             if (squaredDistance == 2 && uiSettings.connectionDrawMode.polygonDrawMode != null) {
                                 val startPosXY = startPosition.toXY(field.realWidth)
                                 val endPosXY = endPosition.toXY(field.realWidth)
-                                val (diffX, diffY) = endPosXY - startPosXY
+                                val (diffX = first, diffY = second) = endPosXY - startPosXY
                                 val adjPos1 = when (diffX) {
                                     1 -> startPosition.xp1y()
                                     -1 -> startPosition.xm1y()
@@ -407,7 +407,7 @@ private fun AllConnections(updateObject: Any?, field: Field, uiSettings: UiSetti
                 }
 
                 for (line in lines) {
-                    val (start, end) = line
+                    val (start = first, end = second) = line
                     drawLine(
                         uiSettings.toColor(start.getState().getActivePlayer()),
                         start.toPxOffset(field, this@Canvas),
@@ -426,13 +426,13 @@ private fun AllConnections(updateObject: Any?, field: Field, uiSettings: UiSetti
 @Composable
 private fun ThreatsAndSurroundings(updateObject: Any?, field: Field, uiSettings: UiSettings) {
     Canvas(Modifier.fillMaxSize().graphicsLayer()) {
-        val (oneMoveCapturingPositions, oneMoveBasePositions) = field.getOneMoveCapturingAndBasePositions()
+        val (capturingPositions, basePositions) = field.getOneMoveCapturingAndBasePositions()
 
         if (uiSettings.showThreats) {
             val capturingMarkerSize = capturingMoveMarkerSize.toPx()
-            oneMoveCapturingPositions.forEach {
-                val (position, player) = it
-                val (xPx, yPx) = position.toPxOffset(field, this)
+            capturingPositions.forEach {
+                val (position = key, player = value) = it
+                val (xPx = x, yPx = y) = position.toPxOffset(field, this)
                 drawLine(
                     uiSettings.toColor(if (player == Player.WallOrBoth) Player.First else player).copy(0.7f),
                     Offset(xPx - capturingMarkerSize, yPx),
@@ -450,9 +450,9 @@ private fun ThreatsAndSurroundings(updateObject: Any?, field: Field, uiSettings:
 
         if (uiSettings.showSurroundings) {
             val baseMarkerSize = capturingBaseMoveMarkerSize.toPx()
-            oneMoveBasePositions.forEach {
-                val (position, player) = it
-                val (xPx, yPx) = position.toPxOffset(field,this)
+            basePositions.forEach {
+                val (position = key, player = value) = it
+                val (xPx = x, yPx = y) = position.toPxOffset(field,this)
                 drawLine(
                     uiSettings.toColor(if (player == Player.WallOrBoth) Player.First else player).copy(0.7f),
                     Offset(xPx - baseMarkerSize, yPx - baseMarkerSize),
@@ -520,7 +520,7 @@ private fun DrawScope.drawPolygon(
     fun createPath(positions: List<Position>): Path {
         return Path().apply {
             // TODO: implement clipping
-            for ((index, position) in positions.withIndex()) {
+            for ((index, position = value) in positions.withIndex()) {
                 val (x, y) = position.toXY(fieldStride)
                 val xCoordinate = x.toFloat().coordinateToPx(this@drawPolygon)
                 val yCoordinate = y.toFloat().coordinateToPx(this@drawPolygon)
@@ -543,7 +543,7 @@ private fun DrawScope.drawPolygon(
         path
     } else {
         Path().apply {
-            for ((index, innerClosure) in innerClosures.withIndex()) {
+            for ((index, innerClosure = value) in innerClosures.withIndex()) {
                 op(if (index == 0) path else this, createPath(innerClosure), PathOperation.Difference)
             }
         }

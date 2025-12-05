@@ -258,7 +258,7 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
     @Suppress("UNCHECKED_CAST")
     private fun GameTreeNode.makeMoves(moveReporter: (MoveInfo, MoveResult) -> Unit) {
         val newMoveResults = mutableListOf<MoveResult>()
-        for ((key, property) in properties) {
+        for ((key, property = value) in properties) {
             when (key) {
                 GameTreeNode::player1Moves,
                 GameTreeNode::player2Moves -> {
@@ -290,7 +290,7 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
 
     @Suppress("UNCHECKED_CAST")
     private fun compareProperties(newProperties: PropertiesMap, existingProperties: PropertiesMap): Boolean {
-        for ((key, newProperty) in newProperties) {
+        for ((key, newProperty = value) in newProperties) {
             when (key) {
                 GameTreeNode::player1Moves,
                 GameTreeNode::player2Moves -> {
@@ -300,11 +300,11 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
                         if (newMoveInfos.size != existingMoveInfos.size) {
                             return false
                         }
-                        newMoveInfos.zip(existingMoveInfos).forEach { (newMoveInfo, existingMoveInfo) ->
-                            if (newMoveInfo.positionXY != existingMoveInfo.positionXY ||
-                                newMoveInfo.player != existingMoveInfo.player ||
-                                newMoveInfo.externalFinishReason != existingMoveInfo.externalFinishReason ||
-                                newMoveInfo.parsedNode != null && newMoveInfo.parsedNode != existingMoveInfo.parsedNode
+                        newMoveInfos.zip(existingMoveInfos).forEach { (first, second) ->
+                            if (first.positionXY != second.positionXY ||
+                                first.player != second.player ||
+                                first.externalFinishReason != second.externalFinishReason ||
+                                first.parsedNode != null && first.parsedNode != second.parsedNode
                             ) {
                                 return false
                             }

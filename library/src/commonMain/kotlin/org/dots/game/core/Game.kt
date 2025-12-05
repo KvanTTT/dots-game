@@ -38,7 +38,7 @@ class Games(games: List<Game>, val parsedNode: ParsedNode? = null) : MutableList
     companion object {
         fun fromField(field: Field): Games {
             return Games(Game(GameTree(field).apply {
-                for ((index, move) in field.moveSequence.withIndex()) {
+                for ((index, move = value) in field.moveSequence.withIndex()) {
                     if (index >= field.initialMovesCount) {
                         addChild(MoveInfo.fromLegalMove(move, field))
                     }
@@ -74,7 +74,7 @@ class Game(
         val rules = gameTree.field.rules
         @Suppress("UNCHECKED_CAST")
         if (sizeProperty != null) {
-            val (width, height) = sizeProperty.value as Pair<Int, Int>
+            val (width = first, height = second) = sizeProperty.value as Pair<Int, Int>
             require(width == rules.width)
             require(height == rules.height)
         } else {

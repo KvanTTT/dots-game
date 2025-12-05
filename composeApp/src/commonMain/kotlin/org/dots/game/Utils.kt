@@ -8,7 +8,7 @@ fun splitByUppercase(input: String): String {
     var currentWordIndex = 0
 
     return buildString {
-        for ((index, char) in input.withIndex()) {
+        for ((index, char = value) in input.withIndex()) {
             prevUpperCase = if (char.isUpperCase()) {
                 if (!prevUpperCase) {
                     if (index != 0) {

@@ -18,10 +18,10 @@ fun checkFeatures(
     assertionMessage: String,
 ): (() -> Unit)? {
     val expectedPositions: SortedMap<Position, Player> = if (expectedPositionsData != null) {
-        val (width, height, expectedLightMoves) = FieldParser.parse(expectedPositionsData)
+        val (width, height, moves) = FieldParser.parse(expectedPositionsData)
         assertEquals(originalField.width, width)
         assertEquals(originalField.height, height)
-        expectedLightMoves.map { it.value }.associate {
+        moves.map { it.value }.associate {
             val (x, y) = it.positionXY
             Position(x, y, originalField.realWidth) to it.player
         }.toSortedMap()

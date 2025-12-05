@@ -118,11 +118,10 @@ kotlin {
         // Do not enforce -Werror globally to avoid failing iOS/native metadata compilation
         // Retain other useful checks across all source sets
         freeCompilerArgs.addAll(
-            listOf(
-                "-Xcontext-parameters",
-                "-Xexpect-actual-classes",
-                "-Xreturn-value-checker=full",
-            )
+            "-Xcontext-parameters",
+            "-Xexpect-actual-classes",
+            "-Xreturn-value-checker=full",
+            "-Xname-based-destructuring=complete",
         )
     }
 }

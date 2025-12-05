@@ -63,8 +63,8 @@ class SgfWriter(val oldSgfRoot: SgfRoot?) {
             appendProperty(Game::sgfFileFormat, GameProperty(SUPPORTED_FILE_FORMAT), game)
         }
 
-        for ((key, gameProperty) in game.properties) {
-            appendProperty(key, gameProperty, game)
+        for ((key, value) in game.properties) {
+            appendProperty(key, value, game)
         }
 
         appendNodes(game.gameTree.rootNode, game)
@@ -88,8 +88,8 @@ class SgfWriter(val oldSgfRoot: SgfRoot?) {
                         append(';')
                     }
 
-                    for ((key, property) in element.properties) {
-                        appendProperty(key, property, game)
+                    for ((key, value) in element.properties) {
+                        appendProperty(key, value, game)
                     }
 
                     val appendParens = element.children.size > 1
@@ -196,11 +196,11 @@ class SgfWriter(val oldSgfRoot: SgfRoot?) {
                     }
 
                     fun <T> List<T>.iterate(appended: (T) -> Unit) {
-                        for ((index, element) in withIndex()) {
+                        for ((index, value) in withIndex()) {
                             if (index > 0) {
                                 append("][")
                             }
-                            appended(element)
+                            appended(value)
                         }
                     }
 

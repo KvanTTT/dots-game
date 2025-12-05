@@ -45,12 +45,12 @@ object FieldParser {
         },
         diagnosticReporter: (Diagnostic) -> Unit = { error(it.toString()) },
     ): Field {
-        val (width, height, allMoves) = parse(data, diagnosticReporter)
+        val (width, height, moves) = parse(data, diagnosticReporter)
 
         return Field.create (initializeRules(width, height), onIncorrectInitialMove = { moveInfo: MoveInfo, _: Boolean, moveNumber: Int ->
             diagnosticReporter(Diagnostic("Can't make initial move #$moveNumber at ${moveInfo.positionXY} (${moveInfo.player})", textSpan = null))
         }).apply {
-            for ((number, move) in allMoves) {
+            for ((number = key, move = value) in moves) {
                 val (x, y) = move.positionXY
                 val position = getPositionIfWithinBounds(x, y)
                 if (position == null) {
@@ -198,7 +198,7 @@ object FieldParser {
         var previousMoveNumber = -1
 
         return linkedMapOf<Int, LightMove>().apply {
-            for ((moveNumber, move) in sortedMoves) {
+            for ((moveNumber = key, move = value) in sortedMoves) {
                 val maxMoveCountToInsert = moveNumber - previousMoveNumber - 1
                 if (maxMoveCountToInsert > 0) {
                     val moveCountToInsert =

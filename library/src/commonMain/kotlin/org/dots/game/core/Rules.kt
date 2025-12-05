@@ -76,7 +76,7 @@ class Rules private constructor(
             komi: Double,
             specifiedInitPosIsRandom: Boolean? = null,
         ): RulesExtra {
-            val (initPosType, refinedInitialMoves, isRandomized, remainingInitMoves) = recognizeInitPosType(initialMoves, width, height)
+            val (initPosType, refinedInitMoves, isRandomized, remainingInitMoves) = recognizeInitPosType(initialMoves, width, height)
             return RulesExtra(
                 Rules(
                     width,
@@ -84,7 +84,7 @@ class Rules private constructor(
                     captureByBorder,
                     baseMode,
                     suicideAllowed,
-                    refinedInitialMoves,
+                    refinedInitMoves,
                     initPosType,
                     remainingInitMoves,
                     // In rare cases random position matches strict position
@@ -287,7 +287,7 @@ fun recognizeInitPosType(initialMoves: List<MoveInfo>, width: Int, height: Int):
             }
 
             for (xyMoveInfo in initialMoves) {
-                val (x, y) = xyMoveInfo.positionXY?.let { it.x - 1 to it.y - 1 } ?: break
+                val (x = first, y = second) = xyMoveInfo.positionXY?.let { it.x - 1 to it.y - 1 } ?: break
                 val firstPlayer = xyMoveInfo.player
 
                 val x1yMoveInfo = movesArray.elementAtOrNull(x + 1)?.elementAtOrNull(y) ?: continue

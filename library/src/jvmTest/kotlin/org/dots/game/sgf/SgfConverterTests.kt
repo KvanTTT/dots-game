@@ -363,7 +363,7 @@ class SgfConverterTests {
                 ), GameResult.ResignWin(Player.First)),
         )
 
-        for ((value, diagnostic, expectedGameResult) in valuesToErrors) {
+        for ((value = first, diagnostic = second, expectedGameResult = third) in valuesToErrors) {
             val actualGameResult = checkParseAndUnparse(
                 "(;GM[40]FF[4]SZ[39:32]RE[$value])",
                 listOf(diagnostic)
@@ -398,7 +398,7 @@ class SgfConverterTests {
             ),
         )
 
-        for ((value, expectedGameResult, diagnostic) in valuesToGameResults) {
+        for ((value = first, expectedGameResult = second, diagnostic = third) in valuesToGameResults) {
             val actualGameResult = checkParseAndUnparse(
                 "(;GM[40]FF[4]SZ[39:32]RE[$value])",
                 listOfNotNull(diagnostic)

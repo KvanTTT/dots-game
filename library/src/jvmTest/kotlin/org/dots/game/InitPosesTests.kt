@@ -362,9 +362,13 @@ class InitPosesTests {
     }
 
     private fun checkRecognition(expectInitPosType: InitPosType, isRandom: Boolean, vararg actualMoveInfos: MoveInfo) {
-        val (actualInitPosType, _, actualIsRandom, remainingInitMoves) = recognizeInitPosType(actualMoveInfos.toList(), Rules.Standard.width, Rules.Standard.height)
-        assertEquals(expectInitPosType, actualInitPosType)
-        assertEquals(isRandom, actualIsRandom)
+        val (initPosType, _ = refinedInitMoves, isRandomized, remainingInitMoves) = recognizeInitPosType(
+            actualMoveInfos.toList(),
+            Rules.Standard.width,
+            Rules.Standard.height
+        )
+        assertEquals(expectInitPosType, initPosType)
+        assertEquals(isRandom, isRandomized)
         assertTrue(remainingInitMoves.isEmpty())
     }
 

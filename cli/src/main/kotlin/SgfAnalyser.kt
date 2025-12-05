@@ -80,7 +80,7 @@ object SgfAnalyser {
 
             val totalTimeTimeMark = TimeSource.Monotonic.markNow()
 
-            for ((index, file) in sgfFiles.withIndex()) {
+            for ((index, file = value) in sgfFiles.withIndex()) {
                 val processingResult = processFile(file, diagnosticsLogger, exceptionLogger)
                 if (processingResult != null) {
                     totalParserElapsed += processingResult.parserElapsed

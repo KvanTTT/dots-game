@@ -174,7 +174,7 @@ private fun scrollToSelectedNodeIfNeeded(
     verticalScrollState: ScrollState,
     coroutineScope: CoroutineScope,
 ) {
-    val (xIndex, yIndex) = gameTreeViewData.nodeToIndexMap.getValue(gameTreeViewData.gameTree.currentNode)
+    val (xIndex = first, yIndex = second) = gameTreeViewData.nodeToIndexMap.getValue(gameTreeViewData.gameTree.currentNode)
 
     horizontalScrollState.scrollToSelectedNodeIfNeeded(xIndex, gameTreeViewData.size.width, coroutineScope)
     verticalScrollState.scrollToSelectedNodeIfNeeded(yIndex, gameTreeViewData.size.height, coroutineScope)
@@ -222,8 +222,8 @@ class GameTreeViewData(val gameTree: GameTree) {
     val nodeToIndexMap: Map<GameTreeNode, Pair<Int, Int>> by lazy {
         buildMap {
             for (xIndex in elements.indices) {
-                for ((yIndex, element) in elements[xIndex].withIndex()) {
-                    val node = (element as? NodeGameTreeElement)?.node ?: continue
+                for ((yIndex = index, value) in elements[xIndex].withIndex()) {
+                    val node = (value as? NodeGameTreeElement)?.node ?: continue
                     this[node] = xIndex to yIndex
                 }
             }
@@ -242,7 +242,7 @@ private fun ConnectionsAndNodes(
     for (xIndex in gameTreeElements.indices) {
         val offsetX = stepSize * xIndex
 
-        for ((yIndex, element) in gameTreeElements[xIndex].withIndex()) {
+        for ((yIndex = index, element = value) in gameTreeElements[xIndex].withIndex()) {
             val offsetY = stepSize * yIndex
 
             when (element) {
@@ -342,7 +342,7 @@ private fun ConnectionsAndNodes(
 @Composable
 private fun CurrentNode(currentNode: GameTreeNode?, gameTreeViewData: GameTreeViewData) {
     if (currentNode == null) return
-    val (xIndex, yIndex) = gameTreeViewData.nodeToIndexMap.getValue(currentNode)
+    val (xIndex = first, yIndex = second) = gameTreeViewData.nodeToIndexMap.getValue(currentNode)
 
     Box(
         Modifier.offset(stepSize * xIndex, stepSize * yIndex).then(selectedNodeModifier)

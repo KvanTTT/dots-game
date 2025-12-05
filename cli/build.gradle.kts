@@ -16,6 +16,7 @@ kotlin {
         freeCompilerArgs.addAll(
             "-Werror",
             "-Xreturn-value-checker=full",
+            "-Xname-based-destructuring=complete",
         )
     }
 }

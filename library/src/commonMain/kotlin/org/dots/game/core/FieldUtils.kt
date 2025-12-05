@@ -48,7 +48,7 @@ fun Field.getPositionsOfConnection(position: Position, diagonalConnections: Bool
             add(currentPosition)
         }
 
-        for ((index, activePosition) in activePositions.withIndex()) {
+        for ((index, activePosition = value) in activePositions.withIndex()) {
             if (activePosition.squareDistanceTo(position, realWidth) > 1) { // weak connection
                 val prevActivePosition = activePositions[(index - 1 + activePositions.size) % activePositions.size]
                 val nextActivePosition = activePositions[(index + 1) % activePositions.size]

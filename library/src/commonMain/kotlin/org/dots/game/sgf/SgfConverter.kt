@@ -92,7 +92,7 @@ class SgfConverter(
         }
 
         return Games(sgf).apply {
-            for ((index, sgfGameTree) in sgf.gameTree.withIndex()) {
+            for ((index, sgfGameTree = value) in sgf.gameTree.withIndex()) {
                 convertGameTree(sgfGameTree, mainBranch = true, game = null, rootConverterProperties = null)?.let { add(it) }
 
                 if (warnOnMultipleGames && index > 0) {
@@ -117,9 +117,9 @@ class SgfConverter(
         var initializedRootConverterProperties: Map<String, SgfProperty<*>>? = rootConverterProperties
         var rollbackNode: GameTreeNode? = initializedGame?.gameTree?.currentNode
 
-        for ((index, sgfNode) in sgfGameTree.nodes.withIndex()) {
+        for ((index, sgfNode = value) in sgfGameTree.nodes.withIndex()) {
             val isRootScope = root && index == 0
-            val (convertedProperties, hasCriticalError) = convertProperties(sgfNode, isRootScope = isRootScope)
+            val (convertedProperties = first, hasCriticalError = second) = convertProperties(sgfNode, isRootScope = isRootScope)
             if (isRootScope) {
                 require(initializedGame == null)
                 require(initializedRootConverterProperties == null)
@@ -136,7 +136,7 @@ class SgfConverter(
                 initializedRootConverterProperties.finishAndValidateGameResult(initializedGame, sgfGameTree)
             }
 
-            for ((index, childGameTree) in sgfGameTree.childrenGameTrees.withIndex()) {
+            for ((index, childGameTree = value) in sgfGameTree.childrenGameTrees.withIndex()) {
                 val _ = convertGameTree(
                     childGameTree,
                     mainBranch = mainBranch && index == 0,
@@ -421,7 +421,7 @@ class SgfConverter(
             val propertyIdentifier = property.identifier.value
 
             val existingProperty = properties[propertyIdentifier]
-            val (sgfProperty, reportedCriticalError) = property.convert()
+            val (sgfProperty = first, reportedCriticalError = second) = property.convert()
             val sgfPropertyInfo = sgfProperty.info
             if (existingProperty == null) {
                 hasCriticalError = hasCriticalError or reportedCriticalError
@@ -505,8 +505,8 @@ class SgfConverter(
         }
 
         val convertedValues = mutableListOf<Any?>()
-        for ((index, propertyValue) in value.withIndex()) {
-            val propertyValueToken = propertyValue.propertyValueToken
+        for ((index, value) in value.withIndex()) {
+            val propertyValueToken = value.propertyValueToken
             val propertyValue = propertyValueToken.value
 
             val convertedValue = when (propertyInfo.type) {
@@ -884,7 +884,7 @@ class SgfConverter(
 
         subPropertiesLoop@ while (currentIndex < propertyValue.length) {
             var propertyIsFound = false
-            namesLoop@ for ((key, subProperty) in ruleKataGoNameToExtraProperty) {
+            namesLoop@ for ((key, subProperty = value) in ruleKataGoNameToExtraProperty) {
                 for (i in 0 until key.length) {
                     if (propertyValue.elementAtOrNull(currentIndex + i) != key[i]) {
                         continue@namesLoop

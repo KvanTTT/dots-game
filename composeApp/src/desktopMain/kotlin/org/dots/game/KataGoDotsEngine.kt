@@ -146,7 +146,7 @@ actual class KataGoDotsEngine private constructor(
             val startPosMovesPieces = mutableListOf<String>()
             val movesPieces =  mutableListOf<String>()
 
-            for ((index, legalMove) in field.moveSequence.withIndex()) {
+            for ((index, legalMove = value) in field.moveSequence.withIndex()) {
                 val pieces = if (index < rules.initialMoves.size) {
                     startPosMovesPieces
                 } else {
