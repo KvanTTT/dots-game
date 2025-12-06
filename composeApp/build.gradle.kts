@@ -87,6 +87,8 @@ kotlin {
 
         val desktopTest by getting
 
+        val wasmJsMain by getting
+
         commonMain.dependencies {
             implementation(project(":library"))
             implementation(libs.runtime)
@@ -112,6 +114,9 @@ kotlin {
         }
         desktopTest.dependencies {
             implementation(compose.desktop.currentOs)
+        }
+        wasmJsMain.dependencies {
+            implementation(npm("pako", "2.1.0"))
         }
     }
     compilerOptions {

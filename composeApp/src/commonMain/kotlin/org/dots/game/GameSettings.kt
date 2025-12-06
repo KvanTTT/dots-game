@@ -49,7 +49,7 @@ data class GameSettings(
                                 path = UrlEncoderDecoder.decode(paramValue)
                             }
                             GameSettings::sgf.name -> {
-                                sgfContent = Base64UrlParamsSafe.decode(paramValue.encodeToByteArray()).decodeToString()
+                                sgfContent = Gzip.decompress(Base64UrlParamsSafe.decode(paramValue.encodeToByteArray())).decodeToString()
                             }
                             GameSettings::game.name -> {
                                 currentGameNumber = paramValue.toUInt().toInt()
@@ -101,7 +101,7 @@ data class GameSettings(
                     append('&')
                 append(GameSettings::sgf.name)
                 append('=')
-                append(Base64UrlParamsSafe.encode(it.encodeToByteArray()))
+                append(Base64UrlParamsSafe.encode(Gzip.compress(it.encodeToByteArray())))
             }
             game?.let {
                 if (isNotEmpty())
