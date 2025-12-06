@@ -22,11 +22,11 @@ import org.dots.game.sgf.SgfMetaInfo.sgfPropertyInfoToKey
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 
-const val SUPPORTED_FILE_FORMAT = 4
+const val SUPPORTED_FILE_FORMAT: Int = 4
 
 class SgfGameMode {
     companion object {
-        const val SUPPORTED_GAME_MODE_NAME = "Kropki"
+        const val SUPPORTED_GAME_MODE_NAME: String = "Kropki"
 
         val gameModes: Map<Int, String> = mapOf(
             1 to "Go",
@@ -116,54 +116,54 @@ fun SgfPropertyInfo.getPlayer(): Player {
 }
 
 object SgfMetaInfo {
-    const val PLAYER1_MARKER = 'B'
-    const val PLAYER2_MARKER = 'W'
+    const val PLAYER1_MARKER: Char = 'B'
+    const val PLAYER2_MARKER: Char = 'W'
 
-    const val GAME_MODE_KEY = "GM"
-    const val FILE_FORMAT_KEY = "FF"
-    const val CHARSET_KEY = "CA"
-    const val SIZE_KEY = "SZ"
-    const val RULES_KEY = "RU"
-    const val RESULT_KEY = "RE"
-    const val GAME_NAME_KEY = "GN"
-    const val PLAYER1_NAME_KEY = "P${PLAYER1_MARKER}"
-    const val PLAYER1_RATING_KEY = "${PLAYER1_MARKER}R"
-    const val PLAYER1_TEAM_KEY = "${PLAYER1_MARKER}T"
-    const val PLAYER2_NAME_KEY = "P${PLAYER2_MARKER}"
-    const val PLAYER2_RATING_KEY = "${PLAYER2_MARKER}R"
-    const val PLAYER2_TEAM_KEY = "${PLAYER2_MARKER}T"
-    const val KOMI_KEY = "KM"
-    const val DATE_KEY = "DT"
-    const val GAME_COMMENT_KEY = "GC"
-    const val COMMENT_KEY = "C"
-    const val PLACE_KEY = "PC"
-    const val EVENT_KEY = "EV"
-    const val OPENING_KEY = "ON"
-    const val ANNOTATOR_KEY = "AN"
-    const val COPYRIGHT_KEY = "CP"
-    const val SOURCE_KEY = "SO"
-    const val TIME_KEY = "TM"
-    const val OVERTIME_KEY = "OT"
-    const val APP_INFO_KEY = "AP"
-    const val PLAYER1_ADD_DOTS_KEY = "A${PLAYER1_MARKER}"
-    const val PLAYER2_ADD_DOTS_KEY = "A${PLAYER2_MARKER}"
-    const val PLAYER1_TIME_LEFT_KEY = "${PLAYER1_MARKER}L"
-    const val PLAYER2_TIME_LEFT_KEY = "${PLAYER2_MARKER}L"
-    const val ROUND_KEY = "RO"
-    const val HANDICAP_KEY = "HA"
+    const val GAME_MODE_KEY: String = "GM"
+    const val FILE_FORMAT_KEY: String = "FF"
+    const val CHARSET_KEY: String = "CA"
+    const val SIZE_KEY: String = "SZ"
+    const val RULES_KEY: String = "RU"
+    const val RESULT_KEY: String = "RE"
+    const val GAME_NAME_KEY: String = "GN"
+    const val PLAYER1_NAME_KEY: String = "P${PLAYER1_MARKER}"
+    const val PLAYER1_RATING_KEY: String = "${PLAYER1_MARKER}R"
+    const val PLAYER1_TEAM_KEY: String = "${PLAYER1_MARKER}T"
+    const val PLAYER2_NAME_KEY: String = "P${PLAYER2_MARKER}"
+    const val PLAYER2_RATING_KEY: String = "${PLAYER2_MARKER}R"
+    const val PLAYER2_TEAM_KEY: String = "${PLAYER2_MARKER}T"
+    const val KOMI_KEY: String = "KM"
+    const val DATE_KEY: String = "DT"
+    const val GAME_COMMENT_KEY: String = "GC"
+    const val COMMENT_KEY: String = "C"
+    const val PLACE_KEY: String = "PC"
+    const val EVENT_KEY: String = "EV"
+    const val OPENING_KEY: String = "ON"
+    const val ANNOTATOR_KEY: String = "AN"
+    const val COPYRIGHT_KEY: String = "CP"
+    const val SOURCE_KEY: String = "SO"
+    const val TIME_KEY: String = "TM"
+    const val OVERTIME_KEY: String = "OT"
+    const val APP_INFO_KEY: String = "AP"
+    const val PLAYER1_ADD_DOTS_KEY: String = "A${PLAYER1_MARKER}"
+    const val PLAYER2_ADD_DOTS_KEY: String = "A${PLAYER2_MARKER}"
+    const val PLAYER1_TIME_LEFT_KEY: String = "${PLAYER1_MARKER}L"
+    const val PLAYER2_TIME_LEFT_KEY: String = "${PLAYER2_MARKER}L"
+    const val ROUND_KEY: String = "RO"
+    const val HANDICAP_KEY: String = "HA"
 
-    const val PLAYER1_MOVE_KEY = PLAYER1_MARKER.toString()
-    const val PLAYER2_MOVE_KEY = PLAYER2_MARKER.toString()
-    const val LABEL_KEY = "LB"
-    const val CIRCLE_KEY = "CR"
-    const val SQUARE_KEY = "SQ"
+    const val PLAYER1_MOVE_KEY: String = PLAYER1_MARKER.toString()
+    const val PLAYER2_MOVE_KEY: String = PLAYER2_MARKER.toString()
+    const val LABEL_KEY: String = "LB"
+    const val CIRCLE_KEY: String = "CR"
+    const val SQUARE_KEY: String = "SQ"
 
-    const val UNKNOWN_KEY = ""
+    const val UNKNOWN_KEY: String = ""
 
-    const val RESIGN_WIN_GAME_RESULT = 'R'
-    const val TIME_WIN_GAME_RESULT = 'T'
-    const val UNKNOWN_WIN_GAME_RESULT = '?'
-    const val GROUNDING_WIN_GAME_RESULT = 'G'
+    const val RESIGN_WIN_GAME_RESULT: Char = 'R'
+    const val TIME_WIN_GAME_RESULT: Char = 'T'
+    const val UNKNOWN_WIN_GAME_RESULT: Char = '?'
+    const val GROUNDING_WIN_GAME_RESULT: Char = 'G'
 
     val propertyInfos: Map<String, SgfPropertyInfo> = mapOf(
         PLAYER1_TIME_LEFT_KEY to SgfPropertyInfo("Player1 time left", PropertiesHolder::player1TimeLeft, SgfPropertyType.Double, scope = SgfPropertyScope.Both),

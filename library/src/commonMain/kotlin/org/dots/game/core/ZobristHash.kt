@@ -5,8 +5,8 @@ import kotlin.random.Random
 typealias Hash = Long
 
 object ZobristHash {
-    const val MAX_POSITIONS_SIZE = (Field.MAX_SIZE + 2) * (Field.MAX_SIZE + 2)
-    val random = Random(1)
+    const val MAX_POSITIONS_SIZE: Int = (Field.MAX_SIZE + 2) * (Field.MAX_SIZE + 2)
+    val random: Random = Random(1)
 
     val widthHash: LongArray = LongArray(Field.MAX_SIZE + 1) {
         random.nextLong()
@@ -17,7 +17,7 @@ object ZobristHash {
     }
 
     val positionsHash: Array<LongArray> = Array(MAX_POSITIONS_SIZE) {
-        LongArray(Player.Count) {
+        LongArray(Player.COUNT) {
             if (it.toByte() == Player.None.value || it.toByte() == Player.WallOrBoth.value) {
                 0L
             } else {

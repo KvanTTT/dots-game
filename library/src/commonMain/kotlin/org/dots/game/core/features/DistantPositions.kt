@@ -56,7 +56,7 @@ import kotlin.math.sqrt
  *
  */
 
-const val maxDistanceIdentifierNumber = 7
+const val maxDistanceIdentifierNumber: Int = 7
 
 val squareDistances: List<Int> = buildSet {
     val limit = Field.MAX_SIZE * Field.MAX_SIZE

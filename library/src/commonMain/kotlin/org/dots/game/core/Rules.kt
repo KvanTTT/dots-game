@@ -29,7 +29,7 @@ class Rules private constructor(
         get() = Standard
 
     companion object {
-        val Standard = create(
+        val Standard: Rules = create(
             width = 39,
             height = 32,
             captureByBorder = false,

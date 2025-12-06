@@ -11,7 +11,7 @@ class Field {
     companion object {
         const val OFFSET: Int = 1
         // Max field size is 62 * 62 (2 positions are reserved for a border)
-        const val MAX_SIZE = (1 shl COORDINATE_BITS_COUNT) - 2
+        const val MAX_SIZE: Int = (1 shl COORDINATE_BITS_COUNT) - 2
 
         fun checkSize(value: Int): Boolean = value in 0..MAX_SIZE
 
@@ -455,10 +455,10 @@ class Field {
                 )
             }
             ExternalFinishReason.Draw -> GameResult.Draw(endGameKind = null, currentPlayer)
-            ExternalFinishReason.Resign -> GameResult.ResignWin(currentPlayer.opposite())
-            ExternalFinishReason.Time -> GameResult.TimeWin(currentPlayer.opposite())
+            ExternalFinishReason.Resign -> ResignWin(currentPlayer.opposite())
+            ExternalFinishReason.Time -> TimeWin(currentPlayer.opposite())
             ExternalFinishReason.Interrupt -> GameResult.InterruptWin(currentPlayer.opposite())
-            ExternalFinishReason.Unknown -> GameResult.UnknownWin(currentPlayer.opposite())
+            ExternalFinishReason.Unknown -> UnknownWin(currentPlayer.opposite())
         }
 
         legalMoves.add(gameResult)

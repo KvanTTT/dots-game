@@ -2,7 +2,7 @@ package org.dots.game.core
 
 class PositionsList private constructor(val internalArray: ShortArray, initialSize: Int, val fieldStride: Int) {
     companion object {
-        val EMPTY = PositionsList(0, 0)
+        val EMPTY: PositionsList = PositionsList(0, 0)
     }
 
     var size: Int = initialSize

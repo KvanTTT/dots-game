@@ -5,11 +5,11 @@ import kotlin.jvm.JvmInline
 @JvmInline
 value class Player internal constructor(val value: Byte) {
     companion object {
-        const val Count = 4
-        val None = Player(0)
-        val First = Player(1)
-        val Second = Player(2)
-        val WallOrBoth = Player(3)
+        const val COUNT: Int = 4
+        val None: Player = Player(0)
+        val First: Player = Player(1)
+        val Second: Player = Player(2)
+        val WallOrBoth: Player = Player(3)
 
         fun validateAndCreate(playerId: Int): Player {
             if (playerId in 0..3) {

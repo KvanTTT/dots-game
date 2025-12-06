@@ -5,7 +5,7 @@ import kotlin.jvm.JvmInline
 @JvmInline
 value class Position internal constructor(val value: Short) : Comparable<Position> {
     companion object {
-        val GAME_OVER = Position(1, 0, 0) // It's also equivalent to PASS in Go
+        val GAME_OVER: Position = Position(1, 0, 0) // It's also equivalent to PASS in Go
     }
 
     internal constructor(x: Int, y: Int, fieldStride: Int) : this((y * fieldStride + x).toShort())

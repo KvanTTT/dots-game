@@ -9,7 +9,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class FieldWithBorderTests() : FieldTests() {
-    override val captureByBorder = true
+    override val captureByBorder: Boolean = true
 
     @Test
     fun captureByBorder() {

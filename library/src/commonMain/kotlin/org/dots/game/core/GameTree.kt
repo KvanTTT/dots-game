@@ -385,7 +385,7 @@ class GameTreeNode private constructor(
     val circles: List<PositionXY>? by PropertyDelegate()
     val squares: List<PositionXY>? by PropertyDelegate()
 
-    val isRoot = previousNode == null
+    val isRoot: Boolean = previousNode == null
 
     override fun toString(): String {
         return buildString {

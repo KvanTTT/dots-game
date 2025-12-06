@@ -39,6 +39,7 @@ kotlin {
             "-Xname-based-destructuring=complete",
             "-Xexplicit-backing-fields",
             "-Xcontext-sensitive-resolution",
+            "-XXexplicit-return-types=strict",
         )
     }
 }

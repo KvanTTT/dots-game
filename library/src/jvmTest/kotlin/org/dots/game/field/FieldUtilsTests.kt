@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class FieldUtilsTests : FieldTests() {
-    val sampleField = FieldParser.parseAndConvertWithNoInitialMoves("""
+    val sampleField: Field = FieldParser.parseAndConvertWithNoInitialMoves("""
             . . . . . . .
             . . * * * * *
             . * + . * . .

@@ -1,5 +1,6 @@
 package org.dots.game.field
 
+import org.dots.game.core.Field
 import org.dots.game.dump.DumpParameters
 import org.dots.game.dump.FieldParser
 import org.dots.game.dump.render
@@ -8,7 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class FieldRenderTests : FieldTests() {
-    val sampleField = FieldParser.parseAndConvertWithNoInitialMoves("""
+    val sampleField: Field = FieldParser.parseAndConvertWithNoInitialMoves("""
             . .   .   .   .  .  . .  . . .
             . .   *3  *4  *5 .  * *  * . .
             . *14 +1  .   .  *6 . .  . * .

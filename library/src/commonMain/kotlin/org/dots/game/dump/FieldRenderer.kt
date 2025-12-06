@@ -24,8 +24,8 @@ data class DumpParameters(
         get() = DEFAULT
 
     companion object {
-        val DEFAULT = DumpParameters()
-        val PLAIN_FIELD = DEFAULT.copy(isSgf = false)
+        val DEFAULT: DumpParameters = DumpParameters()
+        val PLAIN_FIELD: DumpParameters = DEFAULT.copy(isSgf = false)
     }
 }
 

@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class StandardFieldWithDisallowedSuicideTests : FieldTests() {
-    override val suicideAllowed = false
+    override val suicideAllowed: Boolean = false
 
     @Test
     fun failedSuicide() {

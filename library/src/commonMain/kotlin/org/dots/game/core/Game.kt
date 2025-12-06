@@ -132,7 +132,7 @@ class Game(
         initAddDots(first = false)
     }
 
-    val rules = gameTree.field.rules
+    val rules: Rules = gameTree.field.rules
 
     val sgfGameMode: Int? by PropertyDelegate()
     val sgfFileFormat: Int? by PropertyDelegate()
@@ -168,7 +168,7 @@ class Game(
 }
 
 data class AppInfo(val name: String, val version: String?) {
-    val appType = AppType.entries.find { it.value == name } ?: AppType.Unknown
+    val appType: AppType = AppType.entries.find { it.value == name } ?: AppType.Unknown
 
     override fun toString(): String {
         return name + (if (version == null) "" else ":$version")
@@ -205,7 +205,7 @@ data class MoveInfo internal constructor(
     }
 }
 
-val IgnoreParseNodeComparator = object : Comparator<MoveInfo> {
+val IgnoreParseNodeComparator: Comparator<MoveInfo> = object : Comparator<MoveInfo> {
     override fun compare(a: MoveInfo, b: MoveInfo): Int {
         ((a.positionXY?.position ?: 0) - (b.positionXY?.position ?: 0)).let {
             if (it != 0) return it
@@ -229,7 +229,7 @@ fun MoveInfo.equalsIgnoringParseNode(other: MoveInfo): Boolean {
 
 data class Label(val positionXY: PositionXY, val text: String)
 
-const val ThisAppName = "DotsGame"
+const val ThisAppName: String = "DotsGame"
 
 enum class AppType(val value: String) {
     Zagram("zagram.org"),

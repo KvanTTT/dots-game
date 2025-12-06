@@ -5,8 +5,8 @@ import kotlin.jvm.JvmInline
 @JvmInline
 value class PositionXY internal constructor(val position: Int) : Comparable<PositionXY> {
     companion object {
-        const val COORDINATE_BITS_COUNT = 6
-        const val MASK = (1 shl COORDINATE_BITS_COUNT) - 1
+        const val COORDINATE_BITS_COUNT: Int = 6
+        const val MASK: Int = (1 shl COORDINATE_BITS_COUNT) - 1
     }
 
     constructor(x: Int, y: Int) : this((x shl COORDINATE_BITS_COUNT) or (y and MASK))

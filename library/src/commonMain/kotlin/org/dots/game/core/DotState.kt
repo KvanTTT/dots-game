@@ -124,15 +124,15 @@ value class DotState internal constructor(val value: Byte) {
     }
 }
 
-const val FIRST_PLAYER_MARKER = '*'
-const val SECOND_PLAYER_MARKER = '+'
-const val TERRITORY_EMPTY_MARKER = '^'
-const val EMPTY_TERRITORY_MARKER = '`'
-const val EMPTY_POSITION_MARKER = '.'
-const val BORDER_MARKER = '#'
-const val VISITED_MARKER = '$'
+const val FIRST_PLAYER_MARKER: Char = '*'
+const val SECOND_PLAYER_MARKER: Char = '+'
+const val TERRITORY_EMPTY_MARKER: Char = '^'
+const val EMPTY_TERRITORY_MARKER: Char = '`'
+const val EMPTY_POSITION_MARKER: Char = '.'
+const val BORDER_MARKER: Char = '#'
+const val VISITED_MARKER: Char = '$'
 
-val playerMarker = mapOf(
+val playerMarker: Map<Player, Char> = mapOf(
     Player.First to FIRST_PLAYER_MARKER,
     Player.Second to SECOND_PLAYER_MARKER,
     Player.None to EMPTY_POSITION_MARKER,

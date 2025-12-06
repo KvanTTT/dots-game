@@ -8,7 +8,7 @@ data class Diagnostic(
     val severity: DiagnosticSeverity = DiagnosticSeverity.Error,
 ) {
     companion object {
-        fun info(message: String) = Diagnostic(message, severity = DiagnosticSeverity.Info)
+        fun info(message: String): Diagnostic = Diagnostic(message, severity = DiagnosticSeverity.Info)
     }
 
     override fun toString(): String = render(message, textSpan, severity)
