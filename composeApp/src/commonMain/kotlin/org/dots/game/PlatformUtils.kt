@@ -21,6 +21,18 @@ expect object UrlEncoderDecoder {
     fun decode(value: String): String
 }
 
+expect object Gzip {
+    fun compress(input: ByteArray): ByteArray
+    fun decompress(input: ByteArray): ByteArray
+}
+
+val EMPTY_BYTE_ARRAY = ByteArray(0)
+
+expect object Clipboard {
+    fun copyTo(text: String)
+    suspend fun getFrom(): String?
+}
+
 @Composable
 expect fun SaveFileDialog(
     title: String?,

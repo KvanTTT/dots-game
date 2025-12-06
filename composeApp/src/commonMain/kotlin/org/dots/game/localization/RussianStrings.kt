@@ -67,6 +67,7 @@ object RussianStrings : Strings {
     override val padding = "Отступ"
     override val path = "Путь"
     override val link = "Ссылка"
+    override val copy = "Копировать"
     override fun saveDialogTitle(isSgf: Boolean) = "Сохранить игру в .${if (isSgf) "sgf" else "txt"}"
 
     // Settings

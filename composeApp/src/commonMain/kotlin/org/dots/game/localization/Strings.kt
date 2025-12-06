@@ -58,6 +58,7 @@ interface Strings {
     val padding: String
     val path: String
     val link: String
+    val copy: String
     fun saveDialogTitle(isSgf: Boolean): String
 
     // Settings Dialog

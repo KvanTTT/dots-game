@@ -16,12 +16,12 @@ actual object Gzip {
     const val UNKNOWN_OS_ID: Byte = -1
 
     actual fun compress(input: ByteArray): ByteArray {
-        if (input.isEmpty()) return emptyByteArray
+        if (input.isEmpty()) return EMPTY_BYTE_ARRAY
         return Pako.gzip(input.toUint8Array()).toByteArray(compression = true)
     }
 
     actual fun decompress(input: ByteArray): ByteArray {
-        if (input.isEmpty()) return emptyByteArray
+        if (input.isEmpty()) return EMPTY_BYTE_ARRAY
         return Pako.ungzip(input.toUint8Array()).toByteArray(compression = false)
     }
 

@@ -7,7 +7,7 @@ import java.util.zip.GZIPOutputStream
 
 actual object Gzip {
     actual fun compress(input: ByteArray): ByteArray {
-        if (input.isEmpty()) return emptyByteArray
+        if (input.isEmpty()) return EMPTY_BYTE_ARRAY
         ByteArrayOutputStream().use { outStream ->
             GZIPOutputStream(outStream).use { it.write(input) }
             return outStream.toByteArray()
@@ -15,7 +15,7 @@ actual object Gzip {
     }
 
     actual fun decompress(input: ByteArray): ByteArray {
-        if (input.isEmpty()) return emptyByteArray
+        if (input.isEmpty()) return EMPTY_BYTE_ARRAY
         ByteArrayInputStream(input).use { inputStream ->
             val bufferSize = maxOf(input.size, 1024)
             GZIPInputStream(inputStream, bufferSize).use { gzipInputStream ->

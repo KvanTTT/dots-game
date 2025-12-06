@@ -6,11 +6,13 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import org.dots.game.Clipboard
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dotsgame.composeapp.generated.resources.Res
+import dotsgame.composeapp.generated.resources.ic_copy
 import dotsgame.composeapp.generated.resources.ic_save
 import org.dots.game.GameSettings
 import org.dots.game.IconButton
@@ -197,7 +199,7 @@ fun SaveDialog(
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 10.dp)) {
                     Text(strings.path, Modifier.fillMaxWidth(0.2f))
                     TextField(path, {
                         path = it
@@ -212,7 +214,8 @@ fun SaveDialog(
                         }
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
+
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 10.dp)) {
                     Text(strings.link, Modifier.fillMaxWidth(0.2f))
                     TextField(
                         link, { },
@@ -220,6 +223,11 @@ fun SaveDialog(
                         readOnly = true,
                         singleLine = true
                     )
+                    with(strings) {
+                        IconButton(Res.drawable.ic_copy) {
+                            Clipboard.copyTo(link)
+                        }
+                    }
                 }
             }
         }

@@ -12,8 +12,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        SettingsWrapper.androidSettings = SharedPreferencesSettings(getSharedPreferences(ThisAppName, MODE_PRIVATE))
         AndroidContextHolder.appContext = applicationContext
+        SettingsWrapper.androidSettings = SharedPreferencesSettings(getSharedPreferences(ThisAppName, MODE_PRIVATE))
 
         setContent {
             App()
