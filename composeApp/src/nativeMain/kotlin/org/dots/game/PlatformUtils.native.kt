@@ -11,6 +11,7 @@ import platform.Foundation.NSString
 import platform.Foundation.URLQueryAllowedCharacterSet
 import platform.Foundation.stringByAddingPercentEncodingWithAllowedCharacters
 import platform.Foundation.stringByRemovingPercentEncoding
+import platform.Foundation.NSTemporaryDirectory
 
 @Composable
 actual fun HorizontalScrollbar(
@@ -51,8 +52,6 @@ actual fun OpenFileDialog(
     onFileSelected(null)
 }
 
-object Native : Platform(OS.Native)
-
 actual val platform: Platform = Native
 
 @Composable
@@ -73,3 +72,5 @@ actual object UrlEncoderDecoder {
         return (value as NSString).stringByRemovingPercentEncoding()!!
     }
 }
+
+actual val tempDirectory: String = NSTemporaryDirectory()

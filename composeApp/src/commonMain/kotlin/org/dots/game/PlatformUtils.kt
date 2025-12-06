@@ -53,13 +53,24 @@ enum class OS {
     Unknown,
 }
 
-abstract class Platform(val os: OS) {
-    val isMobile get() = os == OS.Android || os == OS.Native
+sealed class Platform(val os: OS) {
+    val isMobile: Boolean get() = os == OS.Android || os == OS.Native
+    val isJvmBased: Boolean get() = (os == OS.Windows || os == OS.Linux || os == OS.MacOS) && this !is Web || this is Android
     val supportsPrimaryButton: Boolean get() = !isMobile && os != OS.Unknown
 
     override fun toString(): String {
         return "${this::class.simpleName} ($os)"
     }
+
+    object Android : Platform(OS.Android)
+
+    class Desktop(os: OS) : Platform(os)
+
+    object Native : Platform(OS.Native)
+
+    class Web(os: OS) : Platform(os)
 }
 
 expect val platform: Platform
+
+expect val tempDirectory: String

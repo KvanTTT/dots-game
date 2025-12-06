@@ -260,8 +260,6 @@ actual fun Tooltip(text: String, content: @Composable () -> Unit) {
     }
 }
 
-class Web(os: OS) : Platform(os)
-
 actual val platform: Platform = run {
     val userAgent = window.navigator.userAgent.lowercase()
     val os = when {
@@ -272,7 +270,7 @@ actual val platform: Platform = run {
         userAgent.contains("linux") || userAgent.contains("x11") -> OS.Linux
         else -> OS.Native
     }
-    Web(os)
+    Platform.Web(os)
 }
 
 external fun encodeURIComponent(uriComponent: String): String
@@ -287,3 +285,5 @@ actual object UrlEncoderDecoder {
         return decodeURIComponent(value)
     }
 }
+
+actual val tempDirectory: String = "/tmp_virtual"

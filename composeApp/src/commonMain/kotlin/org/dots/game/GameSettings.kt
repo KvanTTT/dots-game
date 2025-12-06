@@ -44,6 +44,14 @@ data class GameSettings(
                 } else {
                     val paramValue = paramsString.substring(equalOrAmpIndex + 1, ampIndexOrEnd)
                     try {
+                        fun Int?.checkLegality() {
+                            if (this == null) {
+                                throw IllegalArgumentException("Invalid number format")
+                            } else if (this < 0) {
+                                throw IllegalArgumentException("Expected a non-negative integer")
+                            }
+                        }
+
                         when (paramName) {
                             GameSettings::path.name -> {
                                 path = UrlEncoderDecoder.decode(paramValue)
@@ -52,10 +60,10 @@ data class GameSettings(
                                 sgfContent = Gzip.decompress(Base64UrlParamsSafe.decode(paramValue.encodeToByteArray())).decodeToString()
                             }
                             GameSettings::game.name -> {
-                                currentGameNumber = paramValue.toUInt().toInt()
+                                currentGameNumber = paramValue.toIntOrNull().also { it.checkLegality() }
                             }
                             GameSettings::node.name -> {
-                                currentNodeNumber = paramValue.toUInt().toInt()
+                                currentNodeNumber = paramValue.toIntOrNull().also { it.checkLegality() }
                             }
                             else -> {
                                 diagnosticReporter(
@@ -63,9 +71,9 @@ data class GameSettings(
                                     TextSpan(paramsOffset + index, paramName.length)))
                             }
                         }
-                    } catch (ex: Exception) {
+                    } catch (ex: Throwable) {
                         diagnosticReporter(Diagnostic(
-                            "Parameter `$paramName` have invalid value `$paramValue` (${ex.message})",
+                            "Parameter `$paramName` has invalid value `$paramValue` (${ex.message ?: ex.toString()})",
                             TextSpan(paramsOffset + equalOrAmpIndex + 1, paramValue.length)
                         ))
                     }

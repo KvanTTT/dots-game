@@ -163,8 +163,6 @@ private object AndroidPickedFiles {
     fun exists(path: String): Boolean = nameToUri.containsKey(path)
 }
 
-object Android : Platform(OS.Android)
-
 actual val platform: Platform = Android
 
 @Composable
@@ -181,3 +179,5 @@ actual object UrlEncoderDecoder {
         return URLDecoder.decode(value, "utf-8")
     }
 }
+
+actual val tempDirectory: String = System.getProperty("java.io.tmpdir") ?: "/data/local/tmp"

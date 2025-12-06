@@ -187,8 +187,6 @@ private fun FileDialog(
     }
 }
 
-class Desktop(os: OS) : Platform(os)
-
 actual val platform: Platform = run {
     val osName = System.getProperty("os.name").lowercase()
     val os = when {
@@ -197,7 +195,7 @@ actual val platform: Platform = run {
         osName.contains("mac") -> OS.MacOS
         else -> OS.Unknown
     }
-    Desktop(os)
+    Platform.Desktop(os)
 }
 
 @Composable
@@ -230,3 +228,5 @@ actual object UrlEncoderDecoder {
         return URLDecoder.decode(value, "utf-8")
     }
 }
+
+actual val tempDirectory: String = System.getProperty("java.io.tmpdir")

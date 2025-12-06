@@ -14,33 +14,29 @@ import java.nio.file.Paths
 import kotlin.test.assertEquals
 
 class SettingsTests {
-    companion object {
-        val TEMP_DIRECTORY: String = System.getProperty("java.io.tmpdir")
-    }
-
     @Test
     fun loading() {
-        val defaultClassSettings = loadClassSettings(Rules.Standard, directory = TEMP_DIRECTORY)
+        val defaultClassSettings = loadClassSettings(Rules.Standard, directory = tempDirectory)
         assertEquals(Rules.Standard.width, defaultClassSettings.width)
         assertEquals(Rules.Standard.komi, defaultClassSettings.komi)
         assertEquals(Rules.Standard.initialMoves, defaultClassSettings.initialMoves)
 
-        val defaultDumpParameters = loadClassSettings(DumpParameters.DEFAULT, directory = TEMP_DIRECTORY)
+        val defaultDumpParameters = loadClassSettings(DumpParameters.DEFAULT, directory = tempDirectory)
         assertEquals(DumpParameters.DEFAULT.isSgf, defaultDumpParameters.isSgf)
 
-        val defaultUiSettings = loadClassSettings(UiSettings.Standard, directory = TEMP_DIRECTORY)
+        val defaultUiSettings = loadClassSettings(UiSettings.Standard, directory = tempDirectory)
         assertEquals(UiSettings.Standard.playerFirstColor, defaultUiSettings.playerFirstColor)
 
-        val defaultOpenGameSettings = loadClassSettings(OpenGameSettings.Default, directory = TEMP_DIRECTORY)
+        val defaultOpenGameSettings = loadClassSettings(OpenGameSettings.Default, directory = tempDirectory)
         assertEquals(OpenGameSettings.Default.pathOrContent, defaultOpenGameSettings.pathOrContent)
 
-        val defaultGameSettings = loadClassSettings(GameSettings.Default, directory = TEMP_DIRECTORY)
+        val defaultGameSettings = loadClassSettings(GameSettings.Default, directory = tempDirectory)
         assertEquals(GameSettings.Default.sgf, defaultGameSettings.sgf)
 
-        val defaultKataGoDotsSettings = loadClassSettings(KataGoDotsSettings.Default, directory = TEMP_DIRECTORY)
+        val defaultKataGoDotsSettings = loadClassSettings(KataGoDotsSettings.Default, directory = tempDirectory)
         assertEquals(KataGoDotsSettings.Default.exePath, defaultKataGoDotsSettings.exePath)
 
-        val defaultWindowState = loadWindowsState(directory = TEMP_DIRECTORY)
+        val defaultWindowState = loadWindowsState(directory = tempDirectory)
         assertEquals(WindowSettings.DEFAULT.placement, defaultWindowState.placement)
     }
 
@@ -48,11 +44,11 @@ class SettingsTests {
     fun saving() {
         fun <T : ClassSettings<T>> checkSaveAndExistence(classSettings: ClassSettings<T>) {
             if (classSettings is WindowSettings) {
-                saveWindowsState(WindowState(), directory = TEMP_DIRECTORY)
+                saveWindowsState(WindowState(), directory = tempDirectory)
             } else {
-                saveClassSettings(classSettings.default, directory = TEMP_DIRECTORY)
+                saveClassSettings(classSettings.default, directory = tempDirectory)
             }
-            assertTrue(File(Paths.get(TEMP_DIRECTORY, ThisAppName, classSettings::class.simpleName!! + ".properties").toString()).exists())
+            assertTrue(File(Paths.get(tempDirectory, ThisAppName, classSettings::class.simpleName!! + ".properties").toString()).exists())
         }
 
         checkSaveAndExistence(Rules.Standard)
@@ -82,16 +78,16 @@ class SettingsTests {
             node = 0,
         )
 
-        assertTrue(saveClassSettings(gameSettings, directory = TEMP_DIRECTORY))
+        assertTrue(saveClassSettings(gameSettings, directory = tempDirectory))
 
-        val newGameSettings = loadClassSettings(GameSettings.Default, directory = TEMP_DIRECTORY)
+        val newGameSettings = loadClassSettings(GameSettings.Default, directory = tempDirectory)
 
         assertEquals(bigString, newGameSettings.sgf)
     }
 
     @AfterEach
     fun cleanup() {
-        Paths.get(TEMP_DIRECTORY, ThisAppName).toFile().listFiles()?.forEach { file ->
+        Paths.get(tempDirectory, ThisAppName).toFile().listFiles()?.forEach { file ->
             require(!file.isDirectory)
             file.delete()
         }

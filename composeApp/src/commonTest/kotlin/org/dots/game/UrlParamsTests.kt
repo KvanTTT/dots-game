@@ -4,10 +4,12 @@ import org.dots.game.ExampleTestData.EXAMPLE_PATH
 import org.dots.game.ExampleTestData.exampleSgf
 import org.dots.game.ExampleTestData.exampleSgfParams
 import org.dots.game.sgf.TextSpan
-import org.junit.jupiter.api.Assertions.assertTrue
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertTrue
+import kotlin.test.todo
 
 class UrlParamsTests {
     @Test
@@ -34,7 +36,7 @@ class UrlParamsTests {
             val diagnostics = buildList {
                 val _ = GameSettings.parseUrlParams(str, 1) { add(it) }
             }
-            assertEquals(expectedDiagnostics.toList(), diagnostics)
+            assertContentEquals(expectedDiagnostics.toList(), diagnostics)
         }
 
         parseAndCheckDiagnostics("^%[)",
@@ -48,11 +50,23 @@ class UrlParamsTests {
             Diagnostic("Parameter `unknownkey` is unknown", TextSpan(14, 10))
         )
 
+        val urlDecodingErrorSuffix = when {
+            platform.isJvmBased -> {
+                "URLDecoder: Illegal hex characters in escape (%) pattern - negative value"
+            }
+            platform is Platform.Web -> {
+                "URI malformed"
+            }
+            else -> {
+                todo { error("$platform is not implemented") }
+            }
+        }
+
         parseAndCheckDiagnostics("path=%-42&sgf=invalid_base64&game=999999999999999999&node=-1234",
-            Diagnostic("Parameter `path` have invalid value `%-42` (URLDecoder: Illegal hex characters in escape (%) pattern - negative value)", TextSpan(6, 4)),
-            Diagnostic("Parameter `sgf` have invalid value `invalid_base64` (The pad bits must be zeros)", TextSpan(15, 14)),
-            Diagnostic("Parameter `game` have invalid value `999999999999999999` (Invalid number format: '999999999999999999')", TextSpan(35, 18)),
-            Diagnostic("Parameter `node` have invalid value `-1234` (Invalid number format: '-1234')", TextSpan(59, 5))
+            Diagnostic("Parameter `path` has invalid value `%-42` ($urlDecodingErrorSuffix)", TextSpan(6, 4)),
+            Diagnostic("Parameter `sgf` has invalid value `invalid_base64` (The pad bits must be zeros)", TextSpan(15, 14)),
+            Diagnostic("Parameter `game` has invalid value `999999999999999999` (Invalid number format)", TextSpan(35, 18)),
+            Diagnostic("Parameter `node` has invalid value `-1234` (Expected a non-negative integer)", TextSpan(59, 5))
         )
     }
 }
