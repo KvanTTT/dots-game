@@ -1,39 +1,33 @@
 package org.dots.game
 
-import kotlin.time.Instant
+val BuildInfo.version: String
+    get() = "$majorVersion.$minorVersion.$buildNumber"
 
-data class BuildInfo(val majorVersion: Int, val minorVersion: Int, val number: Int, val dateTime: Instant, val hash: String) {
-    val version: String
-        get() = "$majorVersion.$minorVersion.$number"
+val BuildInfo.isLocal: Boolean
+    get() = buildNumber == 65535
 
-    val isLocal: Boolean = number == 65535
+val BuildInfo.dateTimeString: String
+    get() = buildDateTime.toString()
 
-    val dateTimeString: String by lazy(LazyThreadSafetyMode.PUBLICATION) { dateTime.toString() }
+val BuildInfo.date: String
+    get() = dateTimeString.substringBefore('T')
 
-    val date: String by lazy(LazyThreadSafetyMode.PUBLICATION) { dateTimeString.substringBefore('T') }
+val BuildInfo.dateTimeShort: String
+    get() = dateTimeString.substringBefore('.')
 
-    val dateTimeShort: String by lazy(LazyThreadSafetyMode.PUBLICATION) { dateTimeString.substringBefore('.') }
-
-    override fun toString(): String {
-        return buildString {
-            append("${BuildInfo::version.name}: $version, ")
-            append("${BuildInfo::dateTime.name}: $dateTimeShort, ")
-            append("${BuildInfo::hash.name}: ${hash.ifEmpty { "local" }}")
+fun BuildInfo.render(): String {
+    return buildString {
+        append("${BuildInfo::version.name}: $version, ")
+        append("${BuildInfo::buildDateTime.name}: $dateTimeShort, ")
+        if (buildHash.isNotEmpty()) {
+            append("${BuildInfo::buildHash.name}: $buildHash")
         }
     }
 }
-
-val buildInfo: BuildInfo = BuildInfo(
-    majorVersion,
-    minorVersion,
-    buildNumber,
-    buildDateTime,
-    buildHash,
-)
 
 const val THIS_APP_LOCAL_URL = "http://localhost:8080"
 const val THIS_APP_SERVER_URL = "https://kvanttt.github.io/dots-game"
 
 val thisAppUrl by lazy(LazyThreadSafetyMode.PUBLICATION) {
-    if (buildInfo.isLocal) THIS_APP_LOCAL_URL else THIS_APP_SERVER_URL
+    if (BuildInfo.isLocal) THIS_APP_LOCAL_URL else THIS_APP_SERVER_URL
 }

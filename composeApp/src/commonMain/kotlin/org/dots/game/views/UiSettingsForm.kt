@@ -18,8 +18,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import org.dots.game.BuildInfo
 import org.dots.game.UiSettings
-import org.dots.game.buildInfo
+import org.dots.game.date
+import org.dots.game.version
 
 @Composable
 fun UiSettingsForm(
@@ -98,7 +100,7 @@ fun UiSettingsForm(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(strings.version, Modifier.fillMaxWidth(configKeyTextFraction))
-                    Text("${buildInfo.version} (${buildInfo.date})")
+                    Text("${BuildInfo.version} (${BuildInfo.date})")
                 }
             }
         }

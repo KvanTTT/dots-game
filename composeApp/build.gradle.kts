@@ -15,9 +15,16 @@ plugins {
 
 val localBuildNumber = 65535
 
-val majorVersion = (project.findProperty("majorVersion") as? String)?.toInt() ?: 1
-val minorVersion = (project.findProperty("minorVersion") as? String)?.toInt() ?: 0
-val buildNumber = (project.findProperty("buildNumber") as? String)?.toInt() ?: localBuildNumber
+class BuildInfo {
+    val majorVersion: Int = (project.findProperty(BuildInfo::majorVersion.name) as? String)?.toInt() ?: 1
+    val minorVersion: Int = (project.findProperty(BuildInfo::minorVersion.name) as? String)?.toInt() ?: 0
+    val buildNumber: Int = (project.findProperty(BuildInfo::buildNumber.name) as? String)?.toInt() ?: localBuildNumber
+    val buildDateTime: Instant =
+        (project.findProperty(BuildInfo::buildDateTime.name) as? String)?.let { Instant.parse(it) } ?: Instant.now()
+    val buildHash: String = project.findProperty(BuildInfo::buildHash.name) as? String ?: ""
+}
+
+val buildInfo = BuildInfo()
 
 val generateBuildConstants by tasks.registering {
     val outputDir = layout.projectDirectory.dir("src/commonMain/kotlin/org/dots/game")
@@ -26,14 +33,21 @@ val generateBuildConstants by tasks.registering {
     doLast {
         val file = outputDir.asFile.resolve("BuildInfo.gen.kt")
         file.parentFile.mkdirs()
-        file.writeText("""package org.dots.game
 
-const val majorVersion = $majorVersion
-const val minorVersion = $minorVersion
-const val buildNumber = $buildNumber
-val buildDateTime = kotlin.time.Instant.parse("${project.findProperty("buildDateTime") as? String ?: DateTimeFormatter.ISO_INSTANT.format(Instant.now())}")
-const val buildHash = "${project.findProperty("buildHash") as? String ?: ""}"
-""")
+        file.writeText("""// The file is generated. DO NOT MODIFY MANUALLY
+
+package org.dots.game
+
+import kotlin.time.Instant
+
+@Suppress("ConstPropertyName")
+data object BuildInfo {
+    const val ${BuildInfo::majorVersion.name}: Int = ${buildInfo.majorVersion}
+    const val ${BuildInfo::minorVersion.name}: Int = ${buildInfo.minorVersion}
+    const val ${BuildInfo::buildNumber.name}: Int = ${buildInfo.buildNumber}
+    val ${BuildInfo::buildDateTime.name}: Instant = Instant.parse("${DateTimeFormatter.ISO_INSTANT.format(buildInfo.buildDateTime)}")
+    const val ${BuildInfo::buildHash.name}: String = "${buildInfo.buildHash}"
+}""")
     }
 }
 
@@ -175,7 +189,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb)
             packageName = "org.dots.game"
-            packageVersion = "$majorVersion.$minorVersion.$buildNumber"
+            packageVersion = "${buildInfo.majorVersion}.${buildInfo.minorVersion}.${buildInfo.buildNumber}"
             vendor = "Dots Game Org"
 
             windows {

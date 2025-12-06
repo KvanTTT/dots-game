@@ -173,7 +173,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                 println("Detected platform: $platform")
 
                 coroutineScope.launch {
-                    println("Build Info: $buildInfo")
+                    println("Build Info: ${BuildInfo.render()}")
 
                     if (KataGoDotsEngine.IS_SUPPORTED) {
                         kataGoDotsEngine = KataGoDotsEngine.initialize(kataGoDotsSettings) {
