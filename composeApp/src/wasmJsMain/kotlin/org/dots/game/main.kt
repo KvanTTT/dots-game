@@ -17,15 +17,15 @@ fun main() {
         window.history.pushState(null, "", window.location.href)
     }
 
-    ComposeViewport(document.body!!) {
-        val gameSettings by remember { mutableStateOf(loadClassSettings(GameSettings.Default)) }
+    val gameSettingsFromUrl = GameSettings.parseUrlParams(window.location.search, 0)
+    if (gameSettingsFromUrl.let { it.path != null || it.sgf != null || it.game != null || it.node != null }) {
+        saveClassSettings(gameSettingsFromUrl)
+        window.location.search = ""
+    }
 
-        val gameSettingsFromUrl = GameSettings.parseUrlParams(window.location.search, 0)
-        with(gameSettingsFromUrl) {
-            path?.let { gameSettings.path = it }
-            sgf?.let { gameSettings.sgf = it }
-            game?.let { gameSettings.game = it }
-            node?.let { gameSettings.node = it }
+    ComposeViewport(document.body!!) {
+        val gameSettings = remember {
+            loadClassSettings(GameSettings.Default)
         }
 
         var games: Games? by remember { mutableStateOf(null) }
