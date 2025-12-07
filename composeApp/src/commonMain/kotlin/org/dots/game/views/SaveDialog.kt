@@ -21,8 +21,10 @@ import org.dots.game.InputTypeDetector
 import org.dots.game.SaveFileDialog
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
+import org.dots.game.dateTimeShort
 import org.dots.game.dump.render
-import org.dots.game.thisAppUrl
+import org.dots.game.getGameLink
+import kotlin.time.Clock
 
 @Composable
 fun SaveDialog(
@@ -32,29 +34,32 @@ fun SaveDialog(
     uiSettings: UiSettings,
     onDismiss: (dumpParameters: DumpParameters, newPath: String?) -> Unit,
 ) {
-    val strings by remember { mutableStateOf(uiSettings.language.getStrings()) }
-    val sgfContent = gameSettings.sgf
-    var minX = field.realWidth - 1
-    var maxX = 0
-    var minY = field.realHeight - 1
-    var maxY = 0
+    val strings = remember { uiSettings.language.getStrings() }
+    val sgfContent = remember { gameSettings.sgf!! }
 
-    if (field.moveSequence.isNotEmpty()) {
-        for (move in field.moveSequence) {
-            val (x, y) = move.position.toXY(field.realWidth)
-            if (x < minX) minX = x
-            if (x > maxX) maxX = x
-            if (y < minY) minY = y
-            if (y > maxY) maxY = y
+    val maxPadding = remember {
+        var minX = field.realWidth - 1
+        var maxX = 0
+        var minY = field.realHeight - 1
+        var maxY = 0
+
+        if (field.moveSequence.isNotEmpty()) {
+            for (move in field.moveSequence) {
+                val (x, y) = move.position.toXY(field.realWidth)
+                if (x < minX) minX = x
+                if (x > maxX) maxX = x
+                if (y < minY) minY = y
+                if (y > maxY) maxY = y
+            }
+        } else {
+            minX = field.realWidth / 2
+            minY = field.realHeight / 2
+            maxX = minX
+            maxY = minY
         }
-    } else {
-        minX = field.realWidth / 2
-        minY = field.realHeight / 2
-        maxX = minX
-        maxY = minY
-    }
 
-    val maxPadding = maxOf(minX, minY, field.realWidth - 1 - maxX, field.realHeight - 1 - maxY)
+        maxOf(minX, minY, field.realWidth - 1 - maxX, field.realHeight - 1 - maxY)
+    }
 
     var printNumbers by remember { mutableStateOf(dumpParameters.printNumbers) }
     var padding by remember { mutableStateOf(dumpParameters.padding.coerceAtMost(maxPadding)) }
@@ -62,39 +67,55 @@ fun SaveDialog(
     var debugInfo by remember { mutableStateOf(dumpParameters.debugInfo) }
 
     var isSgf by remember { mutableStateOf(dumpParameters.isSgf) }
-    var fieldRepresentation by remember { mutableStateOf("") }
+    var fieldRepresentation by remember(isSgf, printNumbers, padding, printCoordinates, debugInfo) {
+        mutableStateOf(if (isSgf) {
+            sgfContent
+        } else {
+            field.render(
+                DumpParameters(
+                    printNumbers = printNumbers,
+                    padding = padding,
+                    printCoordinates = printCoordinates,
+                    printBorders = false,
+                    debugInfo = debugInfo,
+                    isSgf = isSgf,
+                )
+            )
+        })
+    }
 
-    val inputTypeForGameSettings by remember { mutableStateOf(InputTypeDetector.tryGetInputTypeForPath(gameSettings.path ?: "")) }
+    val inputTypeForGameSettings = remember { InputTypeDetector.tryGetInputTypeForPath(gameSettings.path ?: "") }
 
-    val refinedLink by remember {
+    val refinedLink = remember {
         val refinedGameSettings = when (val inputType = inputTypeForGameSettings) {
             // Extract refined path for client URL
             is InputType.SgfClientUrl -> gameSettings.copy(path = inputType.refinedPath)
             else -> gameSettings
         }
-        mutableStateOf(thisAppUrl + refinedGameSettings.toUrlParams())
+        getGameLink(refinedGameSettings)
     }
 
     var path by remember {
         val refinedPath = when (val inputType = inputTypeForGameSettings) {
             // Don't use a link as a file name because it's useless
-            is InputType.Url -> {
-                inputType.name + if (!InputTypeDetector.sgfExtensionRegex.matches(inputType.name) && isSgf) ".sgf" else ""
-            }
-            is InputType.InputTypeWithPath -> inputType.refinedPath
-            else -> ""
+            is InputType.Url -> inputType.name
+            is InputType.File -> inputType.refinedPath
+            null -> ""
+        }.let {
+            val resultPath = it.ifBlank { Clock.System.now().dateTimeShort.replace(':', '-') }
+            resultPath + if (!InputTypeDetector.sgfExtensionRegex.matches(resultPath)) ".sgf" else ""
         }
         mutableStateOf(refinedPath)
     }
 
-    val link by remember(path) {
+    val link = remember(path) {
         val inputTypeWithPath = InputTypeDetector.tryGetInputTypeForPath(path)
         val newLink = when (inputTypeWithPath) {
             // Don't use a local absolute path for links
-            is InputType.SgfFile -> thisAppUrl + gameSettings.copy(path = inputTypeWithPath.name).toUrlParams()
+            is InputType.SgfFile -> getGameLink(gameSettings.copy(path = inputTypeWithPath.name))
             else -> refinedLink
         }
-        mutableStateOf(newLink)
+        newLink
     }
 
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -111,9 +132,9 @@ fun SaveDialog(
 
     if (showSaveDialog) {
         SaveFileDialog(
-            title = strings.saveDialogTitle(isSgf),
+            title = strings.saveDialogTitle,
             selectedFile = path,
-            extension = if (isSgf) "sgf" else "txt",
+            extension = "sgf",
             onFileSelected = {
                 if (it != null) {
                     path = it
@@ -121,40 +142,22 @@ fun SaveDialog(
                 }
                 showSaveDialog = false
             },
-            content = fieldRepresentation,
+            content = sgfContent,
         )
     }
-
-    fun updateFieldRepresentation() {
-        fieldRepresentation = if (isSgf && sgfContent != null) {
-            sgfContent
-        } else {
-            field.render(
-                DumpParameters(
-                    printNumbers = printNumbers,
-                    padding = padding,
-                    printCoordinates = printCoordinates,
-                    printBorders = false,
-                    debugInfo = debugInfo,
-                    isSgf = isSgf,
-                )
-            )
-        }
-    }
-
-    updateFieldRepresentation()
 
     Dialog(onDismissRequest = {
         onDismiss(createDumpParameters(), null)
     }) {
         Card(modifier = Modifier.wrapContentHeight()) {
             Column(modifier = Modifier.padding(20.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(strings.sgf, Modifier.fillMaxWidth(configKeyTextFraction))
-                    Switch(isSgf, onCheckedChange = {
-                        isSgf = it
-                        updateFieldRepresentation()
-                    })
+                if (uiSettings.developerMode) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(strings.sgf, Modifier.fillMaxWidth(configKeyTextFraction))
+                        Switch(isSgf, onCheckedChange = {
+                            isSgf = it
+                        })
+                    }
                 }
 
                 Text(strings.fieldRepresentation)
@@ -173,20 +176,17 @@ fun SaveDialog(
                         Text(strings.printNumbers, Modifier.fillMaxWidth(configKeyTextFraction))
                         Checkbox(printNumbers, onCheckedChange = {
                             printNumbers = it
-                            updateFieldRepresentation()
                         })
                     }
 
                     DiscreteSliderConfig(strings.padding, padding, 0, maxPadding) {
                         padding = it
-                        updateFieldRepresentation()
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(strings.printCoordinates, Modifier.fillMaxWidth(configKeyTextFraction))
                         Checkbox(printCoordinates, onCheckedChange = {
                             printCoordinates = it
-                            updateFieldRepresentation()
                         })
                     }
 
@@ -194,7 +194,6 @@ fun SaveDialog(
                         Text(strings.debugInfo, Modifier.fillMaxWidth(configKeyTextFraction))
                         Checkbox(debugInfo, onCheckedChange = {
                             debugInfo = it
-                            updateFieldRepresentation()
                         })
                     }
                 }

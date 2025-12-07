@@ -100,7 +100,7 @@ fun UiSettingsForm(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(strings.version, Modifier.fillMaxWidth(configKeyTextFraction))
-                    Text("${BuildInfo.version} (${BuildInfo.date})")
+                    Text("${BuildInfo.version} (${BuildInfo.buildDateTime.date})")
                 }
             }
         }

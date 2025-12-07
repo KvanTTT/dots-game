@@ -59,7 +59,7 @@ interface Strings {
     val path: String
     val link: String
     val copy: String
-    fun saveDialogTitle(isSgf: Boolean): String
+    val saveDialogTitle: String
 
     // Settings Dialog
     val connectionDrawMode: String

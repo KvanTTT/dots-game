@@ -68,7 +68,7 @@ object EnglishStrings : Strings {
     override val path = "Path"
     override val link = "Link"
     override val copy = "Copy"
-    override fun saveDialogTitle(isSgf: Boolean) = "Save game to .${if (isSgf) "sgf" else "txt"}"
+    override val saveDialogTitle = "Save game"
 
     // Settings Dialog
     override val connectionDrawMode = "Connection Draw Mode"

@@ -130,7 +130,7 @@ sealed class InputType {
     }
 
     sealed class File(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
-    class SgfFile(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
+    class SgfFile(refinedPath: String, name: String, isIncorrect: Boolean = false) : File(refinedPath, name, isIncorrect)
     class OtherFile(refinedPath: String, name: String) : File(refinedPath, name, true)
 
     sealed class Url(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)

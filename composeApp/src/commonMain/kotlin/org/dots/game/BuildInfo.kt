@@ -1,24 +1,23 @@
 package org.dots.game
 
+import kotlin.time.Instant
+
 val BuildInfo.version: String
     get() = "$majorVersion.$minorVersion.$buildNumber"
 
 val BuildInfo.isLocal: Boolean
     get() = buildNumber == 65535
 
-val BuildInfo.dateTimeString: String
-    get() = buildDateTime.toString()
+val Instant.date: String
+    get() = toString().substringBefore('T')
 
-val BuildInfo.date: String
-    get() = dateTimeString.substringBefore('T')
-
-val BuildInfo.dateTimeShort: String
-    get() = dateTimeString.substringBefore('.')
+val Instant.dateTimeShort: String
+    get() = toString().substringBefore('.')
 
 fun BuildInfo.render(): String {
     return buildString {
         append("${BuildInfo::version.name}: $version, ")
-        append("${BuildInfo::buildDateTime.name}: $dateTimeShort, ")
+        append("${BuildInfo::buildDateTime.name}: ${buildDateTime.dateTimeShort}, ")
         if (buildHash.isNotEmpty()) {
             append("${BuildInfo::buildHash.name}: $buildHash")
         }
@@ -30,4 +29,8 @@ const val THIS_APP_SERVER_URL = "https://kvanttt.github.io/dots-game"
 
 val thisAppUrl by lazy(LazyThreadSafetyMode.PUBLICATION) {
     if (BuildInfo.isLocal) THIS_APP_LOCAL_URL else THIS_APP_SERVER_URL
+}
+
+fun getGameLink(gameSettings: GameSettings): String {
+    return thisAppUrl + "/" + gameSettings.toUrlParams()
 }

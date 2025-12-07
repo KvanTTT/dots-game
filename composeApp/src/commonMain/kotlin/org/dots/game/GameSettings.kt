@@ -89,7 +89,7 @@ data class GameSettings(
     fun update(games: Games?): GameSettings {
         if (games != null) {
             sgf = SgfWriter.write(games)
-            val currentGame = game?.let { games.elementAtOrNull(it) }
+            val currentGame = game?.let { games.elementAtOrNull(it) } ?: games.firstOrNull()
             if (currentGame != null) {
                 node = currentGame.gameTree.getCurrentNodeDepthFirstIndex()
             }
@@ -99,26 +99,26 @@ data class GameSettings(
 
     fun toUrlParams(): String {
         return buildString {
-            path?.let {
+            path?.takeIf { it.isNotBlank() }?.let {
                 append(GameSettings::path.name)
                 append('=')
                 append(UrlEncoderDecoder.encode(it))
             }
-            sgf?.let {
+            sgf?.takeIf { it.isNotBlank() }?.let {
                 if (isNotEmpty())
                     append('&')
                 append(GameSettings::sgf.name)
                 append('=')
                 append(Base64UrlParamsSafe.encode(Gzip.compress(it.encodeToByteArray())))
             }
-            game?.let {
+            game?.takeIf { it != 0 }?.let {
                 if (isNotEmpty())
                     append('&')
                 append(GameSettings::game.name)
                 append('=')
                 append(it)
             }
-            node?.let {
+            node?.takeIf { it != 0 }?.let {
                 if (isNotEmpty())
                     append('&')
                 append(GameSettings::node.name)
