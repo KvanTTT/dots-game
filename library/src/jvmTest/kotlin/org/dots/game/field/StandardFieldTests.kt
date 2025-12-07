@@ -5,6 +5,7 @@ package org.dots.game.field
 import org.dots.game.core.PosIsOccupiedIllegalMove
 import org.dots.game.core.DotState
 import org.dots.game.core.EndGameKind
+import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.GameResult
 import org.dots.game.core.LegalMove
 import org.dots.game.core.Player
@@ -286,12 +287,30 @@ class StandardFieldTests : FieldTests() {
     @Test
     fun player1CapturesByPlacingInsideEmptyBase() {
         testFieldWithRollback("""
-            . *  +  .
-            * +6 *7 +
-            . *  +  .
+            . * +  .
+            * + . +
+            . * +  .
         """) {
+            it.makeMove(3, 2, Player.First)
             assertEquals(1, it.player1Score)
             assertEquals(0, it.player2Score)
+        }
+    }
+
+    @Test
+    fun correctEmptyPlayerAfterGroundingAndRollback() {
+        testFieldWithRollback("""
+            . * + .
+            * + . +
+            . * + .
+        """) {
+            val secondPlayerEmptyBasePos = Position(3, 2, it.realWidth)
+            assertEquals(Player.Second, with(it) { secondPlayerEmptyBasePos.getState().getEmptyTerritoryPlayer() })
+
+            it.makeMove(positionXY = null, Player.Second, ExternalFinishReason.Grounding)
+            it.unmakeMove()
+
+            assertEquals(Player.Second, with(it) { secondPlayerEmptyBasePos.getState().getEmptyTerritoryPlayer() })
         }
     }
 

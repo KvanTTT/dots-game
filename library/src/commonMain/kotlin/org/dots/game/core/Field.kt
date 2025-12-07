@@ -264,6 +264,7 @@ class Field {
         if (currentMoveNumber == 0) return NoLegalMoves
 
         val moveResult = legalMoves.removeLast()
+        val isGameOverMove = moveResult.position == Position.GAME_OVER
 
         for (base in moveResult.bases.reversed()) {
             val basePlayer = base.player
@@ -278,13 +279,15 @@ class Field {
         }
 
         if (moveResult.emptyBaseInvalidatePositions.size > 0) {
-            val emptyTerritoryState = DotState.createEmptyTerritory(moveResult.player.opposite())
+            val emptyTerritoryState = DotState.createEmptyTerritory(
+                moveResult.player.let { if (isGameOverMove) it else it.opposite() }
+            )
             moveResult.emptyBaseInvalidatePositions.iterate { position ->
                 position.setState(emptyTerritoryState)
             }
         }
 
-        if (moveResult.position != Position.GAME_OVER) {
+        if (!isGameOverMove) {
             moveResult.position.setState(moveResult.previousState)
             updatePositionHash(moveResult.position, moveResult.player)
             if (rules.suicideAllowed) {
@@ -549,7 +552,7 @@ class Field {
             return oppositePlayerBased.firstOrNull { it.isReal } ?: continue
         }
 
-        error("Enemy's empty territory should be enclosed by an outer closure at $initialPosition")
+        error("Enemy's empty territory should be enclosed by an outer closure at ${initialPosition.toXY(realWidth)}")
     }
 
     private fun tryCapture(position: Position, player: Player, emptyBaseCapturing: Boolean): List<Base> {
