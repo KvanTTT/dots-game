@@ -17,6 +17,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -63,7 +64,7 @@ fun OpenDialog(
     var loadResult by remember { mutableStateOf<LoadResult?>(null) }
     var rewindToEnd by remember { mutableStateOf(openGameSettings.rewindToEnd) }
     var addFinishingMove by remember { mutableStateOf(openGameSettings.addFinishingMove) }
-    var showFileDialog by remember { mutableStateOf(false) }
+    var fileDialogRequest by remember { mutableStateOf(0) }
 
     var initialization by remember { mutableStateOf(true) }
 
@@ -90,16 +91,18 @@ fun OpenDialog(
         initialization = false
     }
 
-    if (showFileDialog) {
-        OpenFileDialog(
-            title = strings.openSgfFile,
-            selectedFile = (loadResult?.inputType as? InputType.SgfFile)?.refinedPath,
-            allowedExtensions = listOf("sgf", "sgfs")
-        ) { selectedPath ->
-            showFileDialog = false
-            selectedPath?.let {
-                pathOrContentTextFieldValue = TextFieldValue(it)
-                openOrLoad()
+    if (fileDialogRequest > 0) {
+        key(fileDialogRequest) {
+            OpenFileDialog(
+                title = strings.openSgfFile,
+                selectedFile = (loadResult?.inputType as? InputType.SgfFile)?.refinedPath,
+                allowedExtensions = listOf("sgf", "sgfs")
+            ) { selectedPath ->
+                fileDialogRequest = 0
+                selectedPath?.let {
+                    pathOrContentTextFieldValue = TextFieldValue(it)
+                    openOrLoad()
+                }
             }
         }
     }
@@ -128,7 +131,7 @@ fun OpenDialog(
                         )
                         with (strings) {
                             IconButton(Res.drawable.ic_browse) {
-                                showFileDialog = true
+                                fileDialogRequest++
                             }
                         }
                     }
