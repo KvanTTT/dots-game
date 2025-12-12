@@ -25,6 +25,7 @@ import org.dots.game.dateTimeShort
 import org.dots.game.dump.render
 import org.dots.game.getGameLink
 import kotlin.time.Clock
+import org.dots.game.platform
 
 @Composable
 fun SaveDialog(
@@ -119,6 +120,7 @@ fun SaveDialog(
     }
 
     var showSaveDialog by remember { mutableStateOf(false) }
+    var isSaved by remember { mutableStateOf(false) }
 
     fun createDumpParameters(): DumpParameters {
         return DumpParameters(
@@ -138,7 +140,11 @@ fun SaveDialog(
             onFileSelected = {
                 if (it != null) {
                     path = it
-                    onDismiss(createDumpParameters(), path)
+                    if (platform.isWeb) {
+                        isSaved = true
+                    } else {
+                        onDismiss(createDumpParameters(), path)
+                    }
                 }
                 showSaveDialog = false
             },
@@ -147,7 +153,7 @@ fun SaveDialog(
     }
 
     Dialog(onDismissRequest = {
-        onDismiss(createDumpParameters(), null)
+        onDismiss(createDumpParameters(), if (platform.isWeb && isSaved) path else null)
     }) {
         Card(modifier = Modifier.wrapContentHeight()) {
             Column(modifier = Modifier.padding(20.dp)) {

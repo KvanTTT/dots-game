@@ -134,7 +134,7 @@ actual fun OpenFileDialog(
                 val reader = FileReader()
                 reader.onload = {
                     val result = reader.result
-                    val text = result?.toString()
+                    val text = (result as? String) ?: result?.toString()
                     if (text != null) {
                         // Store content in virtual FS and return unique file name for display
                         val displayPath = WasmVirtualFS.put(file.name, text)
@@ -179,7 +179,7 @@ private object WasmVirtualFS {
 
         // Generate unique name by appending counter
         val dotIndex = baseName.lastIndexOf('.')
-        val (nameWithoutExt = first, extension = second) = if (dotIndex > 0) {
+        val (nameWithoutExt, extension) = if (dotIndex > 0) {
             baseName.substring(0, dotIndex) to baseName.substring(dotIndex)
         } else {
             baseName to ""

@@ -69,6 +69,7 @@ sealed class Platform(val os: OS) {
     val isMobile: Boolean get() = os == OS.Android || os == OS.Native
     val isJvmBased: Boolean get() = (os == OS.Windows || os == OS.Linux || os == OS.MacOS) && this !is Web || this is Android
     val supportsPrimaryButton: Boolean get() = !isMobile && os != OS.Unknown
+    open val isWeb: Boolean = false
 
     override fun toString(): String {
         return "${this::class.simpleName} ($os)"
@@ -80,7 +81,9 @@ sealed class Platform(val os: OS) {
 
     object Native : Platform(OS.Native)
 
-    class Web(os: OS) : Platform(os)
+    class Web(os: OS) : Platform(os) {
+        override val isWeb: Boolean = true
+    }
 }
 
 expect val platform: Platform
