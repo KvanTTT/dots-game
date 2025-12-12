@@ -24,6 +24,8 @@ import org.dots.game.core.Field
 import org.dots.game.dateTimeShort
 import org.dots.game.dump.render
 import org.dots.game.getGameLink
+import org.dots.game.platform
+import org.dots.game.Platform
 import kotlin.time.Clock
 
 @Composable
@@ -138,7 +140,9 @@ fun SaveDialog(
             onFileSelected = {
                 if (it != null) {
                     path = it
-                    onDismiss(createDumpParameters(), path)
+                    if (platform !is Platform.Web) {
+                        onDismiss(createDumpParameters(), path)
+                    }
                 }
                 showSaveDialog = false
             },

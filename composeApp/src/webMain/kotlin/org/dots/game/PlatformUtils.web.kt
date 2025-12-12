@@ -152,6 +152,9 @@ actual fun OpenFileDialog(
             }
             null
         }
+        input.addEventListener("cancel", {
+            onFileSelected(null)
+        })
         input.click()
     }
 }
