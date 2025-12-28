@@ -24,6 +24,8 @@ actual class KataGoDotsEngine private constructor(
     actual val logger: (Diagnostic) -> Unit,
 ) {
     actual companion object {
+        private const val DLL_NOT_FOUND_ERROR_CODE = -1073741515
+
         const val KATA_GO_DOTS_APP_NAME = "KataGoDots"
 
         private const val RESIGN_MOVE = "resign"
@@ -91,7 +93,14 @@ actual class KataGoDotsEngine private constructor(
                             return@withContext null
                         }
                     } else {
-                        logger(Diagnostic(initResponse.message, severity = DiagnosticSeverity.Critical))
+                        val exitValue = process.exitValue()
+                        val errorMessage = if (exitValue == DLL_NOT_FOUND_ERROR_CODE) {
+                            // It looks like only 'zip.dll' is required; however, the 'zlib1.dll' and 'bz2.dll' might be needed as well
+                            "The 'zip.dll' is missing. Ensure it's present in the 'katago.exe' directory (or accessible in the PATH)."
+                        } else {
+                            "Error during engine initialization (error code: $exitValue)"
+                        }
+                        logger(Diagnostic(errorMessage, severity = DiagnosticSeverity.Critical))
                         return@withContext null
                     }
 
