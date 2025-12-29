@@ -2,6 +2,8 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Properties
@@ -196,6 +198,16 @@ compose.desktop {
                 perUserInstall = true
                 menu = true
                 copyright = "© 2025 KvanTTT (Ivan Kochurkin)"
+            }
+
+            // Workaround for https://github.com/KvanTTT/dots-game/issues/99
+            tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJLinkTask>().configureEach {
+                doLast {
+                    val msvcp140File = destinationDir.get().asFile.resolve("bin/msvcp140.dll")
+                    if (msvcp140File.exists()) {
+                        Files.copy(project.file("src/desktopMain/resources/msvcp140.dll").toPath(), msvcp140File.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                    }
+                }
             }
 
             linux {
