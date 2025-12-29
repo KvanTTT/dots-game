@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import org.dots.game.core.*
 import org.dots.game.core.Player
 import java.io.BufferedReader
+import java.io.File
 import java.io.OutputStreamWriter
 import java.nio.file.Paths
 import java.time.Duration
@@ -65,6 +66,20 @@ actual class KataGoDotsEngine private constructor(
                     }
 
                     val processBuilder = ProcessBuilder(args).redirectErrorStream(true)
+
+                    // Fix msvcp140.dll version mismatch on Windows by prepending the KataGoDots directory to PATH
+                    // This ensures the child process uses the correct DLL version bundled with KataGoDots
+                    // instead of the incompatible version from the Compose native distribution
+                    if (platform.os == OS.Windows) {
+                        val exeFile = File(kataGoDotsSettings.exePath)
+                        val exeDir = exeFile.parentFile?.absolutePath
+                        if (exeDir != null) {
+                            val env = processBuilder.environment()
+                            val currentPath = env["PATH"] ?: ""
+                            // Prepend the KataGoDots directory to PATH so DLLs in that directory are found first
+                            env["PATH"] = "$exeDir${File.pathSeparator}$currentPath"
+                        }
+                    }
 
                     val process = processBuilder.start()
 
