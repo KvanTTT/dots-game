@@ -99,6 +99,7 @@ class Game(
                         val intValue = when (value) {
                             is Boolean -> if (value) 1 else 0
                             is BaseMode -> value.ordinal
+                            is InitPosGenType -> value.ordinal
                             else -> error("Not implemented type ${value::class.simpleName}")
                         }
                         append(intValue)
@@ -108,7 +109,7 @@ class Game(
                 appendIfNonStandard(Rules::captureByBorder)
                 appendIfNonStandard(Rules::baseMode)
                 appendIfNonStandard(Rules::suicideAllowed)
-                appendIfNonStandard(Rules::initPosIsRandom)
+                appendIfNonStandard(Rules::initPosGenType)
             }
             if (extraRules.isNotEmpty()) {
                 properties[Game::rules] = GameProperty(extraRules)

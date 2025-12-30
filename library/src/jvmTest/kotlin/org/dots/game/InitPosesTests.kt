@@ -365,7 +365,7 @@ class InitPosesTests {
         val (initPosType, _ = refinedInitMoves, isRandomized, remainingInitMoves) = recognizeInitPosType(
             actualMoveInfos.toList(),
             Rules.Standard.width,
-            Rules.Standard.height
+            Rules.Standard.height,
         )
         assertEquals(expectInitPosType, initPosType)
         assertEquals(isRandom, isRandomized)

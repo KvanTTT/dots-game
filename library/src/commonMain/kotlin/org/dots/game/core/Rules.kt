@@ -19,12 +19,10 @@ class Rules private constructor(
     val initialMoves: List<MoveInfo>,
     val initPosType: InitPosType,
     val remainingInitMoves: List<MoveInfo>,
-    val initPosIsRandom: Boolean,
+    val random: Random,
+    val initPosGenType: InitPosGenType,
     val komi: Double,
 ) : ClassSettings<Rules>() {
-    val random: Random?
-        get() = Random.takeIf { initPosIsRandom }
-
     override val default: Rules
         get() = Standard
 
@@ -36,7 +34,8 @@ class Rules private constructor(
             baseMode = BaseMode.AtLeastOneOpponentDot,
             suicideAllowed = true,
             initPosType = Cross,
-            random = null,
+            random = Random.Default,
+            initPosGenType = InitPosGenType.Static,
             komi = 0.0
         )
 
@@ -47,7 +46,8 @@ class Rules private constructor(
             baseMode: BaseMode,
             suicideAllowed: Boolean,
             initPosType: InitPosType,
-            random: Random?,
+            random: Random,
+            initPosGenType: InitPosGenType,
             komi: Double,
         ): Rules {
             return Rules(
@@ -56,10 +56,11 @@ class Rules private constructor(
                 captureByBorder,
                 baseMode,
                 suicideAllowed,
-                initPosType.generateMoves(width, height, random)!!,
+                initPosType.generateMoves(width, height, random, initPosGenType)!!,
                 initPosType = initPosType,
                 remainingInitMoves = emptyList(),
-                initPosIsRandom = random != null,
+                random = random,
+                initPosGenType = initPosGenType,
                 komi = komi
             )
         }
@@ -74,7 +75,8 @@ class Rules private constructor(
             suicideAllowed: Boolean,
             initialMoves: List<MoveInfo>,
             komi: Double,
-            specifiedInitPosIsRandom: Boolean? = null,
+            random: Random,
+            initPosGenType: InitPosGenType? = null,
         ): RulesExtra {
             val (initPosType, refinedInitMoves, isRandomized, remainingInitMoves) = recognizeInitPosType(initialMoves, width, height)
             return RulesExtra(
@@ -87,12 +89,21 @@ class Rules private constructor(
                     refinedInitMoves,
                     initPosType,
                     remainingInitMoves,
+                    random,
                     // In rare cases random position matches strict position
-                    // That's why we also should check if the randomization is specified somehow externally
-                    isRandomized || specifiedInitPosIsRandom == true,
+                    // That's why we also should check if the randomization is specified somehow externally.
+                    // By default, Notago randomization is used if something else isn't specified externally.
+                    initPosGenType = if (isRandomized || initPosGenType != InitPosGenType.Static) {
+                        if (initPosGenType == null || initPosGenType == InitPosGenType.Static)
+                            InitPosGenType.RandomNotago
+                        else
+                            initPosGenType
+                    } else {
+                        InitPosGenType.Static
+                    },
                     komi
                 ),
-                specifiedRandomizationContradictsRecognition = isRandomized && specifiedInitPosIsRandom == false
+                specifiedRandomizationContradictsRecognition = isRandomized && initPosGenType == InitPosGenType.Static
             )
         }
     }
@@ -110,7 +121,7 @@ enum class InitPosType {
      * The generator tries to obey notago and bbs implementations.
      * If [random] is specified, the generator randomized the init pos, but currently it works only for 4*4 cross
      */
-    fun generateMoves(width: Int, height: Int, random: Random? = null): List<MoveInfo>? {
+    fun generateMoves(width: Int, height: Int, random: Random = Rules.Standard.random, initPosGenType: InitPosGenType = InitPosGenType.Static): List<MoveInfo>? {
         when (this) {
             Empty -> {
                 return emptyList()
@@ -148,38 +159,44 @@ enum class InitPosType {
                 val offsetX4: Int
                 val offsetY4: Int
 
-                if (random == null) {
-                    if (width == 39 && height == 32) {
-                        // Obey notago and bbs implementation for the standard field
-                        offsetX1 = 12
-                        offsetY1 = 11
-                    } else {
-                        offsetX1 = (width - 3) / 3 + 1
-                        offsetY1 = (height - 3) / 3 + 1
+                when (initPosGenType) {
+                    InitPosGenType.Static -> {
+                        if (width == 39 && height == 32) {
+                            // Obey notago and bbs implementation for the standard field
+                            offsetX1 = 12
+                            offsetY1 = 11
+                        } else {
+                            offsetX1 = (width - 3) / 3 + 1
+                            offsetY1 = (height - 3) / 3 + 1
+                        }
+                        offsetX2 = width - offsetX1
+                        offsetY2 = offsetY1
+                        offsetX3 = width - offsetX1
+                        offsetY3 = height - offsetY1
+                        offsetX4 = offsetX1
+                        offsetY4 = height - offsetY1
                     }
-                    offsetX2 = width - offsetX1
-                    offsetY2 = offsetY1
-                    offsetX3 = width - offsetX1
-                    offsetY3 = height - offsetY1
-                    offsetX4 = offsetX1
-                    offsetY4 = height - offsetY1
-                } else {
-                    val middleX = width / 2
-                    val middleY = height / 2
+                    InitPosGenType.RandomNotago -> {
+                        val middleX = width / 2
+                        val middleY = height / 2
 
-                    // Obey notago implementation but generalize it to arbitrary field size
-                    fun nextRandomOffset(): Double = random.nextDouble(4.0, 7.0)
-                    fun nextRandomOffsetX(): Int = round(nextRandomOffset() / 39.0 * width).toInt()
-                    fun nextRandomOffsetY(): Int = round(nextRandomOffset() / 32.0 * height).toInt()
+                        // Obey notago implementation but generalize it to arbitrary field size
+                        fun nextRandomOffset(): Double = random.nextDouble(4.0, 7.0)
+                        fun nextRandomOffsetX(): Int = round(nextRandomOffset() / 39.0 * width).toInt()
+                        fun nextRandomOffsetY(): Int = round(nextRandomOffset() / 32.0 * height).toInt()
 
-                    offsetX1 = middleX - nextRandomOffsetX()
-                    offsetY1 = middleY - nextRandomOffsetY()
-                    offsetX2 = middleX + nextRandomOffsetX()
-                    offsetY2 = middleY - nextRandomOffsetY()
-                    offsetX3 = middleX + nextRandomOffsetX()
-                    offsetY3 = middleY + nextRandomOffsetY()
-                    offsetX4 = middleX - nextRandomOffsetX()
-                    offsetY4 = middleY + nextRandomOffsetY()
+                        offsetX1 = middleX - nextRandomOffsetX()
+                        offsetY1 = middleY - nextRandomOffsetY()
+                        offsetX2 = middleX + nextRandomOffsetX()
+                        offsetY2 = middleY - nextRandomOffsetY()
+                        offsetX3 = middleX + nextRandomOffsetX()
+                        offsetY3 = middleY + nextRandomOffsetY()
+                        offsetX4 = middleX - nextRandomOffsetX()
+                        offsetY4 = middleY + nextRandomOffsetY()
+                    }
+                    else -> {
+                        error("Not yet supported")
+                    }
                 }
                 return mutableListOf<MoveInfo>().apply {
                     addCross(offsetX1, offsetY1, Player.First)
@@ -206,6 +223,12 @@ enum class InitPosType {
         return RecognitionInfo(this, generateMoves(width, height)!!, isRandomized = false, remainingInitMoves = emptyList())
             .calculateAcceptableKomiRange(considerDraws)
     }
+}
+
+enum class InitPosGenType {
+    Static,
+    RandomNotago,
+    RandomMarlov,
 }
 
 data class DoubleRange(override val start: Double, override val endInclusive: Double) : ClosedFloatingPointRange<Double> {
@@ -249,7 +272,7 @@ fun recognizeInitPosType(initialMoves: List<MoveInfo>, width: Int, height: Int):
 
     fun detectRandomization(expectedInitPosType: InitPosType): RecognitionInfo {
         val nonRandomInitPosMoves =
-            expectedInitPosType.generateMoves(width, height, random = null)!!.sortedBy { it.positionXY!!.position }
+            expectedInitPosType.generateMoves(width, height)!!.sortedBy { it.positionXY!!.position }
         recognizedCrossMoves.sortBy { it.positionXY!!.position }
 
         require(recognizedCrossMoves.size == nonRandomInitPosMoves.size)

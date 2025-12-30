@@ -10,6 +10,7 @@ import androidx.compose.ui.window.Dialog
 import org.dots.game.UiSettings
 import org.dots.game.core.BaseMode
 import org.dots.game.core.DoubleRange
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
 import org.dots.game.maxFieldDimension
@@ -29,7 +30,7 @@ fun NewGameDialog(
     var captureByBorder by remember { mutableStateOf(rules.captureByBorder) }
 
     var initPosType by remember { mutableStateOf(EnumMode(selected = rules.initPosType)) }
-    var initPosIsRandom by remember { mutableStateOf(rules.initPosIsRandom) }
+    var initPosGenType by remember { mutableStateOf(EnumMode(selected = rules.initPosGenType)) }
     var baseMode by remember { mutableStateOf(EnumMode(selected = rules.baseMode)) }
     var suicideAllowed by remember { mutableStateOf(rules.suicideAllowed) }
 
@@ -92,8 +93,14 @@ fun NewGameDialog(
 
                 if (initPosType.selected == InitPosType.QuadrupleCross) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(strings.randomStartPosition, Modifier.fillMaxWidth(configKeyTextFraction))
-                        Checkbox(initPosIsRandom, onCheckedChange = { initPosIsRandom = it })
+                        ModeConfig(
+                            initPosGenType,
+                            ignoredEntries = setOf(InitPosGenType.RandomMarlov), // TODO: remove after implementation of https://github.com/KvanTTT/dots-game/issues/56
+                            nameRenderer = { strings.initPosGenType },
+                            valueRenderer = { strings.initPosGenTypeLabel(it) }
+                        ) {
+                            initPosGenType = it
+                        }
                     }
                 }
 
@@ -133,7 +140,8 @@ fun NewGameDialog(
                                 baseMode.selected,
                                 suicideAllowed,
                                 initPosType.selected,
-                                Random.takeIf { initPosIsRandom && initPosType.selected == InitPosType.QuadrupleCross },
+                                Random.Default,
+                                initPosGenType.selected,
                                 if (uiSettings.developerMode) {
                                     integerKomi.intKomiToDouble()
                                 } else {

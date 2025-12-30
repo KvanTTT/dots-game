@@ -123,12 +123,13 @@ class SgfWriterTests {
                 suicideAllowed = false,
                 initPosType = InitPosType.QuadrupleCross,
                 random = Random(1),
+                initPosGenType = InitPosGenType.RandomNotago,
                 komi = 0.5,
             )
         )
         val games = Games.fromField(field)
         checkOutput(
-            "(;GM[40]FF[4]AP[$ThisAppName]SZ[10]KM[0.5]RU[Border=1,BaseMode=1,Suicide=0,StartIsRandom=1]AB[dc][ed][gc][hd][fg][gh][cg][dh]AW[ec][dd][hc][gd][gg][fh][dg][ch])",
+            "(;GM[40]FF[4]AP[$ThisAppName]SZ[10]KM[0.5]RU[Border=1,BaseMode=1,Suicide=0,InitPosGenType=1]AB[dc][ed][gc][hd][fg][gh][cg][dh]AW[ec][dd][hc][gd][gg][fh][dg][ch])",
             games
         )
     }

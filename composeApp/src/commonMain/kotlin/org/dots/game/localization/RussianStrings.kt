@@ -1,6 +1,7 @@
 package org.dots.game.localization
 
 import org.dots.game.core.BaseMode
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.InitPosType
 import org.dots.game.views.ConnectionDrawMode
 import org.dots.game.views.KataGoDotsSettingsFileType
@@ -30,6 +31,7 @@ object RussianStrings : Strings {
     // New Game Dialog
     override val initPosType = "Стартовая позиция"
     override val baseMode = "Режим захвата"
+    override val initPosGenType = "Тип генерации"
     override val captureByBorder = "Захват через край"
     override val suicideAllowed = "Самоубийство разрешено"
     override val drawIsAllowed = "Возможность ничьи"
@@ -49,6 +51,12 @@ object RussianStrings : Strings {
         BaseMode.AtLeastOneOpponentDot -> "Хотя бы одна точка соперника"
         BaseMode.AnySurrounding -> "Любые области"
         BaseMode.OnlyOpponentDots -> "Только точки соперника (как в Го)"
+    }
+
+    override fun initPosGenTypeLabel(type: InitPosGenType): String = when (type) {
+        InitPosGenType.Static -> "Статичная"
+        InitPosGenType.RandomNotago -> "Случайная (Notago)"
+        InitPosGenType.RandomMarlov -> "Случайная (Марлов)"
     }
 
     // Open Dialog

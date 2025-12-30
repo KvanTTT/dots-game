@@ -1,6 +1,7 @@
 package org.dots.game
 
 import org.dots.game.core.Games
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.Rules
 import org.dots.game.dump.FieldParser
 import org.dots.game.sgf.Sgf
@@ -35,7 +36,9 @@ object GameLoader {
                                 baseMode = rules?.baseMode ?: Rules.Standard.baseMode,
                                 suicideAllowed = rules?.suicideAllowed ?: Rules.Standard.suicideAllowed,
                                 initialMoves = emptyList(),
-                                komi = Rules.Standard.komi,
+                                random = rules?.random ?: Rules.Standard.random,
+                                initPosGenType = InitPosGenType.Static,
+                                komi = rules?.komi ?: Rules.Standard.komi,
                             ).rules
                         }, diagnosticReporter = {
                             diagnosticReporter(GameLoaderDiagnostic(it, isContent = true))

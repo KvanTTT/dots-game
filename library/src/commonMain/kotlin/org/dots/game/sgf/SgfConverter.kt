@@ -16,6 +16,7 @@ import org.dots.game.core.GameResult
 import org.dots.game.core.GameTree
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Games
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.Label
 import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
@@ -319,7 +320,8 @@ class SgfConverter(
             suicideAllowed = sgfExtraRules?.suicideAllowed ?: Rules.Standard.suicideAllowed,
             initialMoves = initialMoves,
             komi = gameProperties[Game::komi]?.value as? Double ?: 0.0,
-            specifiedInitPosIsRandom = sgfExtraRules?.startPosIsRandom,
+            random = Rules.Standard.random,
+            initPosGenType = sgfExtraRules?.initPosGenType,
         )
         if (specifiedRandomizationContradictsRecognition) {
             rulesProperty?.info?.reportPropertyDiagnostic(
@@ -916,7 +918,8 @@ class SgfConverter(
                 }
 
                 subproperties[subProperty] = when (subProperty) {
-                    Rules::initPosIsRandom,
+                    // KataGoDots currently supports only Notago randomization
+                    Rules::initPosGenType -> if (value) InitPosGenType.RandomNotago else InitPosGenType.Static
                     Rules::suicideAllowed -> value
                     Rules::baseMode -> if (value) BaseMode.AnySurrounding else BaseMode.AtLeastOneOpponentDot
                     else -> error("Unexpected property $subProperty")
@@ -940,7 +943,7 @@ class SgfConverter(
             captureByBorder = false,
             subproperties[Rules::baseMode]?.let { it as BaseMode } ?: Rules.Standard.baseMode,
             subproperties[Rules::suicideAllowed]?.let { it as Boolean } ?: Rules.Standard.suicideAllowed,
-            subproperties[Rules::initPosIsRandom]?.let { it as Boolean } ?: Rules.Standard.initPosIsRandom
+            subproperties[Rules::initPosGenType]?.let { it as InitPosGenType } ?: Rules.Standard.initPosGenType
         )
     }
 
@@ -983,8 +986,7 @@ class SgfConverter(
             }
             when (subProperty) {
                 Rules::captureByBorder,
-                Rules::suicideAllowed,
-                Rules::initPosIsRandom -> {
+                Rules::suicideAllowed -> {
                     if (equalsIndex != -1) {
                         when (subPropertyValue) {
                             "0", "1" -> {
@@ -1006,22 +1008,32 @@ class SgfConverter(
                         subproperties[subProperty] = true
                     }
                 }
+                Rules::initPosGenType,
                 Rules::baseMode -> {
+                    val entries = if (subProperty == Rules::initPosGenType)
+                        InitPosGenType.entries
+                    else
+                        BaseMode.entries
+
+                    fun getExpectedString(): String {
+                        return "Expected: ${entries.joinToString(", ") { it.ordinal.toString() }}"
+                    }
+
                     if (equalsIndex != -1) {
                         val intValue = subPropertyValue.toIntOrNull()
-                        val parsedBaseMode = BaseMode.entries.firstOrNull { it.ordinal == intValue }
-                        if (parsedBaseMode != null) {
-                            subproperties[subProperty] = parsedBaseMode
+                        val parsedEntry = entries.firstOrNull { it.ordinal == intValue }
+                        if (parsedEntry != null) {
+                            subproperties[subProperty] = parsedEntry
                         } else {
                             propertyInfo.reportPropertyDiagnostic(
-                                "has key `$subPropertyKey` with invalid or out of range value `$subPropertyValue`. Expected: 0, 1, 2.",
+                                "has key `$subPropertyKey` with invalid or out of range value `$subPropertyValue`. ${getExpectedString()}.",
                                 TextSpan(subPropertyGlobalIndex + equalsIndex + 1, subPropertyValue.length),
                                 DiagnosticSeverity.Error
                             )
                         }
                     } else {
                         propertyInfo.reportPropertyDiagnostic(
-                            "has uninitialized value for `$subPropertyKey`. Expected: 0, 1, 2.",
+                            "has uninitialized value for `$subPropertyKey`. ${getExpectedString()}.",
                             TextSpan(subPropertyGlobalIndex, subPropertyKey.length),
                             DiagnosticSeverity.Error
                         )
@@ -1045,7 +1057,7 @@ class SgfConverter(
             subproperties[Rules::captureByBorder]?.let { it as Boolean } ?: Rules.Standard.captureByBorder,
             subproperties[Rules::baseMode]?.let { it as BaseMode } ?: Rules.Standard.baseMode,
             subproperties[Rules::suicideAllowed]?.let { it as Boolean } ?: Rules.Standard.suicideAllowed,
-            subproperties[Rules::initPosIsRandom]?.let { it as Boolean } ?: Rules.Standard.initPosIsRandom
+            subproperties[Rules::initPosGenType]?.let { it as InitPosGenType } ?: Rules.Standard.initPosGenType
         )
     }
 

@@ -64,6 +64,7 @@ object RandomGameAnalyser {
                     suicideAllowed = Rules.Standard.suicideAllowed,
                     initPosType = initPosType,
                     random = random,
+                    initPosGenType = Rules.Standard.initPosGenType,
                     komi = Rules.Standard.komi,
                 )
                 val field = Field.create(rules) { moveInfo: MoveInfo, _: Boolean, moveNumber: Int ->

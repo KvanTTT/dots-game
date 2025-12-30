@@ -158,6 +158,7 @@ class Field {
             initialMoves = rules.initialMoves.map {
                 MoveInfo(it.positionXY?.transform(transformType, width, height), it.player, it.externalFinishReason, parsedNode = it.parsedNode)
             },
+            random = rules.random,
             komi = rules.komi,
         ).rules)
         newField.initialMovesCount = initialMovesCount

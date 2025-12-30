@@ -6,6 +6,7 @@ import org.dots.game.core.Field
 import org.dots.game.core.Game
 import org.dots.game.core.GameTree
 import org.dots.game.core.Games
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.InitPosType
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
@@ -22,7 +23,7 @@ object ExampleTestData {
             Field.create(
                 Rules.create(
                     10, 10, captureByBorder = true, BaseMode.AnySurrounding, suicideAllowed = false,
-                    InitPosType.QuadrupleCross, Random.Default, komi = 0.5
+                    InitPosType.QuadrupleCross, Random.Default, initPosGenType = InitPosGenType.RandomNotago, komi = 0.5
                 )
             )
         ).apply {

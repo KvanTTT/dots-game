@@ -1,6 +1,7 @@
 package org.dots.game.localization
 
 import org.dots.game.core.BaseMode
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.InitPosType
 import org.dots.game.views.ConnectionDrawMode
 import org.dots.game.views.KataGoDotsSettingsFileType
@@ -30,6 +31,7 @@ object EnglishStrings : Strings {
     // New Game Dialog
     override val initPosType = "Init Pos Type"
     override val baseMode = "Base Mode"
+    override val initPosGenType = "Generation Type"
     override val captureByBorder = "Capture by border"
     override val suicideAllowed = "Suicide allowed"
     override val drawIsAllowed = "Draw is allowed"
@@ -49,6 +51,12 @@ object EnglishStrings : Strings {
         BaseMode.AtLeastOneOpponentDot -> "At Least One Opponent Dot"
         BaseMode.AnySurrounding -> "Any Surrounding"
         BaseMode.OnlyOpponentDots -> "Only Opponent Dots (like Go game)"
+    }
+
+    override fun initPosGenTypeLabel(type: InitPosGenType): String = when (type) {
+        InitPosGenType.Static -> "Static"
+        InitPosGenType.RandomNotago -> "Random (Notago)"
+        InitPosGenType.RandomMarlov -> "Random (Marlov)"
     }
 
     // Open Dialog

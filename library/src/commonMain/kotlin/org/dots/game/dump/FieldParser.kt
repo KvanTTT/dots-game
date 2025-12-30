@@ -25,6 +25,7 @@ object FieldParser {
                 suicideAllowed = Rules.Standard.suicideAllowed,
                 initPosType = InitPosType.Empty,
                 random = Rules.Standard.random,
+                initPosGenType = Rules.Standard.initPosGenType,
                 komi = Rules.Standard.komi
             )
         }, diagnosticReporter)
@@ -41,6 +42,7 @@ object FieldParser {
                 suicideAllowed = Rules.Standard.suicideAllowed,
                 initPosType = Rules.Standard.initPosType,
                 random = Rules.Standard.random,
+                initPosGenType = Rules.Standard.initPosGenType,
                 komi = Rules.Standard.komi
             )
         },

@@ -21,7 +21,17 @@ class TransformOperations : FieldTests() {
 . . . . +
 """
         val originField = FieldParser.parseAndConvert(originFieldData, initializeRules = { width, height ->
-            Rules.create(width, height, captureByBorder, baseMode, suicideAllowed, InitPosType.Cross, random = Rules.Standard.random, komi = Rules.Standard.komi)
+            Rules.create(
+                width,
+                height,
+                captureByBorder,
+                baseMode,
+                suicideAllowed,
+                InitPosType.Cross,
+                random = Rules.Standard.random,
+                initPosGenType = Rules.Standard.initPosGenType,
+                komi = Rules.Standard.komi,
+            )
         })
 
         checkOperation(

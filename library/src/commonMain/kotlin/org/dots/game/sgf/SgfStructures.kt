@@ -3,6 +3,7 @@ package org.dots.game.sgf
 import org.dots.game.core.BaseMode
 import org.dots.game.core.Game
 import org.dots.game.core.GameTreeNode
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.Player
 import org.dots.game.core.PropertiesHolder
 import org.dots.game.core.Rules
@@ -226,20 +227,20 @@ data class SgfExtraRules(
     val captureByBorder: Boolean,
     val baseMode: BaseMode,
     val suicideAllowed: Boolean,
-    val startPosIsRandom: Boolean,
+    val initPosGenType: InitPosGenType,
 )
 
 val ruleExtraPropertyToName: Map<KProperty1<Rules, *>, String> = buildMap {
     this[Rules::captureByBorder] = "Border"
     this[Rules::baseMode] = "BaseMode"
     this[Rules::suicideAllowed] = "Suicide"
-    this[Rules::initPosIsRandom] = "StartIsRandom"
+    this[Rules::initPosGenType] = "InitPosGenType"
 }
 
 val ruleExtraPropertyToKataGoName: Map<KProperty1<Rules, *>, String> = buildMap {
     this[Rules::suicideAllowed] = "sui"
     this[Rules::baseMode] = "dotsCaptureEmptyBase"
-    this[Rules::initPosIsRandom] = "startPosIsRandom"
+    this[Rules::initPosGenType] = "startPosIsRandom"
 }
 
 val ruleNameToExtraProperty: Map<String, KProperty1<Rules, *>> = ruleExtraPropertyToName.entries.associateBy({ it.value }) { it.key }

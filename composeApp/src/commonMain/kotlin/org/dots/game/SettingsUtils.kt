@@ -40,7 +40,7 @@ fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? 
                     setSetting(Rules::baseMode)
                     setSetting(Rules::suicideAllowed)
                     setSetting(Rules::initPosType)
-                    setSetting(Rules::initPosIsRandom)
+                    setSetting(Rules::initPosGenType)
                     setSetting(Rules::komi)
                 }
             }
@@ -121,7 +121,8 @@ fun <T : ClassSettings<T>> loadClassSettings(defaultSettingsObj: T, directory: S
                         baseMode = getEnumSetting(Rules::baseMode),
                         suicideAllowed = getSetting(Rules::suicideAllowed),
                         initPosType = getEnumSetting(Rules::initPosType),
-                        random = Random.takeIf { getSetting(Rules::initPosIsRandom) },
+                        random = Rules.Standard.random,
+                        initPosGenType = getEnumSetting(Rules::initPosGenType),
                         komi = getSetting(Rules::komi),
                     )
                 }

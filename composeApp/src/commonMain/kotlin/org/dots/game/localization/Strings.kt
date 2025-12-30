@@ -1,6 +1,7 @@
 package org.dots.game.localization
 
 import org.dots.game.core.BaseMode
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.InitPosType
 import org.dots.game.views.ConnectionDrawMode
 import org.dots.game.views.KataGoDotsSettingsFileType
@@ -30,6 +31,7 @@ interface Strings {
     // New Game Dialog
     val initPosType: String
     val baseMode: String
+    val initPosGenType: String
     val captureByBorder: String
     val suicideAllowed: String
     val drawIsAllowed: String
@@ -41,6 +43,8 @@ interface Strings {
 
     // BaseMode enum labels
     fun baseModeLabel(mode: BaseMode): String
+
+    fun initPosGenTypeLabel(type: InitPosGenType): String
 
     // Open Dialog
     val pathOrContent: String

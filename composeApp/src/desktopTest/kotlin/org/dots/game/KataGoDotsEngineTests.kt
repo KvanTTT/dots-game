@@ -7,6 +7,7 @@ import org.dots.game.core.BaseMode
 import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.Field
 import org.dots.game.core.GameResult
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.InitPosType
 import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
@@ -16,6 +17,7 @@ import org.dots.game.core.Rules
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -38,7 +40,9 @@ class KataGoDotsEngineTests {
         val TEST_CONFIG: String = System.getenv(KataGoDotsConfigKey)!!
     }
 
-    val defaultEngine = initialize(KataGoDotsSettings(
+    private val testRandom = Random(2)
+
+    private val defaultEngine = initialize(KataGoDotsSettings(
         TEST_ENGINE,
         TEST_MODEL,
         TEST_CONFIG
@@ -86,7 +90,8 @@ class KataGoDotsEngineTests {
                 Rules.create(8, 8,
                     captureByBorder = true, baseMode = BaseMode.AtLeastOneOpponentDot,
                     suicideAllowed = true, initPosType = InitPosType.Cross,
-                    random = null,
+                    random = testRandom,
+                    initPosGenType = InitPosGenType.Static,
                     komi = 0.0
                 )
             )
@@ -103,7 +108,8 @@ class KataGoDotsEngineTests {
                     9, 9,
                     captureByBorder = false, baseMode = BaseMode.AtLeastOneOpponentDot,
                     suicideAllowed = true, initPosType = InitPosType.Cross,
-                    random = null,
+                    random = testRandom,
+                    initPosGenType = InitPosGenType.Static,
                     komi = 0.0
                 )
             )
@@ -211,7 +217,8 @@ class KataGoDotsEngineTests {
                 Rules.create(8, 8,
                     captureByBorder = false, baseMode = BaseMode.AtLeastOneOpponentDot,
                     suicideAllowed = true, initPosType = InitPosType.Cross,
-                    random = null,
+                    random = testRandom,
+                    initPosGenType = InitPosGenType.Static,
                     komi = 0.0
                 )
             )

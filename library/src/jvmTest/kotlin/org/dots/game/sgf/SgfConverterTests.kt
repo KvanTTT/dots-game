@@ -10,6 +10,7 @@ import org.dots.game.core.BaseMode
 import org.dots.game.core.GameResult
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Games
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.InitPosType
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
@@ -494,7 +495,7 @@ class SgfConverterTests {
 
         val detectInitPosRules = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[4]RU[startPosIsRandom0]AB[bb][cc]AW[cb][bc])").single().rules
         assertEquals(InitPosType.Cross, detectInitPosRules.initPosType)
-        assertFalse(detectInitPosRules.initPosIsRandom)
+        assertEquals(InitPosGenType.Static, detectInitPosRules.initPosGenType)
     }
 
     @Test
@@ -525,7 +526,7 @@ class SgfConverterTests {
             )
         )).single().rules
         assertEquals(InitPosType.Cross, randomInitPosFromMovesButNotRandomFromRules.initPosType)
-        assertTrue(randomInitPosFromMovesButNotRandomFromRules.initPosIsRandom)
+        assertEquals(InitPosGenType.RandomNotago, randomInitPosFromMovesButNotRandomFromRules.initPosGenType)
 
         val rulesWithDuplicatedKey = checkParseAndUnparse("(;GM[40]FF[4]AP[katago]SZ[4]RU[sui1sui0])", listOf(
             LineColumnDiagnostic(
@@ -543,18 +544,18 @@ class SgfConverterTests {
         assertEquals(Rules.Standard.captureByBorder, defaultRules.captureByBorder)
         assertEquals(Rules.Standard.suicideAllowed, defaultRules.suicideAllowed)
         assertEquals(Rules.Standard.baseMode, defaultRules.baseMode)
-        assertEquals(Rules.Standard.initPosIsRandom, defaultRules.initPosIsRandom)
+        assertEquals(Rules.Standard.initPosGenType, defaultRules.initPosGenType)
 
-        val rules = checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[Border,Suicide=0,BaseMode=2,StartIsRandom=1,,])").single().rules
+        val rules = checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[Border,Suicide=0,BaseMode=2,InitPosGenType=1,,])").single().rules
         assertTrue(rules.captureByBorder)
         assertFalse(rules.suicideAllowed)
         assertEquals(BaseMode.OnlyOpponentDots, rules.baseMode)
-        assertTrue(rules.initPosIsRandom)
+        assertEquals(InitPosGenType.RandomNotago, rules.initPosGenType)
 
         // Check there is no random initial pos contradiction warning for unknown apps
         val unknownAppRules = checkParseAndUnparse("(;GM[40]FF[4]AP[SomeApp]RU[]SZ[39:32]AB[nj][ok][xk][yl][wv][xw][lu][mv]AW[oj][nk][yk][xl][xv][ww][mu][lv])").single().rules
         // However, the initial pos is detected as random
-        assertTrue(unknownAppRules.initPosIsRandom)
+        assertEquals(InitPosGenType.RandomNotago, unknownAppRules.initPosGenType)
     }
 
     @Test
@@ -590,7 +591,7 @@ class SgfConverterTests {
             )
         ))
 
-        checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[StartIsRandom=0]AB[cb][bc]AW[bb][cc])", listOf(
+        checkParseAndUnparse("(;GM[40]FF[4]AP[DotsGame]SZ[39:32]RU[InitPosGenType=0]AB[cb][bc]AW[bb][cc])", listOf(
             LineColumnDiagnostic(
                 "Property RU (Rules) specifies strict `Cross` but random is detected.",
                 LineColumn(1, 35), DiagnosticSeverity.Warning

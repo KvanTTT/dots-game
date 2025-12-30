@@ -2,6 +2,7 @@ package org.dots.game.field
 
 import org.dots.game.core.BaseMode
 import org.dots.game.core.Field
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.InitPosType
 import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
@@ -24,6 +25,7 @@ abstract class FieldTests {
         suicideAllowed,
         InitPosType.Empty,
         random = Rules.Standard.random,
+        initPosGenType = InitPosGenType.Static,
         komi = Rules.Standard.komi
     )
 
