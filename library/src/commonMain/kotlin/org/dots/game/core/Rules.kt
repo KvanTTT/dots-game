@@ -7,6 +7,7 @@ import org.dots.game.core.InitPosType.Empty
 import org.dots.game.core.InitPosType.QuadrupleCross
 import org.dots.game.core.InitPosType.Single
 import kotlin.collections.elementAtOrNull
+import kotlin.math.abs
 import kotlin.math.round
 import kotlin.random.Random
 
@@ -117,9 +118,27 @@ enum class InitPosType {
     QuadrupleCross,
     Custom;
 
+    companion object {
+        const val MARLOV_MIN_EDGE_DISTANCE: Int = 8
+        const val MARLOV_MIN_CROSSES_DISTANCE: Int = 9
+        const val MARLOV_MOST_DISTANT_CROSSES_MIN_DISTANCE: Int = 21
+        const val MARLOV_MOST_DISTANT_CROSSES_MAX_DISTANCE: Int = 27
+        const val MARLOV_CENTRAL_SQUARE_SIZE: Int = 6
+        const val MARLOV_MAX_ITERATIONS: Int = 512
+    }
+
     /**
-     * The generator tries to obey notago and bbs implementations.
-     * If [random] is specified, the generator randomized the init pos, but currently it works only for 4*4 cross
+     * Generates initial moves for this [InitPosType].
+     *
+     * The generator follows the Notago and BBS implementations.
+     *
+     * Randomization of the initial position is controlled by [initPosGenType], using [random]
+     * as the source of randomness when needed. Randomized layouts are currently supported only
+     * for [QuadrupleCross] (four crosses) with:
+     * - [InitPosGenType.RandomNotago]: any board size.
+     * - [InitPosGenType.RandomMarlov]: only on 39×32 boards.
+     *
+     * For all other combinations a deterministic layout is produced.
      */
     fun generateMoves(width: Int, height: Int, random: Random = Rules.Standard.random, initPosGenType: InitPosGenType = InitPosGenType.Static): List<MoveInfo>? {
         when (this) {
@@ -194,8 +213,18 @@ enum class InitPosType {
                         offsetX4 = middleX - nextRandomOffsetX()
                         offsetY4 = middleY + nextRandomOffsetY()
                     }
-                    else -> {
-                        error("Not yet supported")
+                    InitPosGenType.RandomMarlov -> {
+                        val (xs = first, ys = second) = generateMarlovRandomCrosses(width, height, random)
+                            ?: return null
+
+                        offsetX1 = xs[0]
+                        offsetY1 = ys[0]
+                        offsetX2 = xs[1]
+                        offsetY2 = ys[1]
+                        offsetX3 = xs[2]
+                        offsetY3 = ys[2]
+                        offsetX4 = xs[3]
+                        offsetY4 = ys[3]
                     }
                 }
                 return mutableListOf<MoveInfo>().apply {
@@ -209,6 +238,97 @@ enum class InitPosType {
                 return emptyList()
             }
         }
+    }
+
+    private fun generateMarlovRandomCrosses(width: Int, height: Int, random: Random): Pair<IntArray, IntArray>? {
+        // The gen type is currently only applicable for the standard 39 * 32 field
+        if (width != 39 || height != 32) return null
+
+        val centerX = width / 2.0 + 0.5
+        val centerY = height / 2.0 + 0.5
+
+        // Use scaling to get rid of operations with a floating point
+        val centerX4 = round(centerX * 4).toInt()
+        val centerY4 = round(centerY * 4).toInt()
+        val marlovCentralDistance4 = MARLOV_CENTRAL_SQUARE_SIZE * 2
+
+        // Each cross (by nearest dot to an edge) is at least 8 cells away from every field edge
+        val minX = 1 + MARLOV_MIN_EDGE_DISTANCE
+        val minY = 1 + MARLOV_MIN_EDGE_DISTANCE
+        val maxX = width - MARLOV_MIN_EDGE_DISTANCE
+        val maxY = height - MARLOV_MIN_EDGE_DISTANCE
+
+        val xs = IntArray(4) { 0 }
+        val ys = IntArray(4) { 0 }
+
+        var iterationNumber = 0
+        outer@ while (iterationNumber < MARLOV_MAX_ITERATIONS) {
+            iterationNumber++
+
+            // Calculate top-left positions of crosses at first
+            xs[0] = random.nextInt(minX, maxX)
+            xs[1] = random.nextInt(minX, maxX)
+            xs[2] = random.nextInt(minX, maxX)
+            xs[3] = random.nextInt(minX, maxX)
+
+            ys[0] = random.nextInt(minY, maxY)
+            ys[1] = random.nextInt(minY, maxY)
+            ys[2] = random.nextInt(minY, maxY)
+            ys[3] = random.nextInt(minY, maxY)
+
+            var mostDistantCrossesDistance = 0
+            var xSum = 0
+            var ySum = 0
+
+            for (i in 0 until 4) {
+                val xsi = xs[i]
+                val ysi = ys[i]
+
+                xSum += xsi
+                ySum += ysi
+
+                for (j in i + 1 until 4) {
+                    val dist = abs(xsi - xs[j]) + abs(ysi - ys[j])
+
+                    // Manhattan distance between crosses (top-left dots) is not less than 9
+                    if (dist < MARLOV_MIN_CROSSES_DISTANCE) {
+                        continue@outer
+                    }
+
+                    if (dist > mostDistantCrossesDistance) {
+                        mostDistantCrossesDistance = dist
+                    }
+                }
+            }
+
+            // The distance between the most distant crosses is not more than 27 and not less than 21
+            if (mostDistantCrossesDistance !in MARLOV_MOST_DISTANT_CROSSES_MIN_DISTANCE..MARLOV_MOST_DISTANT_CROSSES_MAX_DISTANCE) {
+                continue@outer
+            }
+
+            // The center mass of all dots in crosses is located in a central square
+            // Use the following formula: (x1 + x2 + x3 + x4) / 4 and consider the next adjacent dot:
+            // (x1 + (x1 + 1) + x2 + (x2 + 1) + x3 + (x3 + 1) + x4 + (x4 + 1)) / 8 =
+            // (x1 + x2 + x3 + x4) / 4 + 1 / 2
+            // The same applies for remaining two adjacent dots coordinates (they don't affect the resulting formula because of symmetry).
+            // After that, multiply it by 4 to get rid of using of floating point operations:
+            // x1 + x2 + x3 + x4 + 2
+            // Set up initial values to 2 and compare values multiplied by 4.
+
+            val massCenterX4 = xSum + 2
+            if (abs(massCenterX4 - centerX4) > marlovCentralDistance4) {
+                continue@outer
+            }
+
+            val massCenterY4 = ySum + 2
+            if (abs(massCenterY4 - centerY4) > marlovCentralDistance4) {
+                continue@outer
+            }
+
+            return xs to ys
+        }
+
+        return null
     }
 
     private fun MutableList<MoveInfo>.addCross(x: Int, y: Int, startPlayer: Player) {

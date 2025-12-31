@@ -95,7 +95,10 @@ fun NewGameDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ModeConfig(
                             initPosGenType,
-                            ignoredEntries = setOf(InitPosGenType.RandomMarlov), // TODO: remove after implementation of https://github.com/KvanTTT/dots-game/issues/56
+                            ignoredEntries = if (width != 39 || height != 32)
+                                setOf(InitPosGenType.RandomMarlov)
+                            else
+                                emptySet(),
                             nameRenderer = { strings.initPosGenType },
                             valueRenderer = { strings.initPosGenTypeLabel(it) }
                         ) {

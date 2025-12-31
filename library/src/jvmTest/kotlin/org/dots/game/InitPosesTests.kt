@@ -1,6 +1,7 @@
 package org.dots.game
 
 import org.dots.game.core.DoubleRange
+import org.dots.game.core.InitPosGenType
 import org.dots.game.core.InitPosType
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
@@ -8,7 +9,10 @@ import org.dots.game.core.PositionXY
 import org.dots.game.core.RecognitionInfo
 import org.dots.game.core.Rules
 import org.dots.game.core.recognizeInitPosType
+import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 import kotlin.random.Random
+import kotlin.system.measureNanoTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -142,6 +146,66 @@ class InitPosesTests {
     fun quadrupleRandomCrossGeneration() {
         val randomCrossesOnSmallField = InitPosType.QuadrupleCross.generateMoves(5, 5, random = Random.Default)!!
         assertEquals(16, randomCrossesOnSmallField.map { it.positionXY!! }.toSet().size)
+    }
+
+    @Test
+    fun quadrupleRandomCrossMarlovGeneration() {
+        val width = 39
+        val height = 32
+        val centerX = width / 2.0 + 0.5
+        val centerY = height / 2.0 + 0.5
+        val random = Random(1)
+        val iterationsCount = 1000000
+
+        val nanos = measureNanoTime {
+            repeat(iterationsCount) {
+                val moves = InitPosType.QuadrupleCross.generateMoves(
+                    width,
+                    height,
+                    random = random,
+                    initPosGenType = InitPosGenType.RandomMarlov
+                )!!
+                assertEquals(16, moves.size)
+
+                val topLefts = buildList {
+                    for (i in 0 until 16) {
+                        if (i % 4 == 0)
+                            add(moves[i].positionXY!!)
+                    }
+                }
+
+                // Distance between crosses (top-left dots) is not less than 9
+                var maxDistantCrossesDistance = 0
+                for (i in 0 until 4) {
+                    val topLeftI = topLefts[i]
+
+                    // Each cross is at least 8 cells away from every field edge
+                    assertTrue(topLeftI.x >= 9)
+                    assertTrue(topLeftI.x + 1 <= 31)
+                    assertTrue(topLeftI.y >= 9)
+                    assertTrue(topLeftI.y + 1 <= 24)
+
+                    for (j in i + 1 until 4) {
+                        val dist = abs(topLeftI.x - topLefts[j].x) + abs(topLeftI.y - topLefts[j].y)
+                        assertTrue(dist >= 9)
+                        if (dist > maxDistantCrossesDistance) {
+                            maxDistantCrossesDistance = dist
+                        }
+                    }
+                }
+
+                // The center mass of crosses is located in a central square 6*6
+                val massCenterX = moves.map { it.positionXY!!.x }.average()
+                val massCenterY = moves.map { it.positionXY!!.y }.average()
+                assertTrue(abs(massCenterX - centerX) <= 3.0)
+                assertTrue(abs(massCenterY - centerY) <= 3.0)
+
+                // The distance between the most distant crosses is not more than 27 and not less than 21
+                assertTrue(maxDistantCrossesDistance in 21..27)
+            }
+        }
+
+        println("Generations per second: ${iterationsCount.toDouble() / nanos * TimeUnit.SECONDS.toNanos(1)}")
     }
 
     @Test
