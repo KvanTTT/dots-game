@@ -515,6 +515,24 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     }) {
                     updateCurrentNode()
                 }
+
+                WinAndScoreGraphView(
+                    currentGameTreeNode,
+                    currentGame.gameTree,
+                    uiSettings,
+                )
+
+                currentGameTreeNode?.comment?.let { comment ->
+                    if (comment.isNotEmpty()) {
+                        Text(
+                            text = comment,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            style = MaterialTheme.typography.body2
+                        )
+                    }
+                }
             }
         }
     }
