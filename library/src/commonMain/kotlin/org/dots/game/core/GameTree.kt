@@ -9,7 +9,8 @@ import kotlin.reflect.KProperty
 class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
     val rootNode: GameTreeNode = GameTreeNode.createRoot(parsedNode)
 
-    internal var game: Game? = null
+    var game: Game? = null
+        internal set
 
     private val memoizedNextChild: MutableMap<GameTreeNode, GameTreeNode> = mutableMapOf()
     var currentNode: GameTreeNode = rootNode

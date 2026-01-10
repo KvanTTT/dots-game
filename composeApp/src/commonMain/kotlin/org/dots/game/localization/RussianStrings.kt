@@ -130,4 +130,15 @@ object RussianStrings : Strings {
     override val aiMove = "Ход бота"
     override val aiThinking = "Бот думает..."
     override val autoMove = "Авто"
+
+    override val winRate = "Вероятность победы"
+    override val score = "Очки"
+    override val visits = "Визиты"
+    override val weight = "Вес"
+    override val winRateDescription = """100% - Второй игрок выигрывает
+50% - Ничья
+0% - Первый игрок выигрывает"""
+    override val scoreDescription = """> 0 Второй игрок выигрывает
+= 0 Ничья
+< 0 Первый игрок выигрывает"""
 }

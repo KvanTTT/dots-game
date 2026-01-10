@@ -100,4 +100,12 @@ interface Strings {
     val aiMove: String
     val aiThinking: String
     val autoMove: String
+
+    // Graph
+    val winRate: String
+    val score: String
+    val weight: String
+    val visits: String
+    val winRateDescription: String
+    val scoreDescription: String
 }

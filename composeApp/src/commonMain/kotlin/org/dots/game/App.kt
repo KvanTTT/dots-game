@@ -515,6 +515,24 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     }) {
                     updateCurrentNode()
                 }
+
+                GameTreeGraphView(
+                    currentGameTreeNode,
+                    gameTreeViewData,
+                    uiSettings,
+                ) {
+                    updateCurrentNode()
+                }
+
+                currentGameTreeNode?.comment?.let { comment ->
+                    if (comment.isNotEmpty()) {
+                        Text(
+                            text = comment,
+                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                            style = MaterialTheme.typography.body2
+                        )
+                    }
+                }
             }
         }
     }
