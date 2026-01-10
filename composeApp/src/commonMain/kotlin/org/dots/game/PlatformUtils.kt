@@ -52,7 +52,7 @@ expect fun OpenFileDialog(
 
 @Composable
 expect fun Tooltip(
-    text: String,
+    text: String?,
     content: @Composable () -> Unit
 )
 

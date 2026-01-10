@@ -202,7 +202,12 @@ private object WasmVirtualFS {
 }
 
 @Composable
-actual fun Tooltip(text: String, content: @Composable () -> Unit) {
+actual fun Tooltip(text: String?, content: @Composable () -> Unit) {
+    if (text == null) {
+        content()
+        return
+    }
+
     var isVisible by remember { mutableStateOf(false) }
     var cursorPosition by remember { mutableStateOf(IntOffset.Zero) }
     val scope = rememberCoroutineScope()

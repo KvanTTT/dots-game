@@ -55,7 +55,7 @@ actual fun OpenFileDialog(
 actual val platform: Platform = Native
 
 @Composable
-actual fun Tooltip(text: String, content: @Composable (() -> Unit)) {
+actual fun Tooltip(text: String?, content: @Composable () -> Unit) {
     content()
 }
 

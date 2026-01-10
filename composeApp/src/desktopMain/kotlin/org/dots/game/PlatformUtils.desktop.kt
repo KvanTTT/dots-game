@@ -201,9 +201,14 @@ actual val platform: Platform = run {
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 actual fun Tooltip(
-    text: String,
+    text: String?,
     content: @Composable () -> Unit
 ) {
+    if (text == null) {
+        content()
+        return
+    }
+
     TooltipArea(
         tooltip = {
             Surface(
