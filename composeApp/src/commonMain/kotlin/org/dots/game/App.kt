@@ -516,10 +516,15 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     updateCurrentNode()
                 }
 
-                GameTreeGraphView(
+                GameTreeGraphsView(
                     currentGameTreeNode,
                     gameTreeViewData,
                     uiSettings,
+                    onUiSettingsChange = {
+                        uiSettings = it
+                        saveClassSettings(uiSettings)
+                        focusRequester.requestFocus()
+                    },
                 ) {
                     updateCurrentNode()
                 }
@@ -528,7 +533,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     if (comment.isNotEmpty()) {
                         Text(
                             text = comment,
-                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                            modifier = Modifier.fillMaxWidth().padding(top = 15.dp),
                             style = MaterialTheme.typography.body2
                         )
                     }

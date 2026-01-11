@@ -141,4 +141,5 @@ object RussianStrings : Strings {
     override val scoreDescription = """> 0 Второй игрок выигрывает
 = 0 Ничья
 < 0 Первый игрок выигрывает"""
+    override val weightDescription = "Чем больше вес, тем важнее этот ход для обучения"
 }

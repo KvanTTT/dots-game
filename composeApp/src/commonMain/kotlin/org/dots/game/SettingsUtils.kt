@@ -65,6 +65,10 @@ fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? 
                     setSetting(UiSettings::developerMode)
                     setSetting(UiSettings::experimentalMode)
                     setSetting(UiSettings::language)
+                    setSetting(UiSettings::showWinRateGraph)
+                    setSetting(UiSettings::showScoreGraph)
+                    setSetting(UiSettings::showWeightGraph)
+                    setSetting(UiSettings::showVisitsGraph)
                 }
             }
             is OpenGameSettings -> {
@@ -151,6 +155,10 @@ fun <T : ClassSettings<T>> loadClassSettings(defaultSettingsObj: T, directory: S
                         developerMode = getSetting(UiSettings::developerMode),
                         experimentalMode = getSetting(UiSettings::experimentalMode),
                         language = getEnumSetting(UiSettings::language),
+                        showWinRateGraph = getSetting(UiSettings::showWinRateGraph),
+                        showScoreGraph = getSetting(UiSettings::showScoreGraph),
+                        showWeightGraph = getSetting(UiSettings::showWeightGraph),
+                        showVisitsGraph = getSetting(UiSettings::showVisitsGraph),
                     )
                 }
             }

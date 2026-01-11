@@ -106,6 +106,8 @@ interface Strings {
     val score: String
     val weight: String
     val visits: String
+
     val winRateDescription: String
     val scoreDescription: String
+    val weightDescription: String
 }

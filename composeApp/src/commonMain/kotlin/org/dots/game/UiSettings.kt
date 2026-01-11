@@ -20,6 +20,10 @@ data class UiSettings(
     val showSurroundings: Boolean = false,
     val developerMode: Boolean = false,
     val experimentalMode: Boolean = false,
+    val showWinRateGraph: Boolean = true,
+    val showScoreGraph: Boolean = true,
+    val showWeightGraph: Boolean = false,
+    val showVisitsGraph: Boolean = false,
     val language: Language = Language.English,
 ) : ClassSettings<UiSettings>() {
     companion object {

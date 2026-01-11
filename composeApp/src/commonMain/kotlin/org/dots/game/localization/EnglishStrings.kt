@@ -131,10 +131,12 @@ object EnglishStrings : Strings {
     override val score = "Score"
     override val weight = "Weight"
     override val visits = "Visits"
+
     override val winRateDescription = """100% - Second player wins
 50% - Draw
 0% - First player wins"""
     override val scoreDescription = """> 0 Second player wins
 = 0 Draw
 < 0 First player wins"""
+    override val weightDescription = "The more the weight, the more important this move is for training"
 }
