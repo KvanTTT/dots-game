@@ -150,7 +150,9 @@ actual fun OpenFileDialog(
                 }
                 reader.readAsText(file)
             }
-            null
+        }
+        input.oncancel = {
+            onFileSelected(null)
         }
         input.click()
     }
