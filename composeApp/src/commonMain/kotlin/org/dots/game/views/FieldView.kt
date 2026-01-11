@@ -248,11 +248,11 @@ private fun Grid(field: Field, uiSettings: UiSettings) {
 
 @Composable
 private fun Moves(updateObject: Any?, field: Field, uiSettings: UiSettings) {
-    val fieldWithIncrementalUpdate = Field.create(field.rules) // TODO: rewrite without using temp field
-
     val gameOverMove = field.moveSequence.lastOrNull()?.takeIf { it.position.isGameOverMove }
 
     Canvas(Modifier.fillMaxSize().graphicsLayer()) {
+        val fieldWithIncrementalUpdate = Field.create(field.rules) // TODO: rewrite without using temp field
+
         val dotRadiusPx = dotRadius.toPx()
 
         for ((index, moveResult = value) in field.moveSequence.withIndex()) {
@@ -290,7 +290,7 @@ private fun Moves(updateObject: Any?, field: Field, uiSettings: UiSettings) {
             drawCircle(
                 color,
                 dotRadiusPx,
-                moveResultPosition.toPxOffset(field, this)
+                moveResultPosition.toPxOffset(fieldWithIncrementalUpdate, this)
             )
 
             for (base in moveResult.bases) {
@@ -312,7 +312,7 @@ private fun Moves(updateObject: Any?, field: Field, uiSettings: UiSettings) {
             drawCircle(
                 lastMoveColor,
                 lastMoveRadius.toPx(),
-                it.position.toPxOffset(field,this)
+                it.position.toPxOffset(fieldWithIncrementalUpdate, this)
             )
         }
 
@@ -328,7 +328,7 @@ private fun Moves(updateObject: Any?, field: Field, uiSettings: UiSettings) {
                 if (!base.isReal) continue
 
                 val (outerClosure, innerClosures) = base.getSortedClosurePositions(
-                    fieldWithIncrementalUpdate,
+                    field,
                     considerTerritoryPositions = true,
                 )
 
