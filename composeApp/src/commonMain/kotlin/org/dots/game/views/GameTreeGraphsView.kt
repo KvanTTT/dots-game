@@ -196,11 +196,13 @@ fun GameTreeGraphsView(
                 val maxAbsScoreCoef by lazy(LazyThreadSafetyMode.NONE) {
                     1.0f / graphData.maxAbsScore.let { if (it == 0.0f) 1.0f else it } * 0.5f
                 }
-                val maxWeightCoef by lazy(LazyThreadSafetyMode.NONE) {
-                    1.0f / graphData.maxWeight.let { if (it == 0.0f) 1.0f else it }
+                val weightDiff = (graphData.maxWeight - graphData.minWeight).let { if (it == 0.0f) 1.0f else it }
+                val weightCoef by lazy(LazyThreadSafetyMode.NONE) {
+                    1.0f / weightDiff
                 }
-                val maxVisitsCoef by lazy(LazyThreadSafetyMode.NONE) {
-                    1.0f / graphData.maxVisits.let { if (it == 0) 1.0f else it.toFloat() }
+                val visitsDiff = (graphData.maxVisits - graphData.minVisits).let { if (it == 0) 1 else it }.toFloat()
+                val visitsCoef by lazy(LazyThreadSafetyMode.NONE) {
+                    1.0f / visitsDiff
                 }
 
                 val widthCoef = width * coef
@@ -229,14 +231,14 @@ fun GameTreeGraphsView(
                     }
 
                     if (uiSettings.showWeightGraph) {
-                        val yWeight = weight?.let { heightPx * (1.0f - it * maxWeightCoef) }
+                        val yWeight = weight?.let { heightPx * (1.0f - (it - graphData.minWeight) * weightCoef) }
                         yWeight?.let {
                             drawCircle(GraphProperties.Weight.color, radius = 2.0f, center = Offset(x, it))
                         }
                     }
 
                     if (uiSettings.showVisitsGraph) {
-                        val yVisits = visits?.let { heightPx * (1.0f - it.toFloat() * maxVisitsCoef) }
+                        val yVisits = visits?.let { heightPx * (1.0f - (it.toFloat() - graphData.minVisits) * visitsCoef) }
                         yVisits?.let {
                             drawCircle(GraphProperties.Visits.color, radius = 2.0f, center = Offset(x, it))
                         }
@@ -401,6 +403,8 @@ private data class GraphData(val points: List<GraphPointData>) {
     val maxScore: Float by lazy(LazyThreadSafetyMode.PUBLICATION) { points.maxOf { it.score ?: 0.0f } }
     val maxAbsScore: Float by lazy(LazyThreadSafetyMode.PUBLICATION) { max(abs(minScore), abs(maxScore)) }
 
+    val minVisits: Int by lazy(LazyThreadSafetyMode.PUBLICATION) { points.minOf { it.visits ?: 0 } }
     val maxVisits: Int by lazy(LazyThreadSafetyMode.PUBLICATION) { points.maxOf { it.visits ?: 0 } }
+    val minWeight: Float by lazy(LazyThreadSafetyMode.PUBLICATION) { points.minOf { it.weight ?: 0.0f } }
     val maxWeight: Float by lazy(LazyThreadSafetyMode.PUBLICATION) { points.maxOf { it.weight ?: 0.0f } }
 }
