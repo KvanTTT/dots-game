@@ -8,6 +8,8 @@ import org.dots.game.views.KataGoDotsSettingsFileType
 import org.dots.game.views.PolygonDrawMode
 
 object EnglishStrings : Strings {
+    override fun boolToString(bool: Boolean): String = if (bool) "Yes" else "No"
+
     // Common UI
     override val new = "New"
     override val reset = "Reset"
@@ -36,7 +38,6 @@ object EnglishStrings : Strings {
     override val suicideAllowed = "Suicide allowed"
     override val drawIsAllowed = "Draw is allowed"
     override val createNewGame = "Create game"
-    override val randomStartPosition = "Random start position"
 
     override fun initPosTypeLabel(type: InitPosType): String = when (type) {
         InitPosType.Empty -> "Empty"

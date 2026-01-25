@@ -8,6 +8,8 @@ import org.dots.game.views.KataGoDotsSettingsFileType
 import org.dots.game.views.PolygonDrawMode
 
 object RussianStrings : Strings {
+    override fun boolToString(bool: Boolean): String = if (bool) "Да" else "Нет"
+
     // Common UI
     override val new = "Новая"
     override val reset = "Сбросить"
@@ -28,15 +30,15 @@ object RussianStrings : Strings {
     override val firstPlayerDefaultName = "Первый"
     override val secondPlayerDefaultName = "Второй"
 
-    // New Game Dialog
+    // Rules
     override val initPosType = "Стартовая позиция"
     override val baseMode = "Режим захвата"
     override val initPosGenType = "Тип генерации"
-    override val captureByBorder = "Захват через край"
     override val suicideAllowed = "Самоубийство разрешено"
     override val drawIsAllowed = "Возможность ничьи"
+    override val captureByBorder = "Захват через край"
+
     override val createNewGame = "Создать игру"
-    override val randomStartPosition = "Случайная стартовая позиция"
 
     override fun initPosTypeLabel(type: InitPosType): String = when (type) {
         InitPosType.Empty -> "Пустая"

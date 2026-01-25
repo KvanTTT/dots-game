@@ -8,6 +8,8 @@ import org.dots.game.views.KataGoDotsSettingsFileType
 import org.dots.game.views.PolygonDrawMode
 
 interface Strings {
+    fun boolToString(bool: Boolean): String
+
     // Common UI
     val new: String
     val reset: String
@@ -36,7 +38,6 @@ interface Strings {
     val suicideAllowed: String
     val drawIsAllowed: String
     val createNewGame: String
-    val randomStartPosition: String
 
     // InitPosType enum labels
     fun initPosTypeLabel(type: InitPosType): String

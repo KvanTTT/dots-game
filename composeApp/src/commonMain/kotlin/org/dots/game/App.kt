@@ -307,30 +307,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     }
                 }
                 Row(Modifier.padding(bottom = 10.dp)) {
-                    val player1Name = currentGame.player1Name ?: strings.firstPlayerDefaultName
-                    val player2Name = currentGame.player2Name ?: strings.secondPlayerDefaultName
-
-                    Text("$player1Name   ", color = uiSettings.playerFirstColor)
-                    Text(player1Score.toNeatNumber().toString(), color = uiSettings.playerFirstColor, fontWeight = FontWeight.Bold)
-
-                    Text(" : ")
-
-                    Text(
-                        player2Score.toNeatNumber().toString(),
-                        color = uiSettings.playerSecondColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text("   $player2Name", color = uiSettings.playerSecondColor)
-
-                    if (uiSettings.developerMode) {
-                        val diff = player2Score - player1Score
-                        val winnerColor: Color = when {
-                            diff.isAlmostEqual(0.0) -> Color.Black
-                            diff > 0.0 -> uiSettings.playerSecondColor
-                            else -> uiSettings.playerFirstColor
-                        }
-                        Text("  ($diff)", color = winnerColor)
-                    }
+                    GameInfo(currentGame, player1Score, player2Score, strings, uiSettings)
                 }
                 Row {
                     val gameAndMoveInfo = buildString {
@@ -556,3 +533,4 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
         }
     }
 }
+
