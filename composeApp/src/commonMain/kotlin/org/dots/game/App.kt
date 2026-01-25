@@ -332,11 +332,12 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     }
                 }
                 Row {
-                    val gameNumberText = if (games.size > 1)
-                        "${strings.game}: ${games.indexOf(currentGame)}; "
-                    else
-                        ""
-                    Text(gameNumberText + "${strings.move}: $moveNumber")
+                    val gameAndMoveInfo = buildString {
+                        if (games.size > 1)
+                            append("${strings.game}: ${games.indexOf(currentGame) + 1} (${games.size}); ")
+                        append("${strings.move}: $moveNumber")
+                    }
+                    Text(gameAndMoveInfo)
                 }
             }
             Column(Modifier.padding(start = 5.dp)) {
