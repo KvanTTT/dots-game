@@ -304,11 +304,12 @@ class Field {
         val position = getPositionIfWithinBounds(x, y) ?: return null
 
         val state = position.getState()
-        val currentPlayer = player ?: getCurrentPlayer()
-        if (state.getActivePlayer() == Player.None &&
-            (rules.suicideAllowed ||
-                    rules.baseMode == BaseMode.AtLeastOneOpponentDot &&
-                    state.getEmptyTerritoryPlayer() != currentPlayer.opposite())
+        val activePlayer = state.getActivePlayer()
+        if (activePlayer != Player.None) {
+            return null
+        } else if (rules.suicideAllowed ||
+            rules.baseMode == BaseMode.AtLeastOneOpponentDot &&
+            state.getEmptyTerritoryPlayer() != (player ?: getCurrentPlayer()).opposite()
         ) {
             /**
              * Optimization: no need to check if the suicide is allowed
@@ -1229,9 +1230,14 @@ sealed class GameResult(
         }
 
         override fun toString(): String {
-            return this::class.simpleName + "(${::winner.name} : $winner" +
-                    player.takeIf { it != Player.None }?.let { ", ${::player.name}: $player" } +
-                    ")"
+            return buildString {
+                append(this@WinGameResult::class.simpleName)
+                append("(${::winner.name} : $winner")
+                if (player != Player.None) {
+                    append(", ${::player.name}: $player")
+                }
+                append(')')
+            }
         }
     }
 
@@ -1259,10 +1265,17 @@ sealed class GameResult(
         }
 
         override fun toString(): String {
-            return this::class.simpleName + "(${::winner.name}: $winner, $score" +
-                    endGameKind?.let { ", $endGameKind" } +
-                    (player.takeIf { it != winner }?.let { ", ${::player.name}: $player" } ?: "") +
-                    ")"
+            return buildString {
+                append(this@ScoreWin::class.simpleName)
+                append("(${::winner.name}: $winner, $score")
+                if (endGameKind != null) {
+                    append(", $endGameKind")
+                }
+                if (player != winner) {
+                    append(", ${::player.name}: $player")
+                }
+                append(')')
+            }
         }
     }
 
