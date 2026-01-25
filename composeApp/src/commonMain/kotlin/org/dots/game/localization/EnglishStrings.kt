@@ -117,8 +117,6 @@ object EnglishStrings : Strings {
     override val languageName = "English"
 
     override val nextPlayer = "Next player"
-    override val firstPlayer = "Player 1"
-    override val secondPlayer = "Player 2"
     override val ground = "Ground"
     override val resign = "Resign"
     override val nextGame = "Next game"
@@ -139,4 +137,12 @@ object EnglishStrings : Strings {
 = 0 Draw
 < 0 First player wins"""
     override val weightDescription = "The more the weight, the more important this move is for training"
+
+    override val sgfComment = "SGF Comment"
+    override val sgfStats = "SGF Stats"
+    override val avgRemainingMoves = "Remaining Moves (Average)"
+    override val avgRemainingMovesComment = """The closer the value is to 100%, the more refined the games are.
+Values closer to zero mean that games were played almost until all legal moves were exhausted.
+Typically, such games are unrealistic and "garbage" because humans don't play until the very end (they usually resign much earlier)."""
+    override val draws = "Draws"
 }

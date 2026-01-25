@@ -45,4 +45,14 @@ class ConverterUtilsTests {
         assertEquals(LineColumn(1, 1), 0.getLineColumn(lineOffsets))
         assertEquals(LineColumn(2, 1), 1.getLineColumn(lineOffsets))
     }
+
+    @Test
+    fun toPercent() {
+        assertEquals("0%", 0.toPercent(0))
+        assertEquals("0%", 50.toPercent(0))
+
+        assertEquals("0%", 0.0.toPercent())
+        assertEquals("50%", 0.498.toPercent())
+        assertEquals("100%", 1.0.toPercent())
+    }
 }

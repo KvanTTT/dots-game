@@ -42,6 +42,7 @@ import dotsgame.composeapp.generated.resources.ic_resign
 import dotsgame.composeapp.generated.resources.ic_save_as
 import dotsgame.composeapp.generated.resources.ic_settings
 import org.dots.game.dump.DumpParameters
+import org.dots.game.sgf.SgfParsedNode
 
 @Composable
 @Preview
@@ -395,7 +396,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                             }
                         }
                     }
-                    Tooltip(strings.firstPlayer) {
+                    Tooltip(strings.firstPlayerDefaultName) {
                         Button(
                             onClick = {
                                 moveMode = MoveMode.First
@@ -409,7 +410,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                             )
                         }
                     }
-                    Tooltip(strings.secondPlayer) {
+                    Tooltip(strings.secondPlayerDefaultName) {
                         Button(
                             onClick = {
                                 moveMode = MoveMode.Second
@@ -517,27 +518,39 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     updateCurrentNode()
                 }
 
-                GameTreeGraphsView(
-                    currentGameTreeNode,
-                    gameTreeViewData,
-                    uiSettings,
-                    onUiSettingsChange = {
-                        uiSettings = it
-                        saveClassSettings(uiSettings)
-                        focusRequester.requestFocus()
-                    },
-                ) {
-                    updateCurrentNode()
+                if (gameTreeViewData.gameTree.game?.appInfo?.appType == AppType.Katago) {
+                    GameTreeGraphsView(
+                        currentGameTreeNode,
+                        gameTreeViewData,
+                        uiSettings,
+                        onUiSettingsChange = {
+                            uiSettings = it
+                            saveClassSettings(uiSettings)
+                            focusRequester.requestFocus()
+                        },
+                    ) {
+                        updateCurrentNode()
+                    }
                 }
 
                 currentGameTreeNode?.comment?.let { comment ->
                     if (comment.isNotEmpty()) {
-                        Text(
-                            text = comment,
-                            modifier = Modifier.fillMaxWidth().padding(top = 15.dp),
-                            style = MaterialTheme.typography.body2
-                        )
+                        Column(modifier = Modifier.fillMaxWidth().padding(top = 15.dp)) {
+                            Text(
+                                text = strings.sgfComment,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = comment,
+                                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                                style = MaterialTheme.typography.body2
+                            )
+                        }
                     }
+                }
+
+                if (games.parsedNode is SgfParsedNode) {
+                    SgfStatsView(games, strings)
                 }
             }
         }

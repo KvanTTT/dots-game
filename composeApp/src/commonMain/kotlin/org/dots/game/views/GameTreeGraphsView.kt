@@ -24,9 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.dots.game.Tooltip
 import org.dots.game.UiSettings
-import org.dots.game.core.AppType
 import org.dots.game.core.GameTreeNode
 import org.dots.game.localization.Strings
+import org.dots.game.toPercent
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.round
@@ -65,7 +65,7 @@ private sealed class GraphProperties<T : Number>(
         Strings::winRate,
         Strings::winRateDescription,
         UiSettings::showWinRateGraph,
-        renderValue = { "${round(it * 100).toInt()}%" }
+        renderValue = { it.toDouble().toPercent() }
     )
 
     object Score : GraphProperties<Float>(
@@ -110,7 +110,6 @@ fun GameTreeGraphsView(
     onChangeCurrentNode: () -> Unit,
 ) {
     val gameTree = gameTreeViewData.gameTree
-    if (gameTree.game?.appInfo?.appType != AppType.Katago) return
 
     val strings = uiSettings.language.getStrings()
     val textMeasurer = rememberTextMeasurer()

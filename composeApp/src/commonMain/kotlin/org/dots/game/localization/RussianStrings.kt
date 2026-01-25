@@ -121,8 +121,6 @@ object RussianStrings : Strings {
     override val languageName = "Русский"
 
     override val nextPlayer = "Следующий игрок"
-    override val firstPlayer = "Игрок 1"
-    override val secondPlayer = "Игрок 2"
     override val ground = "Заземлиться"
     override val resign = "Сдаться"
     override val nextGame = "Следующая игра"
@@ -142,4 +140,13 @@ object RussianStrings : Strings {
 = 0 Ничья
 < 0 Первый игрок выигрывает"""
     override val weightDescription = "Чем больше вес, тем важнее этот ход для обучения"
+
+    override val sgfStats = "SGF Статистика"
+    override val sgfComment = "SGF Комментарий"
+    override val avgRemainingMoves = "Оставшиеся ходы (в среднем)"
+    override val avgRemainingMovesComment = """Чем ближе значение к 100%, тем более реалистичные игры.
+Значение ближе к нулю означает, что игры были сыграны почти до исчерпания всех возможных ходов.
+Обычно это означает, что игры не соответствуют реальному игровому поведению, так как люди не играют до самого конца (они заземляются намного раньше).
+""".trimIndent()
+    override val draws = "Ничьи"
 }

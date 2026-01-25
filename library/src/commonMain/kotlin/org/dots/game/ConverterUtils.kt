@@ -1,6 +1,7 @@
 package org.dots.game
 
 import kotlin.math.abs
+import kotlin.math.round
 
 data class LineColumn(val line: Int, val column: Int) {
     override fun toString(): String {
@@ -57,4 +58,12 @@ fun Double.toNeatNumber(): Number {
 
 fun Double.isAlmostEqual(other: Double): Boolean {
     return abs(this - other) < 1e-9
+}
+
+fun Int.toPercent(denominator: Int): String {
+    return (if (denominator == 0) 0.0 else toDouble() / denominator).toPercent()
+}
+
+fun Double.toPercent(): String {
+    return "${round(this * 100).toInt()}%"
 }

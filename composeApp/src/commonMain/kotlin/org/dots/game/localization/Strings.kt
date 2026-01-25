@@ -91,8 +91,6 @@ interface Strings {
 
     // Controls
     val nextPlayer: String
-    val firstPlayer: String
-    val secondPlayer: String
     val ground: String
     val resign: String
     val nextGame: String
@@ -110,4 +108,10 @@ interface Strings {
     val winRateDescription: String
     val scoreDescription: String
     val weightDescription: String
+
+    val sgfStats: String
+    val sgfComment: String
+    val avgRemainingMoves: String
+    val avgRemainingMovesComment: String
+    val draws: String
 }
