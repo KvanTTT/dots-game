@@ -115,4 +115,14 @@ interface Strings {
     val avgRemainingMoves: String
     val avgRemainingMovesComment: String
     val draws: String
+
+    // Game result
+    val result: String
+    val draw: String
+    val win: String
+    val reason: String
+    val interrupt: String
+    val resignation: String
+    val time: String
+    val unknown: String
 }

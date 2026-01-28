@@ -146,4 +146,13 @@ object EnglishStrings : Strings {
 Values closer to zero mean that games were played almost until all legal moves were exhausted.
 Typically, such games are unrealistic and "garbage" because humans don't play until the very end (they usually resign much earlier)."""
     override val draws = "Draws"
+
+    override val result = "Result"
+    override val reason = "Reason"
+    override val draw = "Draw"
+    override val win = "win"
+    override val interrupt = "interrupt"
+    override val resignation = "resignation"
+    override val time = "time"
+    override val unknown = "unknown"
 }

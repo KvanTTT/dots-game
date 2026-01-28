@@ -151,4 +151,14 @@ object RussianStrings : Strings {
 Обычно это означает, что игры не соответствуют реальному игровому поведению, так как люди не играют до самого конца (они заземляются намного раньше).
 """.trimIndent()
     override val draws = "Ничьи"
+
+    // Game result
+    override val result = "Результат"
+    override val reason = "Причина"
+    override val draw = "Ничья"
+    override val win = "победил"
+    override val interrupt = "прерывание"
+    override val resignation = "сдача"
+    override val time = "время"
+    override val unknown = "неизвестно"
 }

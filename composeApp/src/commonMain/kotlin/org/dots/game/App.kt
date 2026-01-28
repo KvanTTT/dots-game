@@ -307,7 +307,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     }
                 }
                 Row(Modifier.padding(bottom = 10.dp)) {
-                    GameInfo(currentGame, player1Score, player2Score, strings, uiSettings)
+                    GameInfo(currentGame, player1Score, player2Score, getField().gameResult, strings, uiSettings)
                 }
                 Row {
                     val gameAndMoveInfo = buildString {
