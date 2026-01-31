@@ -78,6 +78,7 @@ object EnglishStrings : Strings {
     override val link = "Link"
     override val copy = "Copy"
     override val saveDialogTitle = "Save game"
+    override val tooLongLinkMessage = "Unavailable (too long link)"
 
     // Settings Dialog
     override val connectionDrawMode = "Connection Draw Mode"

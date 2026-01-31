@@ -18,6 +18,7 @@ import org.dots.game.GameSettings
 import org.dots.game.IconButton
 import org.dots.game.InputType
 import org.dots.game.InputTypeDetector
+import org.dots.game.MAX_PRACTICAL_LINK_LENGTH
 import org.dots.game.Platform
 import org.dots.game.SaveFileDialog
 import org.dots.game.UiSettings
@@ -111,13 +112,12 @@ fun SaveDialog(
     }
 
     val link = remember(path) {
-        val inputTypeWithPath = InputTypeDetector.tryGetInputTypeForPath(path)
-        val newLink = when (inputTypeWithPath) {
+        val newLink = when (val inputTypeWithPath = InputTypeDetector.tryGetInputTypeForPath(path)) {
             // Don't use a local absolute path for links
             is InputType.SgfFile -> getGameLink(gameSettings.copy(path = inputTypeWithPath.name))
             else -> refinedLink
         }
-        newLink
+        newLink.takeIf { it.length <= MAX_PRACTICAL_LINK_LENGTH }
     }
 
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -221,14 +221,17 @@ fun SaveDialog(
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 10.dp)) {
                     Text(strings.link, Modifier.fillMaxWidth(0.2f))
                     TextField(
-                        link, { },
+                        link ?: strings.tooLongLinkMessage, { },
                         modifier = Modifier.fillMaxWidth(0.8f).padding(end = 5.dp),
                         readOnly = true,
-                        singleLine = true
+                        singleLine = true,
+                        enabled = link != null
                     )
-                    with(strings) {
-                        IconButton(Res.drawable.ic_copy) {
-                            Clipboard.copyTo(link)
+                    if (link != null) {
+                        with(strings) {
+                            IconButton(Res.drawable.ic_copy) {
+                                Clipboard.copyTo(link)
+                            }
                         }
                     }
                 }
