@@ -24,7 +24,7 @@ enum class KataGoDotsSettingsFileType {
     val extensions by lazy {
         when (this) {
             Exe -> listOf(if (platform.os == OS.Windows) "exe" else "")
-            Model -> listOf("bin", "bin.gz")
+            Model -> listOf("bin", "gz")
             Config -> listOf("cfg")
         }
     }
