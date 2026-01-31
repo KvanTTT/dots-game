@@ -307,7 +307,9 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     }
                 }
                 Row(Modifier.padding(bottom = 10.dp)) {
-                    GameInfo(currentGame, player1Score, player2Score, getField().gameResult, strings, uiSettings)
+                    val gameResult = getField().gameResult ?:
+                        currentGameTreeNode?.takeIf { it.mainBranch && it.children.isEmpty() }?.let { currentGame.result }
+                    GameInfo(currentGame, player1Score, player2Score, gameResult, strings, uiSettings)
                 }
                 Row {
                     Tooltip(gameSettings.path) {

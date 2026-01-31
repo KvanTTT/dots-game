@@ -72,13 +72,15 @@ fun SgfStatsView(games: Games, strings: Strings) {
                 text = strings.sgfStats,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = "${strings.firstPlayerDefaultName}: ${firstPlayerWins.toPercent(total)}, " +
-                        "${strings.secondPlayerDefaultName}: ${secondPlayerWins.toPercent(total)}, " +
-                        "${strings.draws}: ${draws.toPercent(total)}",
-                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                style = MaterialTheme.typography.body2,
-            )
+            if (total > 1) {
+                Text(
+                    text = "${strings.firstPlayerDefaultName}: ${firstPlayerWins.toPercent(total)}, " +
+                            "${strings.secondPlayerDefaultName}: ${secondPlayerWins.toPercent(total)}, " +
+                            "${strings.draws}: ${draws.toPercent(total)}",
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    style = MaterialTheme.typography.body2,
+                )
+            }
             Tooltip(strings.avgRemainingMovesComment) {
                 Text(
                     text = "${strings.avgRemainingMoves}: ${avgRemainingValidModesRatio.toPercent()}",

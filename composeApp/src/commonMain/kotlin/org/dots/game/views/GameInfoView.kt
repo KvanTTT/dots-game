@@ -43,14 +43,8 @@ fun GameInfo(
     }
 
     Tooltip(rulesInfo) {
-        val player1Name = currentGame.player1Name ?: strings.firstPlayerDefaultName
-        val player2Name = currentGame.player2Name ?: strings.secondPlayerDefaultName
-        val diff = player2Score - player1Score
-        val winnerColor: Color = when {
-            diff.isAlmostEqual(0.0) -> Color.Black
-            diff > 0.0 -> uiSettings.playerSecondColor
-            else -> uiSettings.playerFirstColor
-        }
+        val player1Name = currentGame.player1Name?.takeIf { it.isNotBlank() } ?: strings.firstPlayerDefaultName
+        val player2Name = currentGame.player2Name?.takeIf { it.isNotBlank() } ?: strings.secondPlayerDefaultName
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -71,7 +65,13 @@ fun GameInfo(
                 Text("   $player2Name", color = uiSettings.playerSecondColor)
 
                 if (uiSettings.developerMode) {
-                    Text("  (${diff.toNeatNumber()})", color = winnerColor)
+                    val diff = player2Score - player1Score
+                    val diffColor: Color = when {
+                        diff.isAlmostEqual(0.0) -> Color.Black
+                        diff > 0.0 -> uiSettings.playerSecondColor
+                        else -> uiSettings.playerFirstColor
+                    }
+                    Text("  (${diff.toNeatNumber()})", color = diffColor)
                 }
             }
             if (gameResult != null) {
@@ -83,10 +83,11 @@ fun GameInfo(
                         is GameResult.WinGameResult -> gameResult.winner
                         is GameResult.Draw -> null
                     }
+                    val winnerColor = winner?.let { uiSettings.toColor(winner) } ?: Color.Black
                     val reason = when (gameResult) {
                         is GameResult.Draw -> null
                         is GameResult.InterruptWin -> strings.interrupt
-                        is GameResult.ResignWin -> strings.resign
+                        is GameResult.ResignWin -> strings.resignation
                         is GameResult.ScoreWin -> strings.score
                         is GameResult.TimeWin -> strings.time
                         is GameResult.UnknownWin -> strings.unknown
