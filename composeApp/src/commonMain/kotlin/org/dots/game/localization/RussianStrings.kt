@@ -79,6 +79,7 @@ object RussianStrings : Strings {
     override val link = "Ссылка"
     override val copy = "Копировать"
     override val saveDialogTitle = "Сохранить игру"
+    override val tooLongLinkMessage = "Недоступно (слишком длинная ссылка)"
 
     // Settings
     override val connectionDrawMode = "Отрисовка соединений"

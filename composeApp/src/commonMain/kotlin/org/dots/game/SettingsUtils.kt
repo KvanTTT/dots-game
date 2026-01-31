@@ -239,14 +239,8 @@ inline fun <reified V, reified K : ClassSettings<K>> setSetting(property: KPrope
     }
 }
 
-private const val MAX_MESSAGE_LENGTH = 400
-
 fun <T : ClassSettings<T>> getErrorMessage(settingsObj: T, ex: Exception, loading: Boolean): String {
-    val exMessage = ex.message
-    val trimmedExMessage = if (exMessage != null && exMessage.length > MAX_MESSAGE_LENGTH)
-        exMessage.substring(0, MAX_MESSAGE_LENGTH) + "..."
-    else
-        exMessage
+    val trimmedExMessage = ex.message?.trimMessageIfNecessary()
     return "Unable to ${if (loading) "load" else "save"} ${settingsObj::class.simpleName} settings" +
             if (trimmedExMessage != null) ": $trimmedExMessage" else ""
 }
