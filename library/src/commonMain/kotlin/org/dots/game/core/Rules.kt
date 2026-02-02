@@ -154,7 +154,7 @@ enum class InitPosType {
                 if (width < 2 || height < 2) return null
 
                 // Obey notago implementation for odd height
-                return mutableListOf<MoveInfo>().apply { addCross((width + 1) / 2, height / 2, Player.First) }
+                return mutableListOf<MoveInfo>().apply { addCross((width + 1) / 2, height / 2) }
             }
             DoubleCross -> {
                 if (width < 4 || height < 2) return null
@@ -162,8 +162,8 @@ enum class InitPosType {
                 val middleX = (width + 1) / 2 + 1
                 val middleY = height / 2 // Obey notago implementation for odd height
                 return mutableListOf<MoveInfo>().apply {
-                    addCross(middleX - 2, middleY, Player.First)
-                    addCross(middleX, middleY, Player.Second)
+                    addCross(middleX - 2, middleY)
+                    addCross(middleX, middleY, startFromSecond = true)
                 }
             }
             QuadrupleCross -> {
@@ -228,10 +228,10 @@ enum class InitPosType {
                     }
                 }
                 return mutableListOf<MoveInfo>().apply {
-                    addCross(offsetX1, offsetY1, Player.First)
-                    addCross(offsetX2, offsetY2, Player.First)
-                    addCross(offsetX3, offsetY3, Player.First)
-                    addCross(offsetX4, offsetY4, Player.First)
+                    addCross(offsetX1, offsetY1)
+                    addCross(offsetX2, offsetY2)
+                    addCross(offsetX3, offsetY3)
+                    addCross(offsetX4, offsetY4)
                 }
             }
             else -> {
@@ -252,7 +252,7 @@ enum class InitPosType {
         val centerY4 = round(centerY * 4).toInt()
         val marlovCentralDistance4 = MARLOV_CENTRAL_SQUARE_SIZE * 2
 
-        // Each cross (by nearest dot to an edge) is at least 8 cells away from every field edge
+        // Each cross (by the nearest dot to an edge) is at least 8 cells away from every field edge
         val minX = 1 + MARLOV_MIN_EDGE_DISTANCE
         val minY = 1 + MARLOV_MIN_EDGE_DISTANCE
         val maxX = width - MARLOV_MIN_EDGE_DISTANCE
@@ -331,12 +331,24 @@ enum class InitPosType {
         return null
     }
 
-    private fun MutableList<MoveInfo>.addCross(x: Int, y: Int, startPlayer: Player) {
-        val oppPlayer = startPlayer.opposite()
-        add(MoveInfo(PositionXY(x, y), startPlayer))
+    private fun MutableList<MoveInfo>.addCross(x: Int, y: Int, startFromSecond: Boolean = false) {
+        val player = if (!startFromSecond) Player.First else Player.Second
+        val oppPlayer = player.opposite()
+
+        // The end move should always be of Second player to keep a consistent moves order
+        val sideMove = MoveInfo(PositionXY(x, y), player)
+
+        if (!startFromSecond) {
+            add(sideMove)
+        }
+
         add(MoveInfo(PositionXY(x + 1, y), oppPlayer))
-        add(MoveInfo(PositionXY(x + 1, y + 1), startPlayer))
+        add(MoveInfo(PositionXY(x + 1, y + 1), player))
         add(MoveInfo(PositionXY(x, y + 1), oppPlayer))
+
+        if (startFromSecond) {
+            add(sideMove)
+        }
     }
 
     fun calculateAcceptableKomiRange(width: Int, height: Int, considerDraws: Boolean): DoubleRange {
