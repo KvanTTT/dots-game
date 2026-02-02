@@ -64,27 +64,27 @@ class InitPosesTests {
 
         with(InitPosType.DoubleCross.generateMoves(4, 2)!!) {
             take(4).checkCross(1, 1)
-            drop(4).checkCross(3, 1, startPlayer = Player.Second)
+            drop(4).checkCross(3, 1, rotate90 = true)
         }
 
         with(InitPosType.DoubleCross.generateMoves(5, 2)!!) {
             take(4).checkCross(2, 1)
-            drop(4).checkCross(4, 1, startPlayer = Player.Second)
+            drop(4).checkCross(4, 1, rotate90 = true)
         }
 
         with(InitPosType.DoubleCross.generateMoves(19, 19)!!) {
             take(4).checkCross(9, 9)
-            drop(4).checkCross(11, 9, startPlayer = Player.Second)
+            drop(4).checkCross(11, 9, rotate90 = true)
         }
 
         with(InitPosType.DoubleCross.generateMoves(39, 32)!!) {
             take(4).checkCross(19, 16)
-            drop(4).checkCross(21, 16, startPlayer = Player.Second)
+            drop(4).checkCross(21, 16, rotate90 = true)
         }
 
         with(InitPosType.DoubleCross.generateMoves(36, 36)!!) {
             take(4).checkCross(17, 18)
-            drop(4).checkCross(19, 18, startPlayer = Player.Second)
+            drop(4).checkCross(19, 18, rotate90 = true)
         }
     }
 
@@ -436,12 +436,25 @@ class InitPosesTests {
         assertTrue(remainingInitMoves.isEmpty())
     }
 
-    private fun List<MoveInfo>.checkCross(x: Int, y: Int, startPlayer: Player = Player.First) {
+    private fun List<MoveInfo>.checkCross(x: Int, y: Int, rotate90: Boolean = false) {
         assertEquals(4, this.size)
-        val oppositePlayer = startPlayer.opposite()
-        assertEquals(MoveInfo(PositionXY(x, y), startPlayer), this[0])
-        assertEquals(MoveInfo(PositionXY(x + 1, y), oppositePlayer), this[1])
-        assertEquals(MoveInfo(PositionXY(x + 1, y + 1), startPlayer), this[2])
-        assertEquals(MoveInfo(PositionXY(x, y + 1), oppositePlayer), this[3])
+
+        val player = if (!rotate90) Player.First else Player.Second
+        val oppPlayer = player.opposite()
+
+        val sideMove = MoveInfo(PositionXY(x, y), player)
+
+        var index = 0
+        if (!rotate90) {
+            assertEquals(sideMove, this[index++])
+        }
+
+        assertEquals(MoveInfo(PositionXY(x + 1, y), oppPlayer), this[index++])
+        assertEquals(MoveInfo(PositionXY(x + 1, y + 1), player), this[index++])
+        assertEquals(MoveInfo(PositionXY(x, y + 1), oppPlayer), this[index++])
+
+        if (rotate90) {
+            assertEquals(sideMove, this[index++])
+        }
     }
 }
