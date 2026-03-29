@@ -60,8 +60,7 @@ class SgfWriterTests {
 
     @Test
     fun noSgfMoveMoveProperties() {
-        val field = Field.create(Rules.Standard)
-        val games = Games.fromField(field)
+        val games = Games.fromRules(Rules.Standard)
         val gameTree = games.single().gameTree
         gameTree.addChild(mutableMapOf(
             GameTreeNode::player1Moves to GameProperty(listOf(MoveInfo(PositionXY(5, 6), Player.First))),
@@ -87,8 +86,7 @@ class SgfWriterTests {
 
     @Test
     fun noSgfWithGameResults() {
-        val field = Field.create(Rules.Standard)
-        val games = Games.fromField(field)
+        val games = Games.fromRules(Rules.Standard)
         val gameTree = games.single().gameTree
         gameTree.addChild(MoveInfo(PositionXY(10, 10), Player.First))
 
