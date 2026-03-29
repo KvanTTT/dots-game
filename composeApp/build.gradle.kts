@@ -62,7 +62,6 @@ kotlin {
     }
 
     listOf(
-        iosX64(),
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
@@ -139,11 +138,9 @@ kotlin {
         // Do not enforce -Werror globally to avoid failing iOS/native metadata compilation
         // Retain other useful checks across all source sets
         freeCompilerArgs.addAll(
-            "-Xcontext-parameters",
             "-Xexpect-actual-classes",
             "-Xreturn-value-checker=full",
             "-Xname-based-destructuring=complete",
-            "-Xexplicit-backing-fields",
             "-Xcontext-sensitive-resolution",
         )
     }
