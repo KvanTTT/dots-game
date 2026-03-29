@@ -4,17 +4,20 @@ import org.dots.game.core.Field
 import org.dots.game.core.GameTree
 import org.dots.game.core.GameTree.NodeKind
 import org.dots.game.core.GameTreeNode
+import org.dots.game.core.Games
 import org.dots.game.core.InitPosType
 import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.core.PositionXY
+import org.dots.game.core.Rules
 import org.dots.game.createStandardRules
 import org.dots.game.field.FieldTests
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class GameTreeTests : FieldTests() {
@@ -226,6 +229,21 @@ class GameTreeTests : FieldTests() {
             // The move doesn't exist after removing, adding should be successful
             assertEquals(NodeKind.New, makeMove(1, 1))
         }
+    }
+
+    @Test
+    fun correctNodesIfInitializeFromRawFieldWithSomeMoves() {
+        val field = Field.create(Rules.Standard)
+        val firstMoveInfo = MoveInfo(PositionXY(4, 4), Player.First)
+        val secondMoveInfo = MoveInfo(PositionXY(8, 8), Player.Second)
+        assertIs<LegalMove>(field.makeMove(firstMoveInfo))
+        assertIs<LegalMove>(field.makeMove(secondMoveInfo))
+
+        val gameTree = Games.fromField(field).single().gameTree
+        val firstChild = gameTree.rootNode.children.single()
+
+        assertEquals(firstMoveInfo, firstChild.player1Moves!!.single())
+        assertEquals(secondMoveInfo, firstChild.children.single().player2Moves!!.single())
     }
 
     private fun initializeGameTree(): GameTree {

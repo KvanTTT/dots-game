@@ -57,7 +57,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
 
         var start by remember { mutableStateOf(true) }
         var reset by remember { mutableStateOf(true) }
-        var games by remember { mutableStateOf(Games.fromField(Field.create(newGameDialogRules))) }
+        var games by remember { mutableStateOf(Games.fromRules(newGameDialogRules)) }
         var currentGame by remember { mutableStateOf(games.first()) }
 
         fun getField(): Field = currentGame.gameTree.field
@@ -151,7 +151,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
             val contentOrPath = gameSettings.sgf ?: gameSettings.path
 
             if (contentOrPath == null) {
-                games = Games.fromField(Field.create(newGameDialogRules))
+                games = Games.fromRules(newGameDialogRules)
                 onGamesChange(games)
                 switchGame(0)
             } else {

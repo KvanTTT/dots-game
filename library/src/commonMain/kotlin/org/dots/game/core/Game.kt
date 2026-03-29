@@ -36,12 +36,17 @@ class PropertyDelegate {
 
 class Games(games: List<Game>, val parsedNode: ParsedNode? = null) : MutableList<Game> by mutableListOf() {
     companion object {
+        fun fromRules(rules: Rules): Games {
+            return fromField(Field.create(rules))
+        }
+
         fun fromField(field: Field): Games {
             return Games(Game(GameTree(field).apply {
-                for ((index, move = value) in field.moveSequence.withIndex()) {
-                    if (index >= field.initialMovesCount) {
-                        addChild(MoveInfo.fromLegalMove(move, field))
-                    }
+                // Unmake all moves at first to get rid of double moves-making that leads to a game tree with incorrect nodes
+                val realMovesSequence = field.moveSequence.drop(field.initialMovesCount)
+                field.unmakeAllMoves()
+                for (realMove in realMovesSequence) {
+                    addChild(MoveInfo.fromLegalMove(realMove, field))
                 }
             }))
         }
