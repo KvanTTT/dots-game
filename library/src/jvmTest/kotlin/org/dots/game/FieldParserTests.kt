@@ -104,7 +104,7 @@ class FieldParserTests {
     fun incorrectMarker() {
         assertEquals(
             "Error at [0..1): The marker should be either `*` (first player), `+` (second player) or `.`.",
-        assertFails { FieldParser.parseAndConvertWithNoInitialMoves("x") }.message
+            assertFails { FieldParser.parseAndConvertWithNoInitialMoves("~") }.message
         )
     }
 
@@ -112,7 +112,7 @@ class FieldParserTests {
     fun incorrectMoveNumber() {
         assertEquals(
             "Error at [1..13): Incorrect cell move's number.",
-        assertFails { FieldParser.parseAndConvertWithNoInitialMoves("*999999999999") }.message
+            assertFails { FieldParser.parseAndConvertWithNoInitialMoves("*999999999999") }.message
         )
     }
 
@@ -138,6 +138,35 @@ class FieldParserTests {
             "Warning: The following moves are missing: 2..3",
             assertFails { FieldParser.parseAndConvertWithNoInitialMoves(field) }.message
         )
+    }
+
+    @Test
+    fun kataGoFormat() {
+        fun test(fieldData: String) {
+            val parsedField = FieldParser.parseAndConvertWithNoInitialMoves(fieldData)
+
+            assertEquals(4, parsedField.width)
+            assertEquals(3, parsedField.height)
+            val moveSequence = parsedField.moveSequence
+            moveSequence[0].checkPositionAndPlayer(2, 1, Player.First, parsedField.realWidth)
+            moveSequence[1].checkPositionAndPlayer(3, 1, Player.Second, parsedField.realWidth)
+            moveSequence[2].checkPositionAndPlayer(1, 2, Player.First, parsedField.realWidth)
+            moveSequence[3].checkPositionAndPlayer(2, 2, Player.Second, parsedField.realWidth)
+            moveSequence[4].checkPositionAndPlayer(3, 2, Player.First, parsedField.realWidth)
+            moveSequence[5].checkPositionAndPlayer(4, 2, Player.Second, parsedField.realWidth)
+        }
+
+        test("""
+            .xo.
+            xoxo
+            ....
+        """)
+
+        test("""
+            . x o .
+            X O x o
+            . . . .
+        """)
     }
 
     private fun LegalMove.checkPositionAndPlayer(x: Int, y: Int, expectedPlayer: Player, fieldStride: Int) {

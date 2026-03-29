@@ -31,6 +31,21 @@ class InputTypeTests {
     }
 
     @Test
+    fun fieldContentKataGo() {
+        checkInputType(InputType.FieldContent, """
+            .x.
+            xox
+            ...
+        """)
+
+        checkInputType(InputType.FieldContent, """
+            .  x  .
+            x  o  x
+            .  .  .
+        """)
+    }
+
+    @Test
     fun sgf() {
         // File regex should match the entire input but not a part
         checkInputType(InputType.SgfContent, "(;GM[40]FF[4]CA[UTF-8]SZ[0:0]SO[path/to/file.sgf])")
