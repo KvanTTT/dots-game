@@ -17,7 +17,6 @@ kotlin {
             "-Werror",
             "-Xreturn-value-checker=full",
             "-Xname-based-destructuring=complete",
-            "-Xexplicit-backing-fields",
             "-Xcontext-sensitive-resolution",
         )
     }

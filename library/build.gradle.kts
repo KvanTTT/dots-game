@@ -18,7 +18,6 @@ kotlin {
         d8()
     }
 
-    iosX64()
     iosArm64()
     iosSimulatorArm64()
 
@@ -37,7 +36,6 @@ kotlin {
             "-Werror",
             "-Xreturn-value-checker=full",
             "-Xname-based-destructuring=complete",
-            "-Xexplicit-backing-fields",
             "-Xcontext-sensitive-resolution",
             "-XXexplicit-return-types=strict",
         )

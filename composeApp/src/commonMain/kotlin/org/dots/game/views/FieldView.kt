@@ -316,7 +316,7 @@ private fun Moves(updateObject: Any?, field: Field, uiSettings: UiSettings) {
             )
         }
 
-        updateObject
+        val _ = updateObject
     }
 
     if (gameOverMove != null) {
@@ -406,8 +406,7 @@ private fun AllConnections(updateObject: Any?, field: Field, uiSettings: UiSetti
                     }
                 }
 
-                for (line in lines) {
-                    val (start = first, end = second) = line
+                for ((start = first, end = second) in lines) {
                     drawLine(
                         uiSettings.toColor(start.getState().getActivePlayer()),
                         start.toPxOffset(field, this@Canvas),
@@ -418,7 +417,7 @@ private fun AllConnections(updateObject: Any?, field: Field, uiSettings: UiSetti
                 }
             }
 
-            updateObject
+            val _ = updateObject
         }
     }
 }
@@ -468,7 +467,7 @@ private fun ThreatsAndSurroundings(updateObject: Any?, field: Field, uiSettings:
             }
         }
 
-        updateObject
+        val _ = updateObject
     }
 }
 
