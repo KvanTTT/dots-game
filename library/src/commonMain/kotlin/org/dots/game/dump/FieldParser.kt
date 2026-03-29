@@ -3,6 +3,8 @@ package org.dots.game.dump
 import org.dots.game.Diagnostic
 import org.dots.game.DiagnosticSeverity
 import org.dots.game.core.EMPTY_POSITION_MARKER
+import org.dots.game.core.FIRST_PLAYER_KATAGO_MARKER_LOWER
+import org.dots.game.core.FIRST_PLAYER_KATAGO_MARKER_UPPER
 import org.dots.game.core.FIRST_PLAYER_MARKER
 import org.dots.game.core.Field
 import org.dots.game.core.InitPosType
@@ -11,6 +13,8 @@ import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
+import org.dots.game.core.SECOND_PLAYER_KATAGO_MARKER_LOWER
+import org.dots.game.core.SECOND_PLAYER_KATAGO_MARKER_UPPER
 import org.dots.game.core.SECOND_PLAYER_MARKER
 import org.dots.game.sgf.TextSpan
 
@@ -97,16 +101,29 @@ object FieldParser {
                         currentWidth = 0
                     }
                 }
-                FIRST_PLAYER_MARKER, SECOND_PLAYER_MARKER -> {
+                FIRST_PLAYER_MARKER,
+                FIRST_PLAYER_KATAGO_MARKER_UPPER,
+                FIRST_PLAYER_KATAGO_MARKER_LOWER,
+
+                SECOND_PLAYER_MARKER,
+                SECOND_PLAYER_KATAGO_MARKER_UPPER,
+                SECOND_PLAYER_KATAGO_MARKER_LOWER -> {
                     val moveStartIndex = charIndex
 
                     charIndex++
 
-                    val opponentMarker = if (char == FIRST_PLAYER_MARKER) SECOND_PLAYER_MARKER else FIRST_PLAYER_MARKER
+                    val opponentMarker = when (char) {
+                        FIRST_PLAYER_MARKER -> SECOND_PLAYER_MARKER
+                        SECOND_PLAYER_MARKER -> FIRST_PLAYER_MARKER
+                        else -> null // KataGo doesn't support this
+                    }
                     val player = if (data.elementAtOrNull(charIndex) == opponentMarker) {
                         charIndex++
                         Player.WallOrBoth
-                    } else if (char == FIRST_PLAYER_MARKER) {
+                    } else if (char == FIRST_PLAYER_MARKER ||
+                        char == FIRST_PLAYER_KATAGO_MARKER_UPPER ||
+                        char == FIRST_PLAYER_KATAGO_MARKER_LOWER
+                    ) {
                         Player.First
                     } else {
                         Player.Second

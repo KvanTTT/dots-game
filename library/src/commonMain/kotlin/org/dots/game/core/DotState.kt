@@ -126,6 +126,12 @@ value class DotState internal constructor(val value: Byte) {
 
 const val FIRST_PLAYER_MARKER: Char = '*'
 const val SECOND_PLAYER_MARKER: Char = '+'
+
+const val FIRST_PLAYER_KATAGO_MARKER_UPPER: Char = 'X'
+const val FIRST_PLAYER_KATAGO_MARKER_LOWER: Char = 'x'
+const val SECOND_PLAYER_KATAGO_MARKER_UPPER: Char = 'O'
+const val SECOND_PLAYER_KATAGO_MARKER_LOWER: Char = 'o'
+
 const val TERRITORY_EMPTY_MARKER: Char = '^'
 const val EMPTY_TERRITORY_MARKER: Char = '`'
 const val EMPTY_POSITION_MARKER: Char = '.'
