@@ -16,6 +16,7 @@ plugins {
 }
 
 val localBuildNumber = 65535
+val desktopMainClass = "org.dots.game.MainKt"
 
 class BuildInfo {
     val majorVersion: Int = (project.findProperty(BuildInfo::majorVersion.name) as? String)?.toInt() ?: 1
@@ -186,7 +187,7 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "org.dots.game.MainKt"
+        mainClass = desktopMainClass
 
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb)
@@ -214,6 +215,14 @@ compose.desktop {
                 menuGroup = "Game"
             }
         }
+    }
+}
+
+// Keep the Kotlin MPP carrier run task aligned with Compose Desktop's `run` task.
+gradle.projectsEvaluated {
+    project.tasks.matching { it.name == "desktopRun" }.all {
+        val desktopRunTask = this as JavaExec
+        desktopRunTask.mainClass.set(desktopMainClass)
     }
 }
 
