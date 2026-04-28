@@ -9,8 +9,14 @@ import org.dots.game.core.Player
 import org.dots.game.core.Position
 import org.dots.game.core.VISITED_MARKER
 import org.dots.game.core.TERRITORY_EMPTY_MARKER
-import org.dots.game.core.playerMarker
+import org.dots.game.core.getPlayerMarker
 import org.dots.game.sgf.SgfWriter
+
+enum class DumpFormat {
+    Sgf,
+    Plain,
+    PlainKataGo,
+}
 
 data class DumpParameters(
     val printNumbers: Boolean = true,
@@ -18,21 +24,22 @@ data class DumpParameters(
     val printCoordinates: Boolean = true,
     val printBorders: Boolean = false,
     val debugInfo: Boolean = false,
-    val isSgf: Boolean = true,
+    val format: DumpFormat = DumpFormat.Sgf,
 ) : ClassSettings<DumpParameters>() {
     override val default: DumpParameters
         get() = DEFAULT
 
     companion object {
         val DEFAULT: DumpParameters = DumpParameters()
-        val PLAIN_FIELD: DumpParameters = DEFAULT.copy(isSgf = false)
+        val PLAIN_FIELD: DumpParameters = DEFAULT.copy(format = DumpFormat.Plain)
+        val PLAIN_KATAGO_FIELD: DumpParameters = DEFAULT.copy(format = DumpFormat.PlainKataGo)
     }
 }
 
 fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): String {
-    val (printNumbers, padding, printCoordinates, printBorders, debugInfo, isSgf) = dumpParameters
+    val (printNumbers, padding, printCoordinates, printBorders, debugInfo, format) = dumpParameters
 
-    if (isSgf) {
+    if (format == DumpFormat.Sgf) {
         return SgfWriter.write(Games.fromField(this))
     }
 
@@ -67,11 +74,11 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
                 val emptyTerritoryPlayer = state.getEmptyTerritoryPlayer()
                 val isTerritory = state.isTerritory()
                 val isVisited = state.isVisited()
-                if (emptyTerritoryPlayer != Player.None) {
+                if (format == DumpFormat.Plain && emptyTerritoryPlayer != Player.None) {
                     require(activePlayer == Player.None && placedPlayer == Player.None && !isVisited && !isTerritory)
                     if (debugInfo) {
                         append(EMPTY_TERRITORY_MARKER)
-                        append(playerMarker.getValue(emptyTerritoryPlayer))
+                        append(emptyTerritoryPlayer.getPlayerMarker(kataGoFormat = false))
                     } else {
                         append(EMPTY_POSITION_MARKER)
                     }
@@ -82,19 +89,20 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
                         require(!isTerritory)
                     }
 
-                    if (debugInfo && isTerritory) {
-                        append(playerMarker.getValue(activePlayer))
+                    if (format == DumpFormat.Plain && debugInfo && isTerritory) {
+                        append(activePlayer.getPlayerMarker(kataGoFormat = false))
                         append(
                             if (placedPlayer == Player.None)
                                 TERRITORY_EMPTY_MARKER
                             else
-                                playerMarker.getValue(placedPlayer)
+                                placedPlayer.getPlayerMarker(kataGoFormat = false)
                         )
                     } else {
-                        append(playerMarker.getValue(placedPlayer))
+                        val player = if (format == DumpFormat.Plain) placedPlayer else activePlayer
+                        append(player.getPlayerMarker(kataGoFormat = format == DumpFormat.PlainKataGo))
                     }
 
-                    if (debugInfo && isVisited) {
+                    if (format == DumpFormat.Plain && debugInfo && isVisited) {
                         append(VISITED_MARKER)
                     }
                 }

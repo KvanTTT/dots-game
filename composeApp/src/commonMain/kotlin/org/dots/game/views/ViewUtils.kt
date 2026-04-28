@@ -66,7 +66,7 @@ inline fun <reified E : Enum<E>> ModeConfig(
     enumMode: EnumMode<E>,
     ignoredEntries: Set<E> = emptySet(),
     noinline nameRenderer: () -> String = { splitByUppercase(E::class.simpleName!!) },
-    noinline valueRenderer: (E) -> String = { splitByUppercase(enumMode.selected.toString()) },
+    noinline valueRenderer: (E) -> String = { splitByUppercase(it.toString()) },
     crossinline onChange: (newMode: EnumMode<E>) -> Unit
 ) {
     if (enumMode.selected in ignoredEntries) {
