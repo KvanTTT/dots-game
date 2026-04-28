@@ -24,6 +24,7 @@ import org.dots.game.SaveFileDialog
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
 import org.dots.game.dateTimeShort
+import org.dots.game.dump.DumpFormat
 import org.dots.game.dump.render
 import org.dots.game.getGameLink
 import org.dots.game.platform
@@ -69,22 +70,35 @@ fun SaveDialog(
     var printCoordinates by remember { mutableStateOf(dumpParameters.printCoordinates) }
     var debugInfo by remember { mutableStateOf(dumpParameters.debugInfo) }
 
-    var isSgf by remember { mutableStateOf(dumpParameters.isSgf) }
-    var fieldRepresentation by remember(isSgf, printNumbers, padding, printCoordinates, debugInfo) {
-        mutableStateOf(if (isSgf) {
-            sgfContent
-        } else {
-            field.render(
-                DumpParameters(
-                    printNumbers = printNumbers,
-                    padding = padding,
-                    printCoordinates = printCoordinates,
-                    printBorders = false,
-                    debugInfo = debugInfo,
-                    isSgf = isSgf,
-                )
-            )
-        })
+    var format by remember { mutableStateOf(EnumMode(dumpParameters.format)) }
+    var fieldRepresentation by remember(format, printNumbers, padding, printCoordinates, debugInfo) {
+        mutableStateOf(
+            when (format.selected) {
+                DumpFormat.Sgf -> {
+                    sgfContent
+                }
+                DumpFormat.PlainKataGo -> {
+                    field.render(DumpParameters.PLAIN_KATAGO_FIELD.copy(
+                        printNumbers = false,
+                        padding = padding,
+                        printCoordinates = printCoordinates,
+                        printBorders = false,
+                    ))
+                }
+                else -> {
+                    field.render(
+                        DumpParameters(
+                            printNumbers = printNumbers,
+                            padding = padding,
+                            printCoordinates = printCoordinates,
+                            printBorders = false,
+                            debugInfo = debugInfo,
+                            format = format.selected,
+                        )
+                    )
+                }
+            }
+        )
     }
 
     val inputTypeForGameSettings = remember { InputTypeDetector.tryGetInputTypeForPath(gameSettings.path ?: "") }
@@ -128,7 +142,7 @@ fun SaveDialog(
             padding = padding,
             printCoordinates = printCoordinates,
             debugInfo = debugInfo,
-            isSgf = isSgf
+            format = format.selected
         )
     }
 
@@ -156,11 +170,8 @@ fun SaveDialog(
         Card(modifier = Modifier.wrapContentHeight()) {
             Column(modifier = Modifier.padding(20.dp)) {
                 if (uiSettings.developerMode) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(strings.sgf, Modifier.fillMaxWidth(configKeyTextFraction))
-                        Switch(isSgf, onCheckedChange = {
-                            isSgf = it
-                        })
+                    ModeConfig<DumpFormat>(format) {
+                        format = it
                     }
                 }
 
@@ -175,16 +186,18 @@ fun SaveDialog(
                     maxLines = 20,
                 )
 
-                if (!isSgf) {
+                if (format.selected == DumpFormat.Plain || format.selected == DumpFormat.PlainKataGo) {
+                    DiscreteSliderConfig(strings.padding, padding, 0, maxPadding) {
+                        padding = it
+                    }
+                }
+
+                if (format.selected == DumpFormat.Plain) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(strings.printNumbers, Modifier.fillMaxWidth(configKeyTextFraction))
                         Checkbox(printNumbers, onCheckedChange = {
                             printNumbers = it
                         })
-                    }
-
-                    DiscreteSliderConfig(strings.padding, padding, 0, maxPadding) {
-                        padding = it
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {

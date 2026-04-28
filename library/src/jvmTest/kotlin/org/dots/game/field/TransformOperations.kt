@@ -5,6 +5,7 @@ import org.dots.game.core.Field
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
 import org.dots.game.core.TransformType
+import org.dots.game.dump.DumpFormat
 import org.dots.game.dump.FieldParser
 import org.dots.game.dump.render
 import kotlin.test.Test
@@ -105,7 +106,7 @@ class TransformOperations : FieldTests() {
 
     private fun checkOperation(originField: Field, expectedData: String, transformType: TransformType?) {
         val transformedField = transformType?.let { originField.transform(it) } ?: originField
-        assertEquals(expectedData, transformedField.render(DumpParameters(printCoordinates = false, isSgf = false)))
+        assertEquals(expectedData, transformedField.render(DumpParameters(printCoordinates = false, format = DumpFormat.Plain)))
         assertEquals(originField.initialMovesCount, transformedField.initialMovesCount)
         assertEquals(originField.player1Score, transformedField.player1Score)
         assertEquals(originField.player2Score, transformedField.player2Score)

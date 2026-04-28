@@ -22,7 +22,7 @@ class SettingsTests {
         assertEquals(Rules.Standard.initialMoves, defaultClassSettings.initialMoves)
 
         val defaultDumpParameters = loadClassSettings(DumpParameters.DEFAULT, directory = tempDirectory)
-        assertEquals(DumpParameters.DEFAULT.isSgf, defaultDumpParameters.isSgf)
+        assertEquals(DumpParameters.DEFAULT.format, defaultDumpParameters.format)
 
         val defaultUiSettings = loadClassSettings(UiSettings.Standard, directory = tempDirectory)
         assertEquals(UiSettings.Standard.playerFirstColor, defaultUiSettings.playerFirstColor)

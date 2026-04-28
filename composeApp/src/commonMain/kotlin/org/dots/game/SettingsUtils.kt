@@ -9,7 +9,6 @@ import com.russhwolf.settings.set
 import org.dots.game.core.ClassSettings
 import org.dots.game.core.Rules
 import org.dots.game.views.OpenGameSettings
-import kotlin.random.Random
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
@@ -50,7 +49,7 @@ fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? 
                     setSetting(DumpParameters::padding)
                     setSetting(DumpParameters::printCoordinates)
                     setSetting(DumpParameters::debugInfo)
-                    setSetting(DumpParameters::isSgf)
+                    setSetting(DumpParameters::format)
                 }
             }
             is UiSettings -> {
@@ -138,7 +137,7 @@ fun <T : ClassSettings<T>> loadClassSettings(defaultSettingsObj: T, directory: S
                         padding = getSetting(DumpParameters::padding),
                         printCoordinates = getSetting(DumpParameters::printCoordinates),
                         debugInfo = getSetting(DumpParameters::debugInfo),
-                        isSgf = getSetting(DumpParameters::isSgf),
+                        format = getEnumSetting(DumpParameters::format),
                     )
                 }
             }

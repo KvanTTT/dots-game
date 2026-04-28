@@ -138,9 +138,11 @@ const val EMPTY_POSITION_MARKER: Char = '.'
 const val BORDER_MARKER: Char = '#'
 const val VISITED_MARKER: Char = '$'
 
-val playerMarker: Map<Player, Char> = mapOf(
-    Player.First to FIRST_PLAYER_MARKER,
-    Player.Second to SECOND_PLAYER_MARKER,
-    Player.None to EMPTY_POSITION_MARKER,
-    Player.WallOrBoth to BORDER_MARKER,
-)
+fun Player.getPlayerMarker(kataGoFormat: Boolean): Char {
+    return when (this) {
+        Player.First -> if (kataGoFormat) FIRST_PLAYER_KATAGO_MARKER_LOWER else FIRST_PLAYER_MARKER
+        Player.Second -> if (kataGoFormat) SECOND_PLAYER_KATAGO_MARKER_LOWER else SECOND_PLAYER_MARKER
+        Player.None -> EMPTY_POSITION_MARKER
+        else -> BORDER_MARKER
+    }
+}
