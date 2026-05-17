@@ -11,18 +11,18 @@ class FieldOneMovePositionsTests {
     fun twoCapturing() {
         checkOneMoveCapturingAndSurroundPositions(
             fieldData = """
-. * . . . + .
-* + * . + * +
-. . . . . . .
+.  x  .  .  .  o  .
+x  o  x  .  o  x  o
+.  .  .  .  .  .  .
 """,
             expectedCapturingPositionsData = """
-. . . . . . .
-. . . . . . .
-. * . . . + .
+.  .  .  .  .  .  .
+.  .  .  .  .  .  .
+.  x  .  .  .  o  .
 """,
             expectedSurroundingPositionsData = """
 .  .  .  .  .  .  .
-.  *  .  .  .  +  .
+.  x  .  .  .  o  .
 .  .  .  .  .  .  .
 """,
         )
@@ -32,15 +32,15 @@ class FieldOneMovePositionsTests {
     fun twoBases() {
         checkOneMoveCapturingAndSurroundPositions(
             fieldData = """
-. * . . . + .
-* . * . + . +
-. . . . . . .
+.  x  .  .  .  o  .
+x  .  x  .  o  .  o
+.  .  .  .  .  .  .
 """,
             expectedCapturingPositionsData = null,
             expectedSurroundingPositionsData = """
-. . . . . . .
-. * . . . + .
-. . . . . . .
+.  .  .  .  .  .  .
+.  x  .  .  .  o  .
+.  .  .  .  .  .  .
 """
         )
     }
@@ -49,15 +49,15 @@ class FieldOneMovePositionsTests {
     fun emptyBasePosition() {
         checkOneMoveCapturingAndSurroundPositions(
             fieldData = """
-. * .
-* . *
-. * .
+.  x  .
+x  .  x
+.  x  .
 """,
             expectedCapturingPositionsData = null,
             expectedSurroundingPositionsData = """
-. . .
-. * .
-. . .
+.  .  .
+.  x  .
+.  .  .
 """
         )
     }
@@ -66,15 +66,15 @@ class FieldOneMovePositionsTests {
     fun emptyBasePosition2() {
         checkOneMoveCapturingAndSurroundPositions(
             fieldData = """
-. + .
-+ . +
-. + .
+.  o  .
+o  .  o
+.  o  .
 """,
             expectedCapturingPositionsData = null,
             expectedSurroundingPositionsData = """
-. . .
-. + .
-. . .
+.  .  .
+.  o  .
+.  .  .
 """
         )
     }
@@ -83,21 +83,21 @@ class FieldOneMovePositionsTests {
     fun emptyBaseWithCapturing() {
         checkOneMoveCapturingAndSurroundPositions(
             fieldData = """
-. * .
-* + *
-+ . +
-. + .
+.  x  .
+x  o  x
+o  .  o
+.  o  .
 """,
             expectedCapturingPositionsData = """
-. . .
-. . .
-. * .
-. . .
+.  .  .
+.  .  .
+.  x  .
+.  .  .
 """,
             expectedSurroundingPositionsData = """
 .  .  .
-.  *  .
-.  +  .
+.  x  .
+.  o  .
 .  .  .
 """,
         )
@@ -107,24 +107,24 @@ class FieldOneMovePositionsTests {
     fun twoCapturingOnTheSamePosition() {
         checkOneMoveCapturingAndSurroundPositions(
             fieldData = """
-. * .
-* + *
-. . .
-+ * +
-. + .
+.  x  .
+x  o  x
+.  .  .
+o  x  o
+.  o  .
 """,
             expectedCapturingPositionsData = """
-. .  .
-. .  .
-. *+ .
-. .  .
-. .  .
+.   .   .
+.   .   .
+.   xo  .
+.   .   .
+.   .   .
 """,
             expectedSurroundingPositionsData = """
 .  .  .
-.  *  .
+.  x  .
 .  .  .
-.  +  .
+.  o  .
 .  .  .
 """,
         )
@@ -134,25 +134,25 @@ class FieldOneMovePositionsTests {
     fun twoBasesOnTheSamePosition() {
         checkOneMoveCapturingAndSurroundPositions(
             fieldData = """
-. * * * .
-* . + . *
-* + . + *
-* . . . *
-. * . * .
+.  x  x  x  .
+x  .  o  .  x
+x  o  .  o  x
+x  .  .  .  x
+.  x  .  x  .
 """,
             expectedCapturingPositionsData = """
 .  .  .  .  .
 .  .  .  .  .
 .  .  .  .  .
-.  .  *  .  .
-.  .  *  .  .
+.  .  x  .  .
+.  .  x  .  .
 """,
             expectedSurroundingPositionsData = """
-.  .  .  .  .
-.  *  *  *  .
-.  *  *+ *  .
-.  *  *  *  .
-.  .  .  .  .
+.   .   .   .   .
+.   x   x   x   .
+.   x   xo  x   .
+.   x   x   x   .
+.   .   .   .   .
 """.trimIndent(),
         )
     }
@@ -160,24 +160,24 @@ class FieldOneMovePositionsTests {
     @Test
     fun complexExampleWithMultipleStates() {
         checkOneMoveCapturingAndSurroundPositions(fieldData = """
-. + + * * .
-+ . * + . *
-+ * . + * .
-+ * . + * .
-. + . * . .
+.  o  o  x  x  .
+o  .  x  o  .  x
+o  x  .  o  x  .
+o  x  .  o  x  .
+.  o  .  x  .  .
 """,
             expectedCapturingPositionsData = """
 .  .  .  .  .  .
 .  .  .  .  .  .
 .  .  .  .  .  .
-.  .  *+ .  .  .
-.  .  *+ .  .  .
+.  .  xo .  .  .
+.  .  xo .  .  .
 """,
             expectedSurroundingPositionsData = """
 .  .  .  .  .  .
-.  +  +  *  *  .
-.  +  *+ *  .  .
-.  +  *+ *  .  .
+.  o  o  x  x  .
+.  o  xo x  .  .
+.  o  xo x  .  .
 .  .  .  .  .  .
 """)
     }

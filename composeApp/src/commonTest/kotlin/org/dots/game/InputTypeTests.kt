@@ -13,20 +13,20 @@ class InputTypeTests {
 
         // Correct data
         checkInputType(InputType.FieldContent, """
-            . * .
-            * + *
-            . * .
+            . x .
+            x o X
+            . X .
         """)
 
         // Data with warnings
         checkInputType(InputType.FieldContent, """
-            *0 +1
-            +1 *2
+            x0 o1
+            o1 x2
         """)
 
         checkInputType(InputType.FieldContent, """
-            *1 +2
-            +5 *6
+            x1 o2
+            o5 x6
         """)
     }
 

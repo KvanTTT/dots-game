@@ -77,14 +77,6 @@ fun SaveDialog(
                 DumpFormat.Sgf -> {
                     sgfContent
                 }
-                DumpFormat.PlainKataGo -> {
-                    field.render(DumpParameters.PLAIN_KATAGO_FIELD.copy(
-                        printNumbers = false,
-                        padding = padding,
-                        printCoordinates = printCoordinates,
-                        printBorders = false,
-                    ))
-                }
                 else -> {
                     field.render(
                         DumpParameters(
@@ -186,7 +178,7 @@ fun SaveDialog(
                     maxLines = 20,
                 )
 
-                if (format.selected == DumpFormat.Plain || format.selected == DumpFormat.PlainKataGo) {
+                if (format.selected == DumpFormat.Plain) {
                     DiscreteSliderConfig(strings.padding, padding, 0, maxPadding) {
                         padding = it
                     }

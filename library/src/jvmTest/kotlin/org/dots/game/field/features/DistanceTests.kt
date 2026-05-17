@@ -17,74 +17,74 @@ class DistanceTests {
             Arguments.of(
                 0,
 """
-+
+o
 """
             ),
             Arguments.of(
                 1,
 """
-. * .
-* * *
-. * .
+. x .
+x x x
+. x .
 """
             ),
             Arguments.of(
                 2,
 """
-+ . +
-. + .
-+ . +
+o . o
+. o .
+o . o
 """
             ),
             Arguments.of(
                 3,
 """
-. . * . .
+. . x . .
 . . . . .
-* . * . *
+x . x . x
 . . . . .
-. . * . .
+. . x . .
 """
             ),
             Arguments.of(
                 4,
 """
-. + . + .
-+ . . . +
-. . + . .
-+ . . . +
-. + . + .
+. o . o .
+o . . . o
+. . o . .
+o . . . o
+. o . o .
 """
             ),
             Arguments.of(5,
 """
-* . . . *
+x . . . x
 . . . . .
-. . * . .
+. . x . .
 . . . . .
-* . . . *
+x . . . x
 """
             ),
             Arguments.of(6,
 """
-. . . + . . .
+. . . o . . .
 . . . . . . .
 . . . . . . .
-+ . . + . . +
+o . . o . . o
 . . . . . . .
 . . . . . . .
-. . . + . . .
+. . . o . . .
 """
             ),
             Arguments.of(7,
 """
-. . * . * . .
+. . x . x . .
 . . . . . . .
-* . . . . . *
-. . . * . . .
-* . . . . . *
+x . . . . . x
+. . . x . . .
+x . . . . . x
 . . . . . . .
-. . * . * . .
+. . x . x . .
 """
             ),
         )
@@ -94,19 +94,19 @@ class DistanceTests {
     fun simple() {
         val fieldData =
 """
-. * + .
-. * + .
-. + * .
-. + * .
+. x o .
+. x o .
+. o x .
+. o x .
 """
         checkDistance(
             1,
             fieldData,
             expectedDistanceData = """
-. * + .
-. * + .
-. + * .
-. + * .
+. x o .
+. x o .
+. o x .
+. o x .
 """
         )
         checkDistance(
@@ -114,8 +114,8 @@ class DistanceTests {
             fieldData = fieldData,
             expectedDistanceData = """
 . . . .
-. * + .
-. + * .
+. x o .
+. o x .
 . . . .
 """
         )
@@ -124,26 +124,26 @@ class DistanceTests {
     @Test
     fun base() {
         val fieldData = """
-+ * * + + . .
-* + . * . . .
-. * * . * . *
+o x x o o . .
+x o . x . . .
+. x x . x . x
 """
         checkDistance(
             1,
             fieldData = fieldData,
             expectedDistanceData = """
-. * * + + . .
-* * * * . . .
-. * * . . . .
+. x x o o . .
+x x x x . . .
+. x x . . . .
 """,
         )
         checkDistance(
             2,
             fieldData = fieldData,
             expectedDistanceData = """
-. * * . . . .
-* * * * . . .
-. * * . * . .
+. x x . . . .
+x x x x . . .
+. x x . x . .
 """,
         )
     }

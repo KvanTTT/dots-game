@@ -13,10 +13,10 @@ class FieldWithEmptyCapturing() : FieldTests() {
     @Test
     fun checkCapturing() {
         testFieldWithRollback("""
-            . * .
-            * . *
-            . * .
-        """) {
+. x .
+x . x
+. x .
+""") {
             assertEquals(0, it.player1Score)
             assertIs<PosIsOccupiedIllegalMove>(it.makeMove(2, 2, Player.First))
             assertIs<PosIsOccupiedIllegalMove>(it.makeMove(2, 2, Player.Second))

@@ -26,11 +26,11 @@ class FieldParserTests {
     @Test
     fun simple() {
         val parsedField = FieldParser.parseAndConvertWithNoInitialMoves("""
-            . . . .
-            . * + .
-            . + * .
-            . . . .
-        """)
+. . . .
+. x o .
+. o x .
+. . . .
+""")
 
         assertEquals(4, parsedField.width)
         assertEquals(4, parsedField.height)
@@ -44,11 +44,11 @@ class FieldParserTests {
     @Test
     fun simpleWithNumbers() {
         val parsedField = FieldParser.parseAndConvertWithNoInitialMoves("""
-            .  .  . .
-            . *0 +3 .
-            . +1 *2 .
-            .  .  . .
-        """)
+.  .  .  .
+.  x0 o3 .
+.  o1 x2 .
+.  .  .  .
+""")
 
         val moveSequence = parsedField.moveSequence
         moveSequence[0].checkPositionAndPlayer(2, 2, Player.First, parsedField.realWidth)
@@ -60,11 +60,11 @@ class FieldParserTests {
     @Test
     fun moveNumbersStartWithOne() {
         val parsedField = FieldParser.parseAndConvertWithNoInitialMoves("""
-            .  .  . .
-            . *1 +4 .
-            . +2 *3 .
-            .  .  . .
-        """)
+.  .  .  .
+.  x1 o4 .
+.  o2 x3 .
+.  .  .  .
+""")
 
         val moveSequence = parsedField.moveSequence
         moveSequence[0].checkPositionAndPlayer(2, 2, Player.First, parsedField.realWidth)
@@ -76,10 +76,10 @@ class FieldParserTests {
     @Test
     fun mixedNumberedAndUnnumberedMoves() {
         val parsedField = FieldParser.parseAndConvertWithNoInitialMoves("""
-            . *0 .
-            * +2 *
-            . * .
-        """)
+.  x0 .
+x  o2 x
+.  x  .
+""")
 
         val moveSequence = parsedField.moveSequence
         moveSequence[0].checkPositionAndPlayer(2, 1, Player.First, parsedField.realWidth)
@@ -92,9 +92,9 @@ class FieldParserTests {
     @Test
     fun lastNumbered() {
         val parsedField = FieldParser.parseAndConvertWithNoInitialMoves("""
-            * +
-            + *3
-        """)
+x o
+o x3
+""")
         val moveSequence = parsedField.moveSequence
         assertEquals(4, moveSequence.size)
         moveSequence[3].checkPositionAndPlayer(2, 2, Player.First, parsedField.realWidth)
@@ -103,7 +103,7 @@ class FieldParserTests {
     @Test
     fun incorrectMarker() {
         assertEquals(
-            "Error at [0..1): The marker should be either `*` (first player), `+` (second player) or `.`.",
+            "Error at [0..1): The marker should be either `x` (first player), `o` (second player) or `.`.",
             assertFails { FieldParser.parseAndConvertWithNoInitialMoves("~") }.message
         )
     }
@@ -112,18 +112,18 @@ class FieldParserTests {
     fun incorrectMoveNumber() {
         assertEquals(
             "Error at [1..13): Incorrect cell move's number.",
-            assertFails { FieldParser.parseAndConvertWithNoInitialMoves("*999999999999") }.message
+            assertFails { FieldParser.parseAndConvertWithNoInitialMoves("x999999999999") }.message
         )
     }
 
     @Test
     fun clashingMoveNumbers() {
         val field = """
-            *0 +1
-            +1 *2
-        """
+x0 o1
+o1 x2
+"""
         assertEquals(
-            "Warning at [32..33): The move with number 1 is already in use.",
+            "Warning at [8..9): The move with number 1 is already in use.",
             assertFails { FieldParser.parseAndConvertWithNoInitialMoves(field) }.message
         )
     }
@@ -131,9 +131,9 @@ class FieldParserTests {
     @Test
     fun missingMoveNumbers() {
         val field = """
-            *0 +1
-            +4 *5
-        """
+x0 o1
+o4 x5
+"""
         assertEquals(
             "Warning: The following moves are missing: 2..3",
             assertFails { FieldParser.parseAndConvertWithNoInitialMoves(field) }.message
@@ -141,7 +141,7 @@ class FieldParserTests {
     }
 
     @Test
-    fun kataGoFormat() {
+    fun kataGoNoSpaces() {
         fun test(fieldData: String) {
             val parsedField = FieldParser.parseAndConvertWithNoInitialMoves(fieldData)
 
@@ -157,16 +157,16 @@ class FieldParserTests {
         }
 
         test("""
-            .xo.
-            xoxo
-            ....
-        """)
+  .xo.
+  xoxo
+  ....
+""")
 
         test("""
-            . x o .
-            X O x o
-            . . . .
-        """)
+.  x  o  .
+X  O  x  o
+.  .  .  .
+""")
     }
 
     private fun LegalMove.checkPositionAndPlayer(x: Int, y: Int, expectedPlayer: Player, fieldStride: Int) {

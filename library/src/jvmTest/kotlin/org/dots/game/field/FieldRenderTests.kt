@@ -11,27 +11,27 @@ import kotlin.test.assertEquals
 
 class FieldRenderTests : FieldTests() {
     val sampleField: Field = FieldParser.parseAndConvertWithNoInitialMoves("""
-            . .   .   .   .  .  . .  . . .
-            . .   *3  *4  *5 .  * *  * . .
-            . *14 +1  .   .  *6 . .  . * .
-            . *13 .   *0  .  *7 . *2 . * .
-            . *12 .   .   .  *8 . .  . * .
-            . .   *11 *10 *9 .  * *  * . .
-            . .   .   .   .  .  . .  . . .
-        """.trimIndent())
+.   .   .   .   .   .   .   .   .   .   .
+.   .   x3  x4  x5  .   x   x   x   .   .
+.   x14 o1  .   .   x6  .   .   .   x   .
+.   x13 .   x0  .   x7  .   x2  .   x   .
+.   x12 .   .   .   x8  .   .   .   x   .
+.   .   x11 x10 x9  .   x   x   x   .   .
+.   .   .   .   .   .   .   .   .   .   .
+""".trimIndent())
 
     @Test
     fun maxPadding() {
         assertEquals(
             """
-            . . . . . . . . . . .
-            . . * * * . * * * . .
-            . * + . . * . . . * .
-            . * . * . * . * . * .
-            . * . . . * . . . * .
-            . . * * * . * * * . .
-            . . . . . . . . . . .
-        """.trimIndent(),
+. . . . . . . . . . .
+. . x x x . x x x . .
+. x o . . x . . . x .
+. x . x . x . x . x .
+. x . . . x . . . x .
+. . x x x . x x x . .
+. . . . . . . . . . .
+""".trimIndent(),
             sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = false, printBorders = false, debugInfo = false, format = DumpFormat.Plain))
         )
     }
@@ -40,16 +40,16 @@ class FieldRenderTests : FieldTests() {
     fun borders() {
         assertEquals(
             """
-            ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ 
-            │ . . . . . . . . . . . 
-            │ . . * * * . * * * . . 
-            │ . * + . . * . . . * . 
-            │ . * . * . * . * . * . 
-            │ . * . . . * . . . * . 
-            │ . . * * * . * * * . . 
-            │ . . . . . . . . . . . 
-            └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
-        """.trimIndent(),
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ 
+│ . . . . . . . . . . . 
+│ . . x x x . x x x . . 
+│ . x o . . x . . . x . 
+│ . x . x . x . x . x . 
+│ . x . . . x . . . x . 
+│ . . x x x . x x x . . 
+│ . . . . . . . . . . . 
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+""".trimIndent(),
             sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = false, printBorders = true, debugInfo = false, format = DumpFormat.Plain))
         )
     }
@@ -58,17 +58,17 @@ class FieldRenderTests : FieldTests() {
     fun coordinatesWithBorders() {
         assertEquals(
             """
-            \  0  1  2  3  4  5  6  7  8  9  10 11 12
-            0  ┌  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ┐  
-            1  │  .  .  .  .  .  .  .  .  .  .  .  
-            2  │  .  .  *  *  *  .  *  *  *  .  .  
-            3  │  .  *  +  .  .  *  .  .  .  *  .  
-            4  │  .  *  .  *  .  *  .  *  .  *  .  
-            5  │  .  *  .  .  .  *  .  .  .  *  .  
-            6  │  .  .  *  *  *  .  *  *  *  .  .  
-            7  │  .  .  .  .  .  .  .  .  .  .  .  
-            8  └  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ┘
-        """.trimIndent(),
+\  0  1  2  3  4  5  6  7  8  9  10 11 12
+0  ┌  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ┐  
+1  │  .  .  .  .  .  .  .  .  .  .  .  
+2  │  .  .  x  x  x  .  x  x  x  .  .  
+3  │  .  x  o  .  .  x  .  .  .  x  .  
+4  │  .  x  .  x  .  x  .  x  .  x  .  
+5  │  .  x  .  .  .  x  .  .  .  x  .  
+6  │  .  .  x  x  x  .  x  x  x  .  .  
+7  │  .  .  .  .  .  .  .  .  .  .  .  
+8  └  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ┘
+""".trimIndent(),
             sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = true, printBorders = true, debugInfo = false, format = DumpFormat.Plain))
         )
     }
@@ -77,15 +77,15 @@ class FieldRenderTests : FieldTests() {
     fun coordinatesOnly() {
         assertEquals(
             """
-            \  1  2  3  4  5  6  7  8  9  10 11
-            1  .  .  .  .  .  .  .  .  .  .  .
-            2  .  .  *  *  *  .  *  *  *  .  .
-            3  .  *  +  .  .  *  .  .  .  *  .
-            4  .  *  .  *  .  *  .  *  .  *  .
-            5  .  *  .  .  .  *  .  .  .  *  .
-            6  .  .  *  *  *  .  *  *  *  .  .
-            7  .  .  .  .  .  .  .  .  .  .  .
-        """.trimIndent(),
+\  1  2  3  4  5  6  7  8  9  10 11
+1  .  .  .  .  .  .  .  .  .  .  .
+2  .  .  x  x  x  .  x  x  x  .  .
+3  .  x  o  .  .  x  .  .  .  x  .
+4  .  x  .  x  .  x  .  x  .  x  .
+5  .  x  .  .  .  x  .  .  .  x  .
+6  .  .  x  x  x  .  x  x  x  .  .
+7  .  .  .  .  .  .  .  .  .  .  .
+""".trimIndent(),
             sampleField.render(DumpParameters(printNumbers = false, padding = Int.MAX_VALUE, printCoordinates = true, printBorders = false, debugInfo = false, format = DumpFormat.Plain))
         )
     }
@@ -94,12 +94,12 @@ class FieldRenderTests : FieldTests() {
     fun numbers() {
         assertEquals(
             """
-            .   *3  *4  *5  .   *15 *16 *17 .
-            *14 +1  .   .   *6  .   .   .   *18
-            *13 .   *0  .   *7  .   *2  .   *19
-            *12 .   .   .   *8  .   .   .   *20
-            .   *11 *10 *9  .   *21 *22 *23 .
-        """.trimIndent(),
+.   x3  x4  x5  .   x15 x16 x17 .
+x14 o1  .   .   x6  .   .   .   x18
+x13 .   x0  .   x7  .   x2  .   x19
+x12 .   .   .   x8  .   .   .   x20
+.   x11 x10 x9  .   x21 x22 x23 .
+""".trimIndent(),
             sampleField.render(DumpParameters(printNumbers = true, padding = 0, printCoordinates = false, debugInfo = false, format = DumpFormat.Plain))
         )
     }
@@ -108,29 +108,13 @@ class FieldRenderTests : FieldTests() {
     fun debugInfo() {
         assertEquals(
             """
-            .  *  *  *  .  *  *  *  .
-            *  *+ *^ *^ *  `* `* `* *
-            *  *^ *  *^ *  `* *  `* *
-            *  *^ *^ *^ *  `* `* `* *
-            .  *  *  *  .  *  *  *  .
-            """.trimIndent(),
+.  x  x  x  .  x  x  x  .
+x  xo x^ x^ x  `x `x `x x
+x  x^ x  x^ x  `x x  `x x
+x  x^ x^ x^ x  `x `x `x x
+.  x  x  x  .  x  x  x  .
+""".trimIndent(),
             sampleField.render(DumpParameters(printNumbers = false, padding = 0, printCoordinates = false, debugInfo = true, format = DumpFormat.Plain))
-        )
-    }
-
-    @Test
-    fun kataGoFormat() {
-        assertEquals(
-            """
-            . . . . . . . . . . .
-            . . x x x . x x x . .
-            . x x x x x . . . x .
-            . x x x x x . x . x .
-            . x x x x x . . . x .
-            . . x x x . x x x . .
-            . . . . . . . . . . .
-            """.trimIndent(),
-            sampleField.render(DumpParameters(format = DumpFormat.PlainKataGo))
         )
     }
 }

@@ -45,14 +45,14 @@ class ZobristHashTests {
     fun differentMoves() {
         checkHashesOfFields(
             """
-        . . .
-        . * .
-        . . .
-        ""","""
-        . . .
-        . + .
-        . . .
-        """,
+. . .
+. x .
+. . .
+""","""
+. . .
+. o .
+. . .
+""",
             isEqual = false
         )
     }
@@ -61,14 +61,14 @@ class ZobristHashTests {
     fun sameWithDifferentMovesOrder() {
         checkHashesOfFields(
             """
-        . .  .  .  .
-        . *0 +1 *2 .
-        . .  .  .  .
-        ""","""
-        . .  .  .  .
-        . *2 +1 *0 .
-        . .  .  .  .
-        """,
+.  .  .  .  .
+.  x0 o1 x2 .
+.  .  .  .  .
+""","""
+.  .  .  .  .
+.  x2 o1 x0 .
+.  .  .  .  .
+""",
             isEqual = true
         )
     }
@@ -77,18 +77,18 @@ class ZobristHashTests {
     fun basePositionsAreErasured() {
         checkHashesOfFields(
             """
-.   +2  +3  +4  .
-+13 .   .   .   +5
-+12 *1  +0  .   +6
-+11 .   .   .   +7
-.   +10 +9  +8  .
-        ""","""
-.   +0  +1  +2  .
-+3  +4  +5  +6  +7
-+8  +9  +10 +11 +12
-+13 +14 +15 +16 +17
-.   +18 +19 +20 .
-        """,
+.   o2  o3  o4  .
+o13 .   .   .   o5
+o12 x1  o0  .   o6
+o11 .   .   .   o7
+.   o10 o9  o8  .
+""","""
+.   o0  o1  o2  .
+o3  o4  o5  o6  o7
+o8  o9  o10 o11 o12
+o13 o14 o15 o16 o17
+.   o18 o19 o20 .
+""",
             isEqual = true
         )
     }
@@ -97,22 +97,22 @@ class ZobristHashTests {
     fun baseWithInternalBasesPositionsAreErasured() {
         checkHashesOfFields(
             """
-.   .   *13 *14 *15 *16 *17 *18 .   .
-.   *12 .   .   .   .   .   .   *19 .
-*11 .   .   *1  .   .   +6  .   .   *20
-*10 .   *0  +4  *2  +5  *3  +7  .   *21
-*31 .   .   *9  .   .   +8  .   .   *22
-.   *30 .   .   .   .   .   .   *23 .
-.   .   *29 *28 *27 *26 *25 *24 .   .
-        ""","""
-.   .   *0  *1  *2  *3  *4  *5  .   .
-.   *6  *7  *8  *9  *10 *11 *12 *13 .
-*14 *15 *16 *17 *18 *19 *20 *21 *22 *23
-*24 *25 *26 *27 *28 *29 *30 *31 *32 *33
-*34 *35 *36 *37 *38 *39 *40 *41 *42 *43
-.   *44 *45 *46 *47 *48 *49 *50 *51 .
-.   .   *52 *53 *54 *55 *56 *57 .   .
-        """,
+.   .   x13 x14 x15 x16 x17 x18 .   .
+.   x12 .   .   .   .   .   .   x19 .
+x11 .   .   x1  .   .   o6  .   .   x20
+x10 .   x0  o4  x2  o5  x3  o7  .   x21
+x31 .   .   x9  .   .   o8  .   .   x22
+.   x30 .   .   .   .   .   .   x23 .
+.   .   x29 x28 x27 x26 x25 x24 .   .
+""","""
+.   .   x0  x1  x2  x3  x4  x5  .   .
+.   x6  x7  x8  x9  x10 x11 x12 x13 .
+x14 x15 x16 x17 x18 x19 x20 x21 x22 x23
+x24 x25 x26 x27 x28 x29 x30 x31 x32 x33
+x34 x35 x36 x37 x38 x39 x40 x41 x42 x43
+.   x44 x45 x46 x47 x48 x49 x50 x51 .
+.   .   x52 x53 x54 x55 x56 x57 .   .
+""",
             isEqual = true
         )
     }
@@ -121,15 +121,15 @@ class ZobristHashTests {
     fun emptyBaseThatBecomesRealAndRealBase() {
         checkHashesOfFields(
             """
-                .  *0 .
-                *3 +4 *1
-                .  *2 .
-            """,
+.  x0 .
+x3 o4 x1
+.  x2 .
+""",
             """
-                .  *1 .
-                *4 +0 *2
-                .  *3 .
-            """,
+.  x1 .
+x4 o0 x2
+.  x3 .
+""",
             isEqual = true,
         )
     }
@@ -151,8 +151,8 @@ class ZobristHashTests {
         val fieldWithManuallyPlacedCross = FieldParser.parseAndConvertWithNoInitialMoves(
 """
 . . . .
-. * + .
-. + * .
+. x o .
+. o x .
 . . . .
 """,
         )
@@ -164,19 +164,19 @@ class ZobristHashTests {
     fun transformation() {
         val transformField = FieldParser.parseAndConvertWithNoInitialMoves(
             """
-                .  *1 .  .
-                *4 +0 *2 .
-                .  *3 .  .
-            """,
+.  x1 .  .
+x4 o0 x2 .
+.  x3 .  .
+""",
         ).transform(TransformType.RotateCw90)
 
         val alreadyRotatedField = FieldParser.parseAndConvertWithNoInitialMoves(
             """
-                .  *4 .
-                *3 +0 *1
-                .  *2 .
-                .  .  .
-            """,
+.  x4 .
+x3 o0 x1
+.  x2 .
+.  .  .
+""",
         )
 
         assertEquals(alreadyRotatedField.positionHash, transformField.positionHash)

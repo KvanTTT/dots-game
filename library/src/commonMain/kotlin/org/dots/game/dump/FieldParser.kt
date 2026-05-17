@@ -3,9 +3,8 @@ package org.dots.game.dump
 import org.dots.game.Diagnostic
 import org.dots.game.DiagnosticSeverity
 import org.dots.game.core.EMPTY_POSITION_MARKER
-import org.dots.game.core.FIRST_PLAYER_KATAGO_MARKER_LOWER
-import org.dots.game.core.FIRST_PLAYER_KATAGO_MARKER_UPPER
 import org.dots.game.core.FIRST_PLAYER_MARKER
+import org.dots.game.core.FIRST_PLAYER_MARKER_UPPER
 import org.dots.game.core.Field
 import org.dots.game.core.InitPosType
 import org.dots.game.core.LegalMove
@@ -13,9 +12,8 @@ import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
 import org.dots.game.core.Rules
-import org.dots.game.core.SECOND_PLAYER_KATAGO_MARKER_LOWER
-import org.dots.game.core.SECOND_PLAYER_KATAGO_MARKER_UPPER
 import org.dots.game.core.SECOND_PLAYER_MARKER
+import org.dots.game.core.SECOND_PLAYER_MARKER_UPPER
 import org.dots.game.sgf.TextSpan
 
 object FieldParser {
@@ -81,6 +79,12 @@ object FieldParser {
         var charIndex = 0
         var lineIndex = 0
 
+        // It's necessary to distinguish between KataGo no-spaces fields and extended fields where `xo` mean both playes
+        val hasInnerSpaces = data
+            .lineSequence()
+            .any { line -> line.trim().any { it == ' ' || it == '\t' } }
+
+        charIndex = 0
         while (charIndex < data.length) {
             when (val char = data[charIndex]) {
                 ' ', '\t' -> {
@@ -102,31 +106,36 @@ object FieldParser {
                     }
                 }
                 FIRST_PLAYER_MARKER,
-                FIRST_PLAYER_KATAGO_MARKER_UPPER,
-                FIRST_PLAYER_KATAGO_MARKER_LOWER,
-
+                FIRST_PLAYER_MARKER_UPPER,
                 SECOND_PLAYER_MARKER,
-                SECOND_PLAYER_KATAGO_MARKER_UPPER,
-                SECOND_PLAYER_KATAGO_MARKER_LOWER -> {
+                SECOND_PLAYER_MARKER_UPPER -> {
                     val moveStartIndex = charIndex
 
                     charIndex++
 
-                    val opponentMarker = when (char) {
-                        FIRST_PLAYER_MARKER -> SECOND_PLAYER_MARKER
-                        SECOND_PLAYER_MARKER -> FIRST_PLAYER_MARKER
-                        else -> null // KataGo doesn't support this
-                    }
-                    val player = if (data.elementAtOrNull(charIndex) == opponentMarker) {
-                        charIndex++
-                        Player.WallOrBoth
-                    } else if (char == FIRST_PLAYER_MARKER ||
-                        char == FIRST_PLAYER_KATAGO_MARKER_UPPER ||
-                        char == FIRST_PLAYER_KATAGO_MARKER_LOWER
-                    ) {
+                    var player = if (char == FIRST_PLAYER_MARKER || char == FIRST_PLAYER_MARKER_UPPER) {
                         Player.First
                     } else {
                         Player.Second
+                    }
+
+                    if (hasInnerSpaces) {
+                        val nextChar = data.elementAtOrNull(charIndex)
+                        val bothPlayers = when (char) {
+                            FIRST_PLAYER_MARKER,
+                            FIRST_PLAYER_MARKER_UPPER -> {
+                                nextChar == SECOND_PLAYER_MARKER || nextChar == SECOND_PLAYER_MARKER_UPPER
+                            }
+                            SECOND_PLAYER_MARKER,
+                            SECOND_PLAYER_MARKER_UPPER -> {
+                                nextChar == FIRST_PLAYER_MARKER || nextChar == FIRST_PLAYER_MARKER_UPPER
+                            }
+                            else -> false
+                        }
+                        if (bothPlayers) {
+                            charIndex++
+                            player = Player.WallOrBoth
+                        }
                     }
 
                     var digitIndex = charIndex
