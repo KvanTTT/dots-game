@@ -20,15 +20,15 @@ import kotlin.test.fail
 
 class FieldUtilsTests : FieldTests() {
     val sampleField: Field = FieldParser.parseAndConvertWithNoInitialMoves("""
-            . . . . . . .
-            . . * * * * *
-            . * + . * . .
-            . . * * * * .
-            . * . . * . .
-            . * . . . . .
-            . . . * . * *
-            . * * * . . * 
-        """.trimIndent())
+. . . . . . .
+. . x x x x x
+. x o . x . .
+. . x x x x .
+. x . . x . .
+. x . . . . .
+. . . x . x x
+. x x x . . x
+""".trimIndent())
 
     @Test
     fun positionsOfStrongConnectionEmpty() {

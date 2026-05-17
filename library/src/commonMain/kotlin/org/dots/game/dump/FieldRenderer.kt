@@ -15,7 +15,6 @@ import org.dots.game.sgf.SgfWriter
 enum class DumpFormat {
     Sgf,
     Plain,
-    PlainKataGo,
 }
 
 data class DumpParameters(
@@ -32,7 +31,6 @@ data class DumpParameters(
     companion object {
         val DEFAULT: DumpParameters = DumpParameters()
         val PLAIN_FIELD: DumpParameters = DEFAULT.copy(format = DumpFormat.Plain)
-        val PLAIN_KATAGO_FIELD: DumpParameters = DEFAULT.copy(format = DumpFormat.PlainKataGo)
     }
 }
 
@@ -78,7 +76,7 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
                     require(activePlayer == Player.None && placedPlayer == Player.None && !isVisited && !isTerritory)
                     if (debugInfo) {
                         append(EMPTY_TERRITORY_MARKER)
-                        append(emptyTerritoryPlayer.getPlayerMarker(kataGoFormat = false))
+                        append(emptyTerritoryPlayer.getPlayerMarker())
                     } else {
                         append(EMPTY_POSITION_MARKER)
                     }
@@ -90,16 +88,16 @@ fun Field.render(dumpParameters: DumpParameters = DumpParameters.DEFAULT): Strin
                     }
 
                     if (format == DumpFormat.Plain && debugInfo && isTerritory) {
-                        append(activePlayer.getPlayerMarker(kataGoFormat = false))
+                        append(activePlayer.getPlayerMarker())
                         append(
                             if (placedPlayer == Player.None)
                                 TERRITORY_EMPTY_MARKER
                             else
-                                placedPlayer.getPlayerMarker(kataGoFormat = false)
+                                placedPlayer.getPlayerMarker()
                         )
                     } else {
                         val player = if (format == DumpFormat.Plain) placedPlayer else activePlayer
-                        append(player.getPlayerMarker(kataGoFormat = format == DumpFormat.PlainKataGo))
+                        append(player.getPlayerMarker())
                     }
 
                     if (format == DumpFormat.Plain && debugInfo && isVisited) {

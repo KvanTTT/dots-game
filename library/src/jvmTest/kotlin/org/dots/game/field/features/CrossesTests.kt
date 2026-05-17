@@ -10,13 +10,13 @@ class CrossesTests {
     @Test
     fun bounds() {
         checkCrosses("""
-* +
-+ *
+x  o
+o  x
 """,
 
 """
-*+ *+
-*+ *+
+xo xo
+xo xo
 """,
             )
     }
@@ -24,11 +24,11 @@ class CrossesTests {
     @Test
     fun noCrossIfOpponentBase() {
         checkCrosses("""
-. . . . .
-. * + * .
-. + * + .
-. * + * .
-. . . . . 
+.  .  .  .  .
+.  x  o  x  .
+.  o  x  o  .
+.  x  o  x  .
+.  .  .  .  .
 """,
             crossesData = null,
         )
@@ -37,20 +37,20 @@ class CrossesTests {
     @Test
     fun differentCases() {
         checkCrosses("""
-. . . . . .
-. * + . + * 
-. + . . * +
-. . . . . .
-. + * + . .
-. * + * . .
+.  .  .  .  .  .
+.  x  o  .  o  x
+.  o  .  .  x  o
+.  .  .  .  .  .
+.  o  x  o  .  .
+.  x  o  x  .  .
 """,
             crossesData = """
-.  .  .  .  .  . 
-.  .  .  .  *+ *+
-.  .  .  .  *+ *+
-.  .  .  .  .  . 
-.  *+ *+ *+ .  . 
-.  *+ *+ *+ .  . 
+.  .  .  .  .  .
+.  .  .  .  xo xo
+.  .  .  .  xo xo
+.  .  .  .  .  .
+.  xo xo xo .  .
+.  xo xo xo .  .
 """,
         )
     }

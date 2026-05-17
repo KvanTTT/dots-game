@@ -22,11 +22,11 @@ class FieldWithOnlyOpponentDotsAndBorderTests : FieldTests() {
     fun simple() {
         testFieldWithRollback(
             """
-            + * .
-            . * .
-            * . .
-            . . .
-        """
+o x .
+. x .
+x . .
+. . .
+"""
         ) {
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
@@ -69,9 +69,9 @@ class FieldWithOnlyOpponentDotsAndBorderTests : FieldTests() {
     @Test
     fun prohibitMoveIfResultGroupHasNoLiberties() {
         testFieldWithRollback("""
-            * *
-            * .
-        """) {
+x  x
+x  .
+""") {
             // Follow Go game in this case: the result group should have at least one liberty
             assertIs<SuicidalIllegalMove>(it.makeMove(2, 2, Player.First))
         }
@@ -81,11 +81,11 @@ class FieldWithOnlyOpponentDotsAndBorderTests : FieldTests() {
     fun tryPutDotToEmptyBaseAndCapture() {
         testFieldWithRollback(
             """
-            *5 +0 *2 ..
-            +1 *3 .. ..
-            *4 .. .. ..
-            .. .. .. ..
-        """
+x5  o0  x2  .
+o1  x3  .   .
+x4  .   .   .
+.   .   .   .
+"""
         ) {
             assertEquals(2, it.player1Score)
         }
@@ -95,12 +95,12 @@ class FieldWithOnlyOpponentDotsAndBorderTests : FieldTests() {
     fun baseWithInternalCornerHole() {
         testFieldWithRollback(
             """
-            ... +00 *02 +07 ...
-            +01 *04 *03 +08 ...
-            *06 *05 +09 ... ...
-            +11 +10 ... ... ...
-            ... ... ... ... ...
-        """
+.    o00  x02  o07  .
+o01  x04  x03  o08  .
+x06  x05  o09  .    .
+o11  o10  .    .    .
+.    .    .    .    .
+"""
         ) {
             assertEquals(5, it.player2Score)
             assertIs<SuicidalIllegalMove>(it.makeMove(1, 1, Player.First))
@@ -112,12 +112,12 @@ class FieldWithOnlyOpponentDotsAndBorderTests : FieldTests() {
     fun dontRecaptureAlreadyCaptured() {
         testFieldWithRollback(
             """
-            +00 *01 +03 *08 ...
-            *02 +05 +04 *09 ...
-            +07 +06 *10 ... ...
-            ... *11 ... ... ...
-            ... ... ... ... ...
-        """
+o00  x01  o03  x08  .
+x02  o05  o04  x09  .
+o07  o06  x10  .    .
+.    x11  .    .    .
+.    .    .    .    .
+"""
         ) {
             assertEquals(0, it.player1Score)
             assertEquals(2, it.player2Score)
@@ -138,9 +138,9 @@ class FieldWithOnlyOpponentDotsAndNoBorderTests : FieldTests() {
     @Test
     fun simple() {
         testFieldWithRollback("""
-            + * .
-            * . .
-        """) {
+o  x  .
+x  .  .
+""") {
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
         }
@@ -149,12 +149,12 @@ class FieldWithOnlyOpponentDotsAndNoBorderTests : FieldTests() {
     @Test
     fun quadrupleCapture() {
         testFieldWithRollback("""
-            . . *0 . .
-            . *7 + *1 .
-            *6 + . + *2
-            . *5 + *3 .
-            . . *4 . .
-        """) {
+.   .   x0  .   .
+.   x7  o   x1  .
+x6  o   .   o   x2
+.   x5  o   x3  .
+.   .   x4  .   .
+""") {
             assertEquals(0, it.player1Score)
             assertEquals(0, it.player2Score)
 
@@ -170,14 +170,14 @@ class FieldWithOnlyOpponentDotsAndNoBorderTests : FieldTests() {
     fun baseWithInternalCenterHole() {
         testFieldWithRollback(
             """
-            . . + + +
-            . . * * * +
-            + * * + * * +
-            + * + . + * +
-            + * * + * * +
-            . + * * * +
-            . . + + +
-        """
+.  .  o  o  o
+.  .  x  x  x  o
+o  x  x  o  x  x  o
+o  x  o  .  o  x  o
+o  x  x  o  x  x  o
+.  o  x  x  x  o
+.  .  o  o  o
+"""
         ) {
             val legalMove = assertIs<LegalMove>(it.makeMove(2, 2, Player.Second))
             val base = legalMove.bases.single()
@@ -192,14 +192,14 @@ class FieldWithOnlyOpponentDotsAndNoBorderTests : FieldTests() {
     fun baseWithDoubleAdjacentInternalCenterHole() {
         testFieldWithRollback(
             """
-            . . + + + + +
-            . . * * * * * +
-            + * * + * + * * +
-            + * + . + . + * +
-            + * * + * + * * +
-            . + * * * * * +
-            . . + + + + +
-        """
+.  .  o  o  o  o  o
+.  .  x  x  x  x  x  o
+o  x  x  o  x  o  x  x  o
+o  x  o  .  o  .  o  x  o
+o  x  x  o  x  o  x  x  o
+.  o  x  x  x  x  x  o
+.  .  o  o  o  o  o
+"""
         ) {
             val legalMove = assertIs<LegalMove>(it.makeMove(2, 2, Player.Second))
             val base = legalMove.bases.single()
@@ -213,14 +213,14 @@ class FieldWithOnlyOpponentDotsAndNoBorderTests : FieldTests() {
     fun baseWithDoubleIndependentInternalCenterHoles() {
         testFieldWithRollback(
             """
-            . . + + + + + + +
-            . . * * * * * * * +
-            + * * + * * * + * * +
-            + * + . + * + . + * +
-            + * * + * * * + * * +
-            . + * * * * * * * +
-            . . + + + + + + +
-        """
+.  .  o  o  o  o  o  o  o
+.  .  x  x  x  x  x  x  x  o
+o  x  x  o  x  x  x  o  x  x  o
+o  x  o  .  o  x  o  .  o  x  o
+o  x  x  o  x  x  x  o  x  x  o
+.  o  x  x  x  x  x  x  x  o
+.  .  o  o  o  o  o  o  o
+"""
         ) {
             val legalMove = assertIs<LegalMove>(it.makeMove(2, 2, Player.Second))
             val base = legalMove.bases.single()
@@ -234,12 +234,12 @@ class FieldWithOnlyOpponentDotsAndNoBorderTests : FieldTests() {
     fun baseWithInternalSingleConnections() {
         testFieldWithRollback(
             """
-            . * * * 
-            * + + + *
-            * + . + *
-            * + + + *
-            . * * * 
-        """
+.  x  x  x
+x  o  o  o  x
+x  o  .  o  x
+x  o  o  o  x
+.  x  x  x
+"""
         ) {
             val legalMove = assertIs<LegalMove>(it.makeMove(3, 3, Player.First))
             val base = legalMove.bases.single()
@@ -269,12 +269,12 @@ class FieldWithOnlyOpponentDotsAndNoBorderTests : FieldTests() {
     fun baseWithInternalDoubleConnections() {
         testFieldWithRollback(
             """
-            . * * * *
-            * + + + + *
-            * + * . + *
-            * + + + + *
-            . * * * *
-        """
+.  x  x  x  x
+x  o  o  o  o  x
+x  o  x  .  o  x
+x  o  o  o  o  x
+.  x  x  x  x
+"""
         ) {
             val legalMove = assertIs<LegalMove>(it.makeMove(4, 3, Player.First))
             val base = legalMove.bases.single()
@@ -293,13 +293,13 @@ class FieldWithOnlyOpponentDotsAndNoBorderTests : FieldTests() {
     fun baseWithInternalTripleConnections() {
         testFieldWithRollback(
             """
-            . * * * *
-            * + + + + *
-            * + * * + *
-            * + + . + *
-            . * + + + *
-            . . * * *
-        """
+.  x  x  x  x
+x  o  o  o  o  x
+x  o  x  x  o  x
+x  o  o  .  o  x
+.  x  o  o  o  x
+.  .  x  x  x
+"""
         ) {
             val legalMove = assertIs<LegalMove>(it.makeMove(4, 4, Player.First))
             val base = legalMove.bases.single()

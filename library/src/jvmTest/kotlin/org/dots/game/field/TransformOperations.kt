@@ -16,10 +16,10 @@ class TransformOperations : FieldTests() {
     fun testTransformation() {
         val originFieldData =
 """
-. . . * +
-. . . . *
+. . . x o
+. . . . x
 . . . . .
-. . . . +
+. . . . o
 """
         val originField = FieldParser.parseAndConvert(originFieldData, initializeRules = { width, height ->
             Rules.create(
@@ -38,10 +38,10 @@ class TransformOperations : FieldTests() {
         checkOperation(
             originField,
             """
-.  .  .  *4 +5
-.  .  *0 +1 *6
-.  .  +3 *2 .
-.  .  .  .  +7
+.  .  .  x4 o5
+.  .  x0 o1 x6
+.  .  o3 x2 .
+.  .  .  .  o7
 """.trim(),
             transformType = null
         )
@@ -51,9 +51,9 @@ class TransformOperations : FieldTests() {
             """
 .  .  .  .
 .  .  .  .
-.  +3 *0 .
-.  *2 +1 *4
-+7 .  *6 +5
+.  o3 x0 .
+.  x2 o1 x4
+o7 .  x6 o5
 """.trim(),
             TransformType.RotateCw90
         )
@@ -61,10 +61,10 @@ class TransformOperations : FieldTests() {
         checkOperation(
             originField,
             """
-+7 .  .  .  .
-.  *2 +3 .  .
-*6 +1 *0 .  .
-+5 *4 .  .  .
+o7 .  .  .  .
+.  x2 o3 .  .
+x6 o1 x0 .  .
+o5 x4 .  .  .
 """.trim(),
             TransformType.Rotate180
         )
@@ -72,9 +72,9 @@ class TransformOperations : FieldTests() {
         checkOperation(
             originField,
             """
-+5 *6 .  +7
-*4 +1 *2 .
-.  *0 +3 .
+o5 x6 .  o7
+x4 o1 x2 .
+.  x0 o3 .
 .  .  .  .
 .  .  .  .
 """.trim(),
@@ -84,10 +84,10 @@ class TransformOperations : FieldTests() {
         checkOperation(
             originField,
             """
-+5 *4 .  .  .
-*6 +1 *0 .  .
-.  *2 +3 .  .
-+7 .  .  .  .
+o5 x4 .  .  .
+x6 o1 x0 .  .
+.  x2 o3 .  .
+o7 .  .  .  .
 """.trim(),
             TransformType.FlipHorizontal
         )
@@ -95,10 +95,10 @@ class TransformOperations : FieldTests() {
         checkOperation(
             originField,
             """
-.  .  .  .  +7
-.  .  +3 *2 .
-.  .  *0 +1 *6
-.  .  .  *4 +5
+.  .  .  .  o7
+.  .  o3 x2 .
+.  .  x0 o1 x6
+.  .  .  x4 o5
 """.trimIndent(),
             TransformType.FlipVertical
         )

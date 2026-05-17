@@ -14,10 +14,10 @@ class StandardFieldWithDisallowedSuicideTests : FieldTests() {
     @Test
     fun failedSuicide() {
         testFieldWithRollback("""
-            . * .
-            * . *
-            . * .
-        """) {
+. x .
+x . x
+. x .
+""") {
             assertIs<SuicidalIllegalMove>(it.makeMove(2, 2, Player.Second))
             assertIs<LegalMove>(it.makeMove(2, 2, Player.First))
             assertIs<PosIsOccupiedIllegalMove>(it.makeMove(2, 2, Player.First))
@@ -27,10 +27,10 @@ class StandardFieldWithDisallowedSuicideTests : FieldTests() {
     @Test
     fun player1CapturesByPlacingInsideEmptyBase() {
         testFieldWithRollback("""
-            . *  +  .
-            * +6 *7 +
-            . *  +  .
-        """) {
+.  x  o  .
+x  o6 x7 o
+.  x  o  .
+""") {
             assertEquals(1, it.player1Score)
             assertEquals(0, it.player2Score)
         }
@@ -40,14 +40,14 @@ class StandardFieldWithDisallowedSuicideTests : FieldTests() {
     fun tryPutDotToEmptyBaseWithinEmptyBase() {
         testFieldWithRollback(
             """
-            ... ... +04 +05 +06
-            ... +07 ... ... ... +08
-            +09 ... ... +00 ... ... +10
-            +11 ... +01 ... +02 ... +12
-            +13 ... ... +03 ... ... +14
-            ... +15 ... ... ... +16
-            ... ... +17 +18 +19
-        """
+.   .   o04 o05 o06
+.   o07 .   .   .   o08
+o09 .   .   o00 .   .   o10
+o11 .   o01 .   o02 .   o12
+o13 .   .   o03 .   .   o14
+.   o15 .   .   .   o16
+.   .   o17 o18 o19
+"""
         ) {
             assertIs<SuicidalIllegalMove>(it.makeMove(4, 4, Player.First))
             assertIs<SuicidalIllegalMove>(it.makeMove(2, 4, Player.First))
