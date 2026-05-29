@@ -138,6 +138,8 @@ kotlin {
         // Do not enforce -Werror globally to avoid failing iOS/native metadata compilation
         // Retain other useful checks across all source sets
         freeCompilerArgs.addAll(
+            "-language-version=2.5",
+            "-Xwarning-level=EXPERIMENTAL_LANGUAGE_VERSION:disabled",
             "-Xexpect-actual-classes",
             "-Xreturn-value-checker=full",
             "-Xname-based-destructuring=complete",
