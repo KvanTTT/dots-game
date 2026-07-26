@@ -195,15 +195,19 @@ object FieldParser {
                     currentWidth++
                 }
                 else -> {
-                    diagnosticReporter(
-                        Diagnostic(
-                            "The marker should be either `$FIRST_PLAYER_MARKER` (first player), `$SECOND_PLAYER_MARKER` (second player) or `$EMPTY_POSITION_MARKER`.",
-                            TextSpan(charIndex, 1)
+                    if (char.isDigit() && (lineIndex == 0 || currentWidth == 0)) {
+                        charIndex++ // Skip coordinates if they are used (top row and left column)
+                    } else {
+                        diagnosticReporter(
+                            Diagnostic(
+                                "The marker should be either `$FIRST_PLAYER_MARKER` (first player), `$SECOND_PLAYER_MARKER` (second player) or `$EMPTY_POSITION_MARKER`.",
+                                TextSpan(charIndex, 1)
+                            )
                         )
-                    )
 
-                    currentWidth++
-                    charIndex++
+                        charIndex++
+                        currentWidth++
+                    }
                 }
             }
         }
