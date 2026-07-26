@@ -1,8 +1,6 @@
 package org.dots.game.core
 
 import org.dots.game.ParsedNode
-import kotlin.collections.component1
-import kotlin.collections.component2
 import kotlin.collections.mutableMapOf
 import kotlin.reflect.KProperty
 
@@ -124,6 +122,39 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
         return switch(siblings[(currentNodeIndex + (if (next) 1 else (siblings.size - 1))) % siblings.size])
     }
 
+    @IgnorableReturnValue
+    fun nextDepthFirst(): Boolean {
+        currentNode.children.firstOrNull()?.let {
+            return switch(it)
+        }
+
+        var node = currentNode
+        while (true) {
+            val previousNode = node.previousNode ?: return false
+            val siblings = previousNode.children
+            val nextSiblingIndex = siblings.indexOf(node) + 1
+            if (nextSiblingIndex < siblings.size) {
+                return switch(siblings[nextSiblingIndex])
+            }
+            node = previousNode
+        }
+    }
+
+    @IgnorableReturnValue
+    fun prevDepthFirst(): Boolean {
+        val previousNode = currentNode.previousNode ?: return false
+        val siblings = previousNode.children
+        val currentNodeIndex = siblings.indexOf(currentNode)
+        if (currentNodeIndex == 0) {
+            return switch(previousNode)
+        }
+
+        var node = siblings[currentNodeIndex - 1]
+        while (true) {
+            node = node.children.lastOrNull() ?: return switch(node)
+        }
+    }
+
     /**
      * @return `false` if @param[targetNode] is a @property[currentNode] or it's an unrelated node,
      * otherwise perform switching to the passed node and returns `true`
@@ -214,7 +245,7 @@ class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
     }
 
     @IgnorableReturnValue
-    fun trySwitchingToDepthFirstIndex(index: Int): Boolean {
+    fun trySwitchingByDepthFirstIndex(index: Int): Boolean {
         var counter = 0
         forEachDepthFirst {
             if (counter == index) {

@@ -361,9 +361,15 @@ private fun handleKeyEvent(
     viewportDpSize: DpSize,
 ): ChangeType? {
     if (keyEvent.type == KeyEventType.KeyDown) {
+        val depthFirstModifierPressed = keyEvent.isMetaPressed || keyEvent.isCtrlPressed
+
         return when (keyEvent.key) {
-            Key.DirectionLeft -> ChangeType.Node.takeIf { gameTree.back() }
-            Key.DirectionRight -> ChangeType.Node.takeIf { gameTree.next() }
+            Key.DirectionLeft -> ChangeType.Node.takeIf {
+                if (depthFirstModifierPressed) gameTree.prevDepthFirst() else gameTree.back()
+            }
+            Key.DirectionRight -> ChangeType.Node.takeIf {
+                if (depthFirstModifierPressed) gameTree.nextDepthFirst() else gameTree.next()
+            }
             Key.DirectionUp -> ChangeType.Node.takeIf { gameTree.prevSibling() }
             Key.DirectionDown -> ChangeType.Node.takeIf { gameTree.nextSibling() }
             Key.MoveHome -> ChangeType.Node.takeIf { gameTree.rewindToBegin() }

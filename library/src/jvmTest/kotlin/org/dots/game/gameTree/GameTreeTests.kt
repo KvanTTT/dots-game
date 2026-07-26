@@ -91,6 +91,48 @@ class GameTreeTests : FieldTests() {
     }
 
     @Test
+    fun nextPrevDepthFirstCommands() {
+        with(initializeGameTree()) {
+            assertEquals(NodeKind.New, makeMove(1, 1)) // A, child of root
+            val aNode = currentNode
+
+            assertEquals(NodeKind.New, makeMove(2, 2)) // B, first child of A
+            val bNode = currentNode
+            back()
+
+            assertEquals(NodeKind.New, makeMove(3, 1)) // C, second child of A (sibling of B)
+            val cNode = currentNode
+            back()
+            back()
+
+            assertEquals(NodeKind.New, makeMove(4, 4)) // D, second child of root (sibling of A)
+            val dNode = currentNode
+
+            switch(rootNode)
+
+            assertTrue(nextDepthFirst())
+            assertEquals(aNode, currentNode)
+            assertTrue(nextDepthFirst())
+            assertEquals(bNode, currentNode)
+            assertTrue(nextDepthFirst())
+            assertEquals(cNode, currentNode)
+            assertTrue(nextDepthFirst())
+            assertEquals(dNode, currentNode)
+            assertFalse(nextDepthFirst()) // No more nodes
+
+            assertTrue(prevDepthFirst())
+            assertEquals(cNode, currentNode)
+            assertTrue(prevDepthFirst())
+            assertEquals(bNode, currentNode)
+            assertTrue(prevDepthFirst())
+            assertEquals(aNode, currentNode)
+            assertTrue(prevDepthFirst())
+            assertEquals(rootNode, currentNode)
+            assertFalse(prevDepthFirst()) // Root has no previous node
+        }
+    }
+
+    @Test
     fun memoizedNodes() {
         with(initializeGameTree()) {
             val initNode = currentNode
