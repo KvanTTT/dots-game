@@ -46,9 +46,28 @@ fun GameInfo(
         val player1Name = currentGame.player1Name?.takeIf { it.isNotBlank() } ?: strings.firstPlayerDefaultName
         val player2Name = currentGame.player2Name?.takeIf { it.isNotBlank() } ?: strings.secondPlayerDefaultName
 
+        fun playerTitle(first: Boolean): String {
+            return buildString {
+                if (!first) {
+                    append("   ")
+                }
+
+                append(if (first) player1Name else player2Name)
+
+                val rating = if (first) currentGame.player1Rating else currentGame.player2Rating
+                if (rating != null) {
+                    append(" (${rating.toNeatNumber()})")
+                }
+
+                if (first) {
+                    append("   ")
+                }
+            }
+        }
+
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("$player1Name   ", color = uiSettings.playerFirstColor)
+                Text(playerTitle(first = true), color = uiSettings.playerFirstColor)
                 Text(
                     player1Score.toNeatNumber().toString(),
                     color = uiSettings.playerFirstColor,
@@ -62,7 +81,7 @@ fun GameInfo(
                     color = uiSettings.playerSecondColor,
                     fontWeight = FontWeight.Bold
                 )
-                Text("   $player2Name", color = uiSettings.playerSecondColor)
+                Text(playerTitle(first = false), color = uiSettings.playerSecondColor)
 
                 if (uiSettings.developerMode) {
                     val diff = player2Score - player1Score
