@@ -20,10 +20,10 @@ import org.dots.game.sgf.SgfGameMode.Companion.SUPPORTED_GAME_MODE_NAME
 import org.dots.game.toNeatNumber
 import kotlin.reflect.KProperty
 
-class SgfWriter(val oldSgfRoot: SgfRoot?) {
+class SgfWriter(val oldSgfRoot: SgfRoot?, val ignoreSpaces: Boolean) {
     companion object {
-        fun write(games: Games): String {
-            val sgfWriter = SgfWriter(games.parsedNode?.let { it as SgfRoot })
+        fun write(games: Games, ignoreSpaces: Boolean = false): String {
+            val sgfWriter = SgfWriter(games.parsedNode?.let { it as SgfRoot }, ignoreSpaces)
             with(sgfWriter) {
                 return StringBuilder().appendGames(games).toString()
             }
@@ -126,7 +126,7 @@ class SgfWriter(val oldSgfRoot: SgfRoot?) {
             }
 
             if (appType == AppType.Katago && (gamePropertyValue as? EndGameResult)?.endGameKind != EndGameKind.Grounding) {
-                return // Katago supports only grounding
+                return // KataGoDots supports only grounding
             }
         }
 
@@ -284,6 +284,8 @@ class SgfWriter(val oldSgfRoot: SgfRoot?) {
     }
 
     private fun StringBuilder.appendLeadingWhitespaces(sgfToken: SgfToken?) {
-        sgfToken?.leadingWs?.let { append(it.value) }
+        if (!ignoreSpaces) {
+            sgfToken?.leadingWs?.let { append(it.value) }
+        }
     }
 }

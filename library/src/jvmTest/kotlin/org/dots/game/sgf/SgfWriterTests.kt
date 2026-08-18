@@ -132,6 +132,36 @@ class SgfWriterTests {
         )
     }
 
+    @Test
+    fun ignoreWhitespaces() {
+        val games = parseConvertAndCheck("""
+(;FF[4]GM[40]CA[UTF-8]
+
+AP[notAgo:4.2.4]
+PC[https://t.me/notAgo]
+DT[2023-09-02]
+SO[1693648027]
+
+PB[user1]BR[1000]
+PW[user2]WR[2271]
+
+RU[Особый]
+SZ[39:32]
+RE[B+G]
+TM[240]
+OT[20 sec / move]
+
+AB[qn][po][wt][vu][ru][qv][wl][vm]
+AW[pn][qo][vt][wu][qu][rv][vl][wm]
+
+;B[um]BL[240];W[ul]WL[240])
+        """)
+        assertEquals(
+            "(;FF[4]GM[40]CA[UTF-8]AP[notAgo:4.2.4]PC[https://t.me/notAgo]DT[2023-09-02]SO[1693648027]PB[user1]BR[1000]PW[user2]WR[2271]RU[Особый]SZ[39:32]RE[B+G]TM[240]OT[20 sec / move]AB[qn][po][wt][vu][ru][qv][wl][vm]AW[pn][qo][vt][wu][qu][rv][vl][wm];B[um]BL[240];W[ul]WL[240])",
+            SgfWriter.write(games, ignoreSpaces = true)
+        )
+    }
+
     private fun checkOutput(output: String, games: Games) {
         val sgf = SgfWriter.write(games)
         parseConvertAndCheck(sgf)
