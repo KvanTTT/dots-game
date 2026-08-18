@@ -387,14 +387,14 @@ class SgfConverterTests {
                 LineColumnDiagnostic(
                     "Property RE (Result) has value `10` that doesn't match score from game field `0`.",
                     LineColumn(1, 32),
-                    DiagnosticSeverity.Warning
+                    DiagnosticSeverity.Error
                 )
             ),
             Triple("W+5" , GameResult.ScoreWin(5.0, endGameKind = null, Player.Second, player = null),
                 LineColumnDiagnostic(
                     "Property RE (Result) has value `5` that doesn't match score from game field `0`.",
                     LineColumn(1, 31),
-                    DiagnosticSeverity.Warning
+                    DiagnosticSeverity.Error
                 )
             ),
         )
@@ -418,7 +418,7 @@ class SgfConverterTests {
                 LineColumnDiagnostic(
                     "Property RE (Result) has value `0.5` that doesn't match score from game field `0`.",
                     LineColumn(1, 38),
-                    DiagnosticSeverity.Warning
+                    DiagnosticSeverity.Error
                 ),
             )
         )
