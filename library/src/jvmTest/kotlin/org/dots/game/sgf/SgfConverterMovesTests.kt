@@ -348,7 +348,7 @@ class SgfConverterMovesTests {
                 LineColumnDiagnostic(
                     "Property RE (Result) has value `2` that doesn't match score from game field `1`.",
                     LineColumn(1, 61),
-                    DiagnosticSeverity.Warning
+                    DiagnosticSeverity.Error
                 )
             )
         )
@@ -362,7 +362,7 @@ class SgfConverterMovesTests {
                 LineColumnDiagnostic(
                     "Property RE (Result) has value `2` that doesn't match score from game field `1`.",
                     LineColumn(1, 68),
-                    DiagnosticSeverity.Warning
+                    DiagnosticSeverity.Error
                 )
             )
         )

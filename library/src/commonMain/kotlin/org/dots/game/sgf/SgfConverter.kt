@@ -241,7 +241,7 @@ class SgfConverter(
                         gameResultProperty.info.reportPropertyDiagnostic(
                             "has value `${definedGameScore.toNeatNumber()}` that doesn't match score from game field `${scoreFromField.toNeatNumber()}`.",
                             TextSpan(currentGameTree.textSpan.end, 0),
-                            DiagnosticSeverity.Warning
+                            DiagnosticSeverity.Error
                         )
                     }
                 }
