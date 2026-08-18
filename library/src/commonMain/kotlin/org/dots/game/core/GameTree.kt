@@ -4,7 +4,7 @@ import org.dots.game.ParsedNode
 import kotlin.collections.mutableMapOf
 import kotlin.reflect.KProperty
 
-class GameTree(val field: Field, parsedNode: ParsedNode? = null) {
+class GameTree(val field: Field, val parsedNode: ParsedNode? = null) {
     val rootNode: GameTreeNode = GameTreeNode.createRoot(parsedNode)
 
     var game: Game? = null

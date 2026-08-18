@@ -411,8 +411,8 @@ fun recognizeInitPosType(initialMoves: List<MoveInfo>, width: Int, height: Int):
         val remainingMoves = initialMoves.toMutableSet()
 
         var randomized = false
-        for (index in 0..<recognizedCrossMoves.size) {
-            val recognizedMove = recognizedCrossMoves[index]
+        for ((index, value) in recognizedCrossMoves.withIndex()) {
+            val recognizedMove = value
             val nonRandomInitPosMove = nonRandomInitPosMoves[index]
             if (!randomized && (recognizedMove.positionXY != nonRandomInitPosMove.positionXY || recognizedMove.player != nonRandomInitPosMove.player)) {
                 randomized = true
