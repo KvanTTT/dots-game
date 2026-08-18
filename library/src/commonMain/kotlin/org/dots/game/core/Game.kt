@@ -144,8 +144,8 @@ class Game(
     val sgfFileFormat: Int? by PropertyDelegate()
     val charset: String? by PropertyDelegate()
     val size: Pair<Int, Int> by PropertyDelegate()
-    val player1AddDots: List<MoveInfo> by PropertyDelegate()
-    val player2AddDots: List<MoveInfo> by PropertyDelegate()
+    val player1AddDots: List<MoveInfo>? by PropertyDelegate()
+    val player2AddDots: List<MoveInfo>? by PropertyDelegate()
     var appInfo: AppInfo? by PropertyDelegate()
     var gameName: String? by PropertyDelegate()
     var player1Name: String? by PropertyDelegate()
@@ -174,7 +174,7 @@ class Game(
 }
 
 data class AppInfo(val name: String, val version: String?) {
-    val appType: AppType = AppType.entries.find { it.value == name } ?: AppType.Unknown
+    val appType: AppType = AppType.entries.find { it.value.equals(name, ignoreCase = true) } ?: AppType.Unknown
 
     override fun toString(): String {
         return name + (if (version == null) "" else ":$version")
@@ -193,12 +193,12 @@ data class MoveInfo internal constructor(
             return MoveInfo(positionXY = null, player, externalFinishReason, parsedNode)
         }
 
-        fun fromLegalMove(legalMove: LegalMove, field: Field): MoveInfo {
+        fun fromLegalMove(legalMove: LegalMove, field: Field, parsedNode: ParsedNode? = null): MoveInfo {
             val externalFinishReason = (legalMove as? GameResult)?.toExternalFinishReason()
             return if (externalFinishReason != null) {
-                createFinishingMove(legalMove.player, externalFinishReason)
+                createFinishingMove(legalMove.player, externalFinishReason, parsedNode)
             } else {
-                MoveInfo(legalMove.position.toXY(field.realWidth), legalMove.player)
+                MoveInfo(legalMove.position.toXY(field.realWidth), legalMove.player, parsedNode)
             }
         }
     }
