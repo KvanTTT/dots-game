@@ -10,10 +10,36 @@ import kotlin.test.assertNull
 
 class SgfRefinerTests {
     @Test
-    fun filterOutEmptyGame() {
+    fun dropEmptyGame() {
         assertNull(
             SgfRefiner.refine(parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
                 "B[tp];W[up];B[uq];W[tq])")))
+    }
+
+    @Test
+    fun dropGamesWithInconsistentMoves() {
+        // Disallow consecutive moves of the same player
+        assertNull(
+            SgfRefiner.refine(parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
+                    "B[tp];W[up];B[uq];B[tq])")))
+
+        // Disallow no moves
+        assertNull(
+            SgfRefiner.refine(parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
+                    "B[tp];;W[up])")))
+
+        // Disallow multiple moves
+        assertNull(
+            SgfRefiner.refine(parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
+                    "B[tp];W[up]B[uq])")))
+    }
+
+    @Test
+    fun dropSecondaryBranches() {
+        check(
+            "(;GM[40]FF[4]SZ[39:32]AB[tp][uq]AW[tq][up];B[bb](;W[bc];B[bd])(;W[cc];B[cd]))",
+            "(;GM[40]FF[4]SZ[39:32]AB[tp][uq]AW[tq][up];B[bb];W[bc];B[bd])"
+        )
     }
 
     @Test
