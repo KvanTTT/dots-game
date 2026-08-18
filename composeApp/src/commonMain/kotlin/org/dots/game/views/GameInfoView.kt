@@ -115,7 +115,7 @@ fun GameInfo(
                         append(strings.result)
                         append(": ")
                         if (winner != null) {
-                            append(player1Name)
+                            append(if (winner == First) player1Name else player2Name)
                             append(' ')
                             append(strings.win)
                         } else {
