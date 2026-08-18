@@ -15,12 +15,54 @@ object SgfRefiner {
             for (game in games) {
                 val refinedGame = recognizeStartPosIfNeeded(game)
 
-                if (!refineGrounding(refinedGame)) continue
+                refineGrounding(refinedGame)
+
+                // We should run consistency checks after grounding refinement
+                // Because it handles (removes) multiple manually made consecutive moves that
+                // are treated as invalid in this check.
+                if (!checkMovesConsistencyAndRemoveSecondaryBranches(refinedGame)) continue
 
                 add(refinedGame)
             }
         }
         return if (refinedGames.isNotEmpty()) Games(refinedGames, games.parsedNode) else null
+    }
+
+    fun checkMovesConsistencyAndRemoveSecondaryBranches(game: Game): Boolean {
+        val gameTree = game.gameTree
+        gameTree.rewindToBegin()
+
+        var currentNode: GameTreeNode? = gameTree.rootNode
+        var expectedNextPlayer = Player.First
+
+        while (currentNode != null) {
+            if (!currentNode.isRoot) {
+                // Disallow multiple/zero moves in a single node
+                val moveResult = currentNode.moveResults.singleOrNull() ?: return false
+
+                // Disallow illegal moves
+                if (moveResult !is LegalMove) return false
+
+                // Disallow non-alternative moves
+                if (moveResult.player != expectedNextPlayer) return false
+
+                expectedNextPlayer = expectedNextPlayer.opposite()
+            } else if (currentNode.children.isEmpty()) {
+                return false // Drop empty games
+            }
+
+            // Remove secondary branches
+            if (currentNode.children.size > 1) {
+                for (child in currentNode.children.drop(1)) {
+                    gameTree.switch(child)
+                    require(gameTree.removeCurrentBranch())
+                }
+            }
+
+            currentNode = if (gameTree.next()) gameTree.currentNode else null
+        }
+
+        return true
     }
 
     private fun recognizeStartPosIfNeeded(game: Game): Game {
@@ -91,22 +133,21 @@ object SgfRefiner {
         return game
     }
 
-    private fun refineGrounding(game: Game): Boolean {
+    private fun refineGrounding(game: Game) {
         val gameTree = game.gameTree
         val field = gameTree.field
         gameTree.rewindToEnd()
 
         val currentNode = gameTree.currentNode
 
-        // Detect last move player and drop empty games
-        val lastMovePlayer = (currentNode.moveResults.firstOrNull() as? LegalMove)?.player ?: return false
+        val lastMovePlayer = (currentNode.moveResults.firstOrNull() as? LegalMove)?.player ?: return
 
         // Make sure that all last moves have a single player (otherwise it's not a valid game)
-        if (currentNode.moveResults.any { it !is LegalMove || it.player != lastMovePlayer }) return false
+        if (currentNode.moveResults.any { it !is LegalMove || it.player != lastMovePlayer }) return
 
         val previousNode = currentNode.previousNode
         if (previousNode != null) {
-            val previousMoveResult = previousNode.moveResults.singleOrNull() as? LegalMove ?: return false
+            val previousMoveResult = previousNode.moveResults.singleOrNull() as? LegalMove ?: return
 
             // Detect a grounding move(s) and remove it because neither this app nor KataGoDots support grounding by multiple moves.
             // Also, refine output by using resignation instead of grounding.
@@ -152,7 +193,5 @@ object SgfRefiner {
                 game.result = field.gameResult
             }
         }
-
-        return true
     }
 }
