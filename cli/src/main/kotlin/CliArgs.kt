@@ -9,13 +9,17 @@ import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.parameters.types.restrictTo
+import org.dots.game.DiagnosticSeverity
 import org.dots.game.core.BaseMode
 import org.dots.game.core.Field
+import org.dots.game.core.Games
 import org.dots.game.core.InitPosType
 import org.dots.game.core.Rules
 import java.io.File
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets.UTF_8
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.reflect.KProperty
 
@@ -61,9 +65,22 @@ class CliArgs : CliktCommand() {
         .boolean()
         .default(false)
         .help("Enabled extra checks (for instance, on rollback)")
+    val outputFileOrDirectory: File? by option()
+        .file()
+        .help("If specified, merge games and write the result to file or directory at the provided path. Erase the file at the beginning if it exists")
+    val refineOutput: Boolean by option()
+        .boolean()
+        .default(true)
+        .help("If specified, filter out invalid games and normalize sgf to KataGoDots format (relevant if only use --output-file)")
+    val minDiagnosticSeverity: DiagnosticSeverity by option("--diag-severity")
+        .enum<DiagnosticSeverity>()
+        .default(DiagnosticSeverity.Error)
+        .help("If specified, filter out diagnostics with severity lower than the provided value")
 
     override fun run() {
         val outputStream = PrintStream(System.out, true, UTF_8)
+
+        val sgfFileWriter = outputFileOrDirectory?.let { SgfFileWriter(it) }
 
         val path = path
         if (path != null) {
@@ -73,7 +90,7 @@ class CliArgs : CliktCommand() {
             outputStream.reportSpecifiedButUnusedParameter(captureEmptyBasesOption, captureEmptyBases)
             outputStream.reportSpecifiedButUnusedParameter(::initPosType, initPosType)
             outputStream.reportSpecifiedButUnusedParameter(::seed, seed)
-            SgfAnalyser.process(outputStream, path, logFile, numberOfFilesToProcess = gamesCount)
+            SgfAnalyser.process(outputStream, path, logFile, sgfFileWriter, refineOutput, minDiagnosticSeverity, numberOfFilesToProcess = gamesCount)
         } else {
             outputStream.println("Random games mode activated...")
             outputStream.reportSpecifiedButUnusedParameter(::gamesCountToDrop, gamesCountToDrop)
@@ -91,6 +108,7 @@ class CliArgs : CliktCommand() {
                 gamesCount = warmUpGamesCount,
                 seed ?: 0L,
                 checkRollback = true,
+                finalGameStateHandler = {},
                 formatDouble = { it.toString() },
                 outputStream = { },
             )
@@ -106,12 +124,18 @@ class CliArgs : CliktCommand() {
                 gamesCount,
                 seed ?: 0L,
                 checkRollback,
+                finalGameStateHandler = {
+                    sgfFileWriter?.add(Games.fromField(it), content = null, fileName = LocalDateTime.now().format(dateTimeFormatter))
+                },
                 formatDouble = { String.format(Locale.ENGLISH, "%.4f", it) },
                 outputStream = { outputStream.println(it) },
             )
             outputStream.println("Main loop is finished.")
         }
     }
+
+    val dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss")
+
     fun PrintStream.reportSpecifiedButUnusedParameter(property: KProperty<*>, value: Any?) {
         return reportSpecifiedButUnusedParameter("--" + property.name, value)
     }

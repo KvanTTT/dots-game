@@ -20,6 +20,7 @@ object RandomGameAnalyser {
         gamesCount: Int,
         seed: Long,
         checkRollback: Boolean,
+        finalGameStateHandler: (Field) -> Unit,
         formatDouble: (Double) -> String,
         outputStream: (String) -> Unit,
         errorStream: (String) -> Unit = outputStream,
@@ -85,6 +86,8 @@ object RandomGameAnalyser {
                         }
                     }
                 }
+
+                finalGameStateHandler(field)
 
                 val gameResult = field.gameResult!!
                 if (gameResult is GameResult.Draw) {
