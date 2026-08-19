@@ -1,9 +1,12 @@
 package org.dots.game.sgf
 
+import org.dots.game.LineColumnDiagnostic
+import org.dots.game.buildLineOffsets
 import org.dots.game.core.EndGameKind
 import org.dots.game.core.Game
 import org.dots.game.core.GameResult
 import org.dots.game.core.InitPosType
+import org.dots.game.toLineColumnDiagnostic
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -12,26 +15,34 @@ class SgfRefinerTests {
     @Test
     fun dropEmptyGame() {
         assertNull(
-            SgfRefiner.refine(parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
-                "B[tp];W[up];B[uq];W[tq])")))
+            SgfRefiner.refine(
+                parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
+                    "B[tp];W[up];B[uq];W[tq])")
+            ))
     }
 
     @Test
     fun dropGamesWithInconsistentMoves() {
         // Disallow consecutive moves of the same player
         assertNull(
-            SgfRefiner.refine(parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
-                    "B[tp];W[up];B[uq];B[tq])")))
+            SgfRefiner.refine(
+                parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
+                        "B[tp];W[up];B[uq];B[tq])")
+            ))
 
         // Disallow no moves
         assertNull(
-            SgfRefiner.refine(parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
-                    "B[tp];;W[up])")))
+            SgfRefiner.refine(
+                parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
+                        "B[tp];;W[up])")
+            ))
 
         // Disallow multiple moves
         assertNull(
-            SgfRefiner.refine(parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
-                    "B[tp];W[up]B[uq])")))
+            SgfRefiner.refine(
+                parseConvertAndCheck("(;GM[40]FF[4]SZ[39:32]RU[russian];" +
+                        "B[tp];W[up]B[uq])")
+            ))
     }
 
     @Test
@@ -132,11 +143,12 @@ class SgfRefinerTests {
 
     @Test
     fun notagoGroundingWin() {
-        val header = "(;FF[4]GM[40]CA[UTF-8]AP[notAgo:4.2.4]PC[https://t.me/notAgo]DT[2023-09-05]SO[1693942648]PB[Utsux]BR[2614]PW[Test]WR[2208]RU[Особый]SZ[39:32]RE[B+G]TM[300]OT[30 sec / move]AB[tp][uq]AW[up][tq];B[vq]BL[300];W[uo]WL[300];B[sp]BL[300];W[tr]WL[300];B[vs]BL[300];W[tt]WL[300];B[sn]BL[300];W[vn]WL[300];B[po]BL[300];W[xn]WL[300];B[yr]BL[300];W[ss]WL[300];B[Bm]BL[300];W[wk]WL[300];B[vh]BL[300];W[tk]WL[300];B[qi]BL[300];W[Ao]WL[300];B[yo]BL[300];W[zk]WL[300];B[zn]BL[300];W[yh]WL[300];B[sh]BL[300];W[Bg]WL[300];B[rl]BL[300];W[xl]WL[300];B[xp]BL[300];W[sw]WL[300];B[ui]BL[300];W[ty]WL[300];B[En]BL[300];W[Bi]WL[300];B[Fs]BL[300];W[Fh]WL[300];B[rj]BL[300];W[Dd]WL[300];B[te]BL[300];W[zd]WL[300];B[Ho]BL[300];W[Ie]WL[300];B[sc]BL[300];W[Gb]WL[300];B[Is]BL[300];W[sA]WL[300];B[Cn]BL[300];W[su]WL[300];B[rm]BL[300];W[tC]WL[300];B[Ip]BL[300];W[sE]WL[300];B[Kp]BL[300];W[sv]WL[300];B[Am]BL[300];W[sx]WL[300];B[si]BL[300];W[sC]WL[300];B[tf]BL[300];W[Bb]WL[300];B[td]BL[300];W[zi]WL[300];B[Gn]BL[300];W[zj]WL[300];B[Dn]BL[300];W[yk]WL[300];B[wq]BL[300];W[yl]WL[300];B[rk]BL[300];W[xm]WL[300];B[ti]BL[300];W[wn]WL[300];B[xr]BL[300];W[un]WL[300];B[vr]BL[300];W[Ai]WL[300];B[Jp]BL[300];W[Bh]WL[300];B[Lp]BL[300];W[Bf]WL[300];B[Mp]BL[300];W[Be]WL[300];B[Fn]BL[300];W[Bd]WL[300];B[so]BL[300];W[Bc]WL[300];B[sg]BL[300];W[Ba]WL[300];B[sb]BL[300];W[st]WL[300];B[qn]BL[300];W[ts]WL[300];B[qo]BL[300];W[sy]WL[300];B[rn]BL[300];W[sz]WL[300];B[ri]BL[300];W[sB]WL[300];B[tg]BL[300];W[sD]WL[300];B[vi]BL[300];W[sF]WL[300];B[tc]BL[300];W[vk]WL[300];B[sa]BL[300];W[uk]WL[300];B[Hp]BL[300];W[zh]WL[300];B[Go]BL[300];W[Eh]WL[300];B[Bo]BL[300];W[Dh]WL[300];B[Ap]BL[300];W[Ch]WL[300];B[zq]BL[300];W[Cd]WL[300];B[Ir]BL[300];W[Ad]WL[300];B[Iq]BL[300];W[Fb]WL[300];B[Gs]BL[300];W[Eb]WL[300];B[Hs]BL[300];W[Db]WL[300]"
+        val header1 = "(;FF[4]GM[40]CA[UTF-8]AP[notAgo:4.2.4]PC[https://t.me/notAgo]DT[2023-09-05]SO[1693942648]PB[Utsux]BR[2614]PW[Test]WR[2208]RU[Особый]SZ[39:32]"
+        val header2 = "TM[300]OT[30 sec / move]AB[tp][uq]AW[up][tq];B[vq]BL[300];W[uo]WL[300];B[sp]BL[300];W[tr]WL[300];B[vs]BL[300];W[tt]WL[300];B[sn]BL[300];W[vn]WL[300];B[po]BL[300];W[xn]WL[300];B[yr]BL[300];W[ss]WL[300];B[Bm]BL[300];W[wk]WL[300];B[vh]BL[300];W[tk]WL[300];B[qi]BL[300];W[Ao]WL[300];B[yo]BL[300];W[zk]WL[300];B[zn]BL[300];W[yh]WL[300];B[sh]BL[300];W[Bg]WL[300];B[rl]BL[300];W[xl]WL[300];B[xp]BL[300];W[sw]WL[300];B[ui]BL[300];W[ty]WL[300];B[En]BL[300];W[Bi]WL[300];B[Fs]BL[300];W[Fh]WL[300];B[rj]BL[300];W[Dd]WL[300];B[te]BL[300];W[zd]WL[300];B[Ho]BL[300];W[Ie]WL[300];B[sc]BL[300];W[Gb]WL[300];B[Is]BL[300];W[sA]WL[300];B[Cn]BL[300];W[su]WL[300];B[rm]BL[300];W[tC]WL[300];B[Ip]BL[300];W[sE]WL[300];B[Kp]BL[300];W[sv]WL[300];B[Am]BL[300];W[sx]WL[300];B[si]BL[300];W[sC]WL[300];B[tf]BL[300];W[Bb]WL[300];B[td]BL[300];W[zi]WL[300];B[Gn]BL[300];W[zj]WL[300];B[Dn]BL[300];W[yk]WL[300];B[wq]BL[300];W[yl]WL[300];B[rk]BL[300];W[xm]WL[300];B[ti]BL[300];W[wn]WL[300];B[xr]BL[300];W[un]WL[300];B[vr]BL[300];W[Ai]WL[300];B[Jp]BL[300];W[Bh]WL[300];B[Lp]BL[300];W[Bf]WL[300];B[Mp]BL[300];W[Be]WL[300];B[Fn]BL[300];W[Bd]WL[300];B[so]BL[300];W[Bc]WL[300];B[sg]BL[300];W[Ba]WL[300];B[sb]BL[300];W[st]WL[300];B[qn]BL[300];W[ts]WL[300];B[qo]BL[300];W[sy]WL[300];B[rn]BL[300];W[sz]WL[300];B[ri]BL[300];W[sB]WL[300];B[tg]BL[300];W[sD]WL[300];B[vi]BL[300];W[sF]WL[300];B[tc]BL[300];W[vk]WL[300];B[sa]BL[300];W[uk]WL[300];B[Hp]BL[300];W[zh]WL[300];B[Go]BL[300];W[Eh]WL[300];B[Bo]BL[300];W[Dh]WL[300];B[Ap]BL[300];W[Ch]WL[300];B[zq]BL[300];W[Cd]WL[300];B[Ir]BL[300];W[Ad]WL[300];B[Iq]BL[300];W[Fb]WL[300];B[Gs]BL[300];W[Eb]WL[300];B[Hs]BL[300];W[Db]WL[300]"
 
         check(
-            "$header)",
-            "$header;B[])"
+            header1 + "RE[B+G]" + "$header2)",
+            header1 + "RE[B+G]" + "$header2;B[])" // TODO: should be "RE[B+1]"
         )
     }
 
@@ -174,9 +186,23 @@ AW[pn][qo][vt][wu][qu][rv][vl][wm]
         )
     }
 
+    @Test
+    fun groundingDraw() {
+        val header = "(;FF[4]GM[40]CA[UTF-8]AP[zagram.org]SZ[39:32]RU[Punish=0,Holes=1,AddTurn=0,MustSurr=1,MinArea=1,Pass=0,Stop=1,LastSafe=0,ScoreTerr=0,InstantWin=0]AB[sp][tq]AW[sq][tp]PB[vovanchik08]PW[Kotofeus]TM[60]OT[0+7]BL[75]WL[72]DT[2022-02-21]RE[0]BR[1063]WR[1154];B[so]BL[67];W[up]WL[67];B[tr]BL[67];W[rq]WL[67];B[ss]BL[67];W[qr]WL[67];B[tn]BL[67];W[vo]WL[67];B[um]BL[67];W[xo]WL[67];B[rt]BL[67];W[nr]WL[67];B[pt]BL[67];W[ps]WL[67];B[ou]BL[67];W[yp]WL[67];B[wm]BL[67];W[Ap]WL[67];B[xn]BL[67];W[zs]WL[67];B[mu]BL[67];W[lq]WL[67];B[zn]BL[67];W[yu]WL[67];B[lt]BL[67];W[mn]WL[67];B[Ao]BL[67];W[Bp]WL[67];B[Cn]BL[67];W[Dr]WL[67];B[Do]BL[67];W[Ax]WL[67];B[Ep]BL[67];W[Dv]WL[67];B[ks]BL[67];W[kp]WL[67];B[Er]BL[67];W[Cq]WL[67];B[Dq]BL[67];W[Ds]WL[67];B[Es]BL[67];W[zA]WL[67];B[Bn]BL[67];W[kk]WL[67];B[jr]BL[67];W[lh]WL[67];B[vl]BL[67];W[ip]WL[67];B[yo]BL[67];W[xp]WL[67];B[zp]BL[66.4];W[zq]WL[67];B[zo]BL[66.4];W[zr]WL[67];B[Dt]BL[66.4];W[Cs]WL[67];B[Eu]BL[66.4];W[Cw]WL[67];B[Ct]BL[66.4];W[Bt]WL[67];B[Cu]BL[66.4];W[Bw]WL[67];B[Bu]BL[66.4];W[Au]WL[67];B[uq]BL[58.8];W[wp]WL[67];B[vr]BL[58.8];W[yq]WL[67];B[Av]BL[58.8];W[zv]WL[66.8];B[Bv]BL[58.8];W[zw]WL[66.8];B[Aw]BL[58.8];W[zy]WL[66.8];B[qu]BL[58.8];W[Bx]WL[66.8];B[iq]BL[58.7];W[jp]WL[66.8];B[gq]BL[58.7];W[hm]WL[66.8];B[nv]BL[58.7];W[AC]WL[66.8];B[fp]BL[58.7];W[kf]WL[66.8];B[cq]BL[58.7];W[jd]WL[66.8];B[dp]BL[58.7];W[ld]WL[61.4];B[eo]BL[45.1];W[gm]WL[61.4];B[hp]BL[45.1];W[in]WL[61.4];B[ho]BL[45.1];W[io]WL[61.4];B[qo]BL[45.1];W[os]WL[61.4];B[pn]BL[45.1];W[mr]WL[61.4];B[rn]BL[45.1];W[zE]WL[61.4];B[Ir]BL[45.1];W[AE]WL[61.4];B[Js]BL[45.1];W[lj]WL[61.4];B[Kt]BL[45.1];W[jl]WL[61.4];B[oo]BL[45.1];W[im]WL[61.4];B[np]BL[45.1];W[mi]WL[61.4];B[mq]BL[45.1];W[lr]WL[61.4];B[lp]BL[45.1];W[kq]WL[61.4];B[lo]BL[45.1];W[lm]WL[61.4];B[no]BL[45.1];W[km]WL[61.4];B[aq]BL[45.1];W[kc]WL[61.4];B[Jy]BL[44.1];W[AD]WL[61.4];B[mA]BL[44.1];W[AB]WL[61.4];B[Kx]BL[43.4];W[AA]WL[57.7];B[Gs]BL[43.4];W[kd]WL[57.7];B[my]BL[43.4];W[ke]WL[57.7];B[nB]BL[35.8];W[kg]WL[57.7];B[Kv]BL[35.8];W[kb]WL[47.7];B[Lw]BL[35.8];W[zz]WL[44.9];B[Hr]BL[35.8];W[zx]WL[44.9];B[Du]BL[35.8];W[Cv]WL[44.9];B[ws]BL[35.8];W[yt]WL[44.9];B[mw]BL[35.8];W[li]WL[44.9];B[mx]BL[35.8];W[zF]WL[44.9];B[nD]BL[35.8];W[zD]WL[44.9];B[nE]BL[35.8];W[zC]WL[44.9];B[nF]BL[35.8];W[zB]WL[44.9];B[mz]BL[35.8];W[yv]WL[44.9];B[vq]BL[35.8];W[vp]WL[44.9];B[qt]BL[35.8];W[zu]WL[44.9];B[nu]BL[35.8];W[qq]WL[44.9];B[nw]BL[35.8];W[pr]WL[44.9];B[ln]BL[35.8];W[mm]WL[44.9];B[nC]BL[35.8];W[or]WL[44.9];B[Dp]BL[35.8];W[rp]WL[44.9];B[ro]BL[35.8];W[qp]WL[44.9];B[po]BL[35.8];W[nq]WL[44.9];B[mp]BL[35.8];W[ys]WL[44.9];B[hq]BL[35.8];W[jq]WL[44.9];B[ir]BL[35.8];W[kr]WL[44.9];B[js]BL[35.8];W[yr]WL[44.9];B[kt]BL[35.8];W[il]WL[44.9];B[vm]BL[35.8];W[kl]WL[44.9];B[ep]BL[35.8];W[kj]WL[44.9];B[bq]BL[35.8];W[kh]WL[44.9];B[An]BL[35.8];W[ka]WL[44.9];B[sn]BL[35.8];W[Cr]WL[44.9];B[gp]BL[35.8];W[At]WL[44.9];B[Co]BL[35.8];W[Bs]WL[44.9];B[Fs]BL[35.8];W[As]WL[44.9];B[Ku]BL[35.8];W[Br]WL[44.9];B[Kw]BL[35.8];W[Ar]WL[44.9];B[Mw]BL[35.8];W[Aq]WL[44.9];B[Ky]BL[35.8];W[Bq]WL[44.9];B[Eq]BL[35.8];W[yw]WL[44.9];B[Et]BL[35.8];W[ki]WL[44.9];B[rs]BL[35.8];W[jm]WL[44.9];B[pu]BL[35.8];W[kn]WL[44.9];B[cp]BL[35.8];W[ko]WL[44.9];B[un]BL[35.8];W[jo]WL[44.9];B[wn]BL[35.8];W[jn]WL[44.9];B[mB]BL[35.8];W[jk]WL[44.9];B[vs]BL[35.8];W[jj]WL[44.9];B[sr]BL[35.8];W[ji]WL[44.9];B[yn]BL[35.8];W[jh]WL[44.9];B[Hs]BL[35.8];W[jg]WL[44.9];B[Is]BL[35.8];W[jf]WL[44.9];B[Ks]BL[35.8];W[je]WL[44.9];B[qn]BL[35.8];W[jc]WL[44.9];B[lu]BL[35.8];W[jb]WL[44.9];B[ur]BL[35.8];W[ja]WL[44.9];B[vn]BL[35.8];W[Ay]WL[44.9]C[B pressed STOP];"
+        check(
+            header + "W[Az]WL[157.1];W[AF]WL[153.1];W[yF]WL[138.6];W[BF]WL[136.7])",
+            header + "B[])"
+        )
+    }
+
     @IgnorableReturnValue
     private fun check(sgf: String, expectedRefinedSgf: String): Game {
-        val refinedGames = SgfRefiner.refine(parseConvertAndCheck(sgf))!!
+        val diagnostics = mutableListOf<LineColumnDiagnostic>()
+        val lineOffsets by lazy(LazyThreadSafetyMode.NONE) { sgf.buildLineOffsets() }
+        val games = Sgf.parseAndConvert(sgf) {
+            diagnostics.add(it.toLineColumnDiagnostic(lineOffsets))
+        }
+        val refinedGames = SgfRefiner.refine(games, diagnostics)!!
         assertEquals(expectedRefinedSgf, SgfWriter.write(refinedGames))
         return refinedGames.single()
     }
