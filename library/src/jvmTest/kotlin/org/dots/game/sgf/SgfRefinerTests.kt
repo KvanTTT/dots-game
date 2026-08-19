@@ -1,12 +1,10 @@
 package org.dots.game.sgf
 
-import org.dots.game.LineColumnDiagnostic
-import org.dots.game.buildLineOffsets
+import org.dots.game.Diagnostic
 import org.dots.game.core.EndGameKind
 import org.dots.game.core.Game
 import org.dots.game.core.GameResult
 import org.dots.game.core.InitPosType
-import org.dots.game.toLineColumnDiagnostic
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -195,12 +193,22 @@ AW[pn][qo][vt][wu][qu][rv][vl][wm]
         )
     }
 
+    @Test
+    fun initPosWithAlternatingMoves() {
+        val header = "(;AP[Спортивные Точки (playdots.ru)]GM[40]FF[4]CA[UTF-8]SZ[39:32]RU[russian]PB[Руслан Черемухин]PW[Константин Суслов]BR[Третий разряд, 1324]WR[Первый разряд, 1551]OT[20 sec / move]DT[2015-09-19 19:47:02]EV[нерейт]C[без территории, с заземлением, двойной скрест в центре, 20 сек на ход (стандарт), зрители 0, продолжительность 08:40]RE[W+31]SO[https://playdots.ru/game-info/?id=110044]"
+        val body = ";B[ur];W[wq];B[vo];W[un];B[uo];W[to];B[tn];W[so];B[rp];W[rq];B[qp];W[rn];B[qm];W[tm];B[qr];W[ss];B[sr];W[rr];B[rs];W[tr];B[st];W[us];B[vr];W[ws];B[um];W[sm];B[vn];W[tk];B[qq];W[ts];B[vm];W[vt];B[qs];W[uj];B[ul];W[tl];B[wp];W[xr];B[xp];W[Aq];B[wj];W[vi];B[xi];W[xh];B[yh];W[wi];B[zi];W[xj];B[yi];W[yk];B[xk];W[yj];B[vj];W[xl];B[wk];W[wm];B[uk];W[ti];B[ui];W[uh];B[wh];W[xg];B[wg];W[wf];B[vg];W[vf];B[ug];W[tf];B[tg];W[sg];B[xf];W[yg];B[uf];W[ue];B[yl];W[zl];B[ym];W[Ak];B[zj];W[zk];B[zm];W[Am];B[yf];W[sh];B[zg];W[An];B[Ah];W[Bo];B[Bq];W[Bp];B[Ap];W[zr];B[Ar];W[ys];B[Br];W[ub])"
+
+        check(
+            "$header;B[sp];W[tp];B[tq];W[sq];W[up];B[vp];W[vq];B[uq]$body",
+            header + "AB[sp][tq][uq][vp]AW[sq][tp][up][vq]" + body,
+        )
+    }
+
     @IgnorableReturnValue
     private fun check(sgf: String, expectedRefinedSgf: String): Game {
-        val diagnostics = mutableListOf<LineColumnDiagnostic>()
-        val lineOffsets by lazy(LazyThreadSafetyMode.NONE) { sgf.buildLineOffsets() }
+        val diagnostics = mutableListOf<Diagnostic>()
         val games = Sgf.parseAndConvert(sgf) {
-            diagnostics.add(it.toLineColumnDiagnostic(lineOffsets))
+            diagnostics.add(it)
         }
         val refinedGames = SgfRefiner.refine(games, diagnostics)!!
         assertEquals(expectedRefinedSgf, SgfWriter.write(refinedGames))
