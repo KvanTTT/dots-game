@@ -29,6 +29,11 @@ actual fun readFileText(filePath: String): String = error("File loading is not s
 
 actual fun fileExists(filePath: String): Boolean = false
 
+// Directory traversal is not implemented for native platforms (iOS)
+actual fun directoryExists(directoryPath: String): Boolean = false
+
+actual fun listFilesRecursively(directoryPath: String): Sequence<String> = emptySequence()
+
 actual suspend fun downloadFileText(fileUrl: String): String = error("File downloading by url is not supported")
 
 @Composable

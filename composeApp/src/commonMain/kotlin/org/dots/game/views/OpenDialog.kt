@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dotsgame.composeapp.generated.resources.Res
 import dotsgame.composeapp.generated.resources.ic_browse
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.dots.game.Diagnostic
 import org.dots.game.GameLoader
@@ -45,6 +48,9 @@ import org.dots.game.OpenFileDialog
 import org.dots.game.UiSettings
 import org.dots.game.core.ClassSettings
 import org.dots.game.toLineColumnDiagnostic
+import kotlin.time.Duration.Companion.milliseconds
+
+private val INPUT_PROCESSING_DELAY = 300.milliseconds
 
 @Composable
 fun OpenDialog(
@@ -64,23 +70,34 @@ fun OpenDialog(
     var rewindToEnd by remember { mutableStateOf(openGameSettings.rewindToEnd) }
     var addFinishingMove by remember { mutableStateOf(openGameSettings.addFinishingMove) }
     var showFileDialog by remember { mutableStateOf(false) }
+    var loadJob by remember { mutableStateOf<Job?>(null) }
 
     var initialization by remember { mutableStateOf(true) }
 
-    fun openOrLoad() {
+    fun openOrLoad(postponed: Boolean = false) {
         val text = pathOrContentTextFieldValue.text
         if (text != previousInput) {
             previousInput = text
 
-            coroutineScope.launch {
-                diagnostics = buildList {
-                    loadResult = GameLoader.openOrLoad(text, rules, addFinishingMove = addFinishingMove) { diagnostic ->
-                        add(diagnostic)
-                    }
-                    if (loadResult?.inputType is InputType.InputTypeWithPath) {
-                        contentTextFieldValue = TextFieldValue(loadResult?.content ?: "")
-                    }
+            loadJob?.cancel()
+            loadJob = coroutineScope.launch {
+                // Don't process every intermediate input because it can be expensive
+                // (a directory being typed char by char is traversed on every change)
+                if (postponed) delay(INPUT_PROCESSING_DELAY)
+
+                val newDiagnostics = mutableListOf<GameLoader.GameLoaderDiagnostic>()
+                val newLoadResult = GameLoader.openOrLoad(text, rules, addFinishingMove = addFinishingMove) { diagnostic ->
+                    newDiagnostics.add(diagnostic)
                 }
+
+                // Don't overwrite the state if a newer input has already been submitted
+                ensureActive()
+
+                loadResult = newLoadResult
+                if (newLoadResult.inputType is InputType.InputTypeWithPath) {
+                    contentTextFieldValue = TextFieldValue(newLoadResult.content ?: "")
+                }
+                diagnostics = newDiagnostics
             }
         }
     }
@@ -118,7 +135,7 @@ fun OpenDialog(
                             pathOrContentTextFieldValue,
                             {
                                 pathOrContentTextFieldValue = it
-                                openOrLoad()
+                                openOrLoad(postponed = true)
                             },
                             modifier = Modifier.weight(1f),
                             singleLine = loadResult?.inputType is InputType.InputTypeWithPath,

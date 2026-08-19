@@ -109,6 +109,8 @@ fun SaveDialog(
             // Don't use a link as a file name because it's useless
             is InputType.Url -> inputType.name
             is InputType.File -> inputType.refinedPath
+            // Use the directory name but not its entire path as a base of the file name
+            is InputType.SgfDirectory -> inputType.name
             null -> ""
         }.let {
             val resultPath = it.ifBlank { Clock.System.now().dateTimeShort.replace(':', '-') }

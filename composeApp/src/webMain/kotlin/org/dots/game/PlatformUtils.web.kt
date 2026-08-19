@@ -52,6 +52,11 @@ actual fun readFileText(filePath: String): String = WasmVirtualFS.read(filePath)
 
 actual fun fileExists(filePath: String): Boolean = WasmVirtualFS.exists(filePath)
 
+// Directories are not supported on Web because there is no real file system
+actual fun directoryExists(directoryPath: String): Boolean = false
+
+actual fun listFilesRecursively(directoryPath: String): Sequence<String> = emptySequence()
+
 @OptIn(ExperimentalWasmJsInterop::class)
 actual suspend fun downloadFileText(fileUrl: String): String {
     val response = window.fetch(fileUrl).await() as Response

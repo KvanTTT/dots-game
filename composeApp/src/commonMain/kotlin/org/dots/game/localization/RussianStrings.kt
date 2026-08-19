@@ -63,7 +63,7 @@ object RussianStrings : Strings {
 
     // Open Dialog
     override val pathOrContent = "Путь или содержимое"
-    override val pathOrContentPlaceholder = "Введите путь к .sgf файлу или его содержимое"
+    override val pathOrContentPlaceholder = "Введите путь к .sgf файлу, к каталогу с такими файлами или его содержимое"
     override val rewindToEnd = "Просмотр с конца"
     override val addFinishingMove = "Добавить завершающий ход"
     override val openSgfFile = "Открыть SGF файл"

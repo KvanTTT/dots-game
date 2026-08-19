@@ -62,7 +62,7 @@ object EnglishStrings : Strings {
 
     // Open Dialog
     override val pathOrContent = "Path or Content"
-    override val pathOrContentPlaceholder = "Enter path to .sgf(s) file or its content"
+    override val pathOrContentPlaceholder = "Enter path to .sgf(s) file, to a directory with such files or its content"
     override val rewindToEnd = "Rewind to End"
     override val addFinishingMove = "Add Finishing Move"
     override val openSgfFile = "Open SGF File"

@@ -14,6 +14,15 @@ expect fun readFileText(filePath: String): String
 
 expect fun fileExists(filePath: String): Boolean
 
+expect fun directoryExists(directoryPath: String): Boolean
+
+/**
+ * Returns paths of all files located in [directoryPath] and its subdirectories.
+ * The result is lazy to avoid a complete traversal of a huge directory.
+ * Platforms without access to a real file system return an empty sequence.
+ */
+expect fun listFilesRecursively(directoryPath: String): Sequence<String>
+
 expect suspend fun downloadFileText(fileUrl: String): String
 
 expect object UrlEncoderDecoder {

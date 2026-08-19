@@ -48,6 +48,11 @@ actual fun readFileText(filePath: String): String = File(filePath).readText()
 
 actual fun fileExists(filePath: String): Boolean = File(filePath).exists()
 
+actual fun directoryExists(directoryPath: String): Boolean = File(directoryPath).isDirectory
+
+actual fun listFilesRecursively(directoryPath: String): Sequence<String> =
+    File(directoryPath).walkTopDown().filter { it.isFile }.map { it.path }
+
 actual suspend fun downloadFileText(fileUrl: String): String {
     return withContext(Dispatchers.IO) {
         URI.create(fileUrl).toURL().openStream().readBytes().decodeToString()

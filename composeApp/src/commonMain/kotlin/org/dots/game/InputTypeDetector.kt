@@ -73,6 +73,13 @@ object InputTypeDetector {
         }
 
         val refinedPath = input.trim().removeSurrounding("\"")
+
+        if (directoryExists(refinedPath)) {
+            // Drop trailing separators to get a name of the directory itself but not an empty one
+            val pathWithoutTrailingSeparators = refinedPath.trimEnd('/', '\\').ifEmpty { refinedPath }
+            return InputType.SgfDirectory(refinedPath, extractFileName(pathWithoutTrailingSeparators))
+        }
+
         val lower = refinedPath.lowercase()
         if (sgfExtensionRegex.matches(lower)) {
             return InputType.SgfFile(refinedPath, extractFileName(refinedPath))
@@ -132,6 +139,9 @@ sealed class InputType {
     sealed class File(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
     class SgfFile(refinedPath: String, name: String, isIncorrect: Boolean = false) : File(refinedPath, name, isIncorrect)
     class OtherFile(refinedPath: String, name: String) : File(refinedPath, name, true)
+
+    /** A directory with sgf(s) files that are merged into a single sgf content on loading. */
+    class SgfDirectory(refinedPath: String, name: String) : InputTypeWithPath(refinedPath, name, isIncorrect = false)
 
     sealed class Url(refinedPath: String, name: String, isIncorrect: Boolean = false) : InputTypeWithPath(refinedPath, name, isIncorrect)
     class SgfServerUrl(refinedPath: String, name: String, isIncorrect: Boolean = false) : Url(refinedPath, name, isIncorrect)
