@@ -722,9 +722,16 @@ class SgfConverter(
             if (value.elementAtOrNull(EXTRA_MOVE_INFO_INDEX - 1) == '.') {
                 if (!capturingIsCalculatedAutomaticallyIsReported) {
                     val capturingMoveInfos = buildList {
-                        for (internalIndex in EXTRA_MOVE_INFO_INDEX until value.length step 2) {
+                        var internalIndex = EXTRA_MOVE_INFO_INDEX
+                        while (internalIndex < value.length) {
                             convertCoordinates(propertyInfo, internalIndex).let { coordinates ->
                                 coordinates.toPositionXY()?.let { add(it) }
+                            }
+
+                            internalIndex += 2
+                            // Also handle multiple closures by the same move (`W[kj.lj.jj.ki]`)
+                            if (value.elementAtOrNull(internalIndex) == '.') {
+                                internalIndex++
                             }
                         }
                     }

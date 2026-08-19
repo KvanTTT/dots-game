@@ -240,6 +240,26 @@ class SgfConverterMovesTests {
     }
 
     @Test
+    fun capturingPositionsOfMultipleBases() {
+        // . . . . . . .
+        // . . . o . . .
+        // . . o x o . .
+        // . o x o x o .
+        // . . o . o . .
+        // . . . . . . .
+        val _ = checkParseAndUnparse(
+            "(;GM[40]FF[4]SZ[20];B[lj];W[mj];B[jj];W[ij];B[ki];W[kh];B[en];W[ji];B[qn];W[li];B[hp];W[jk];B[np];W[lk];B[kp];W[kj.lj.jj.ki])",
+            listOf(
+                LineColumnDiagnostic(
+                    "Property W (Player2 move) has capturing positions that are not yet supported: (12;10), (10;10), (11;9) (`lj.jj.ki`). The capturing is calculated automatically according game rules for this and next cases.",
+                    LineColumn(1, 116),
+                    DiagnosticSeverity.Warning
+                ),
+            )
+        ).single().gameTree
+    }
+
+    @Test
     fun notaGoGrounding() {
         fun checkGrounding(player: Player) {
             val pla: Char
