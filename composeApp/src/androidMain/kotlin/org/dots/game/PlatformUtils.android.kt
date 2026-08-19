@@ -58,6 +58,11 @@ actual fun fileExists(filePath: String): Boolean {
     return filePath.startsWith("content://") || AndroidPickedFiles.exists(filePath) || File(filePath).exists()
 }
 
+// Directories are not supported on Android because files are picked via SAF that provides content URIs only
+actual fun directoryExists(directoryPath: String): Boolean = false
+
+actual fun listFilesRecursively(directoryPath: String): Sequence<String> = emptySequence()
+
 actual suspend fun downloadFileText(fileUrl: String): String {
     return withContext(Dispatchers.IO) {
         URI.create(fileUrl).toURL().openStream().readBytes().decodeToString()
