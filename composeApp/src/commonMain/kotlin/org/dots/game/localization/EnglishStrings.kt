@@ -78,6 +78,8 @@ object EnglishStrings : Strings {
     override val link = "Link"
     override val copy = "Copy"
     override val saveDialogTitle = "Save game"
+    override val refine = "Refine"
+    override val refinementIsFailed = "The games can't be refined, thus they are not saved"
     override val tooLongLinkMessage = "Unavailable (too long link)"
 
     // Settings Dialog

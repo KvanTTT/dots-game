@@ -65,6 +65,8 @@ interface Strings {
     val link: String
     val copy: String
     val saveDialogTitle: String
+    val refine: String
+    val refinementIsFailed: String
     val tooLongLinkMessage: String
 
     // Settings Dialog

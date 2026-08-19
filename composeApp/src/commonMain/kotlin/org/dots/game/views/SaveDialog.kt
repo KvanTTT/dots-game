@@ -2,6 +2,8 @@ package org.dots.game.views
 
 import org.dots.game.dump.DumpParameters
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +16,7 @@ import androidx.compose.ui.window.Dialog
 import dotsgame.composeapp.generated.resources.Res
 import dotsgame.composeapp.generated.resources.ic_copy
 import dotsgame.composeapp.generated.resources.ic_save
+import org.dots.game.Diagnostic
 import org.dots.game.GameSettings
 import org.dots.game.IconButton
 import org.dots.game.InputType
@@ -22,13 +25,35 @@ import org.dots.game.MAX_PRACTICAL_LINK_LENGTH
 import org.dots.game.Platform
 import org.dots.game.SaveFileDialog
 import org.dots.game.UiSettings
+import org.dots.game.buildLineOffsets
 import org.dots.game.core.Field
 import org.dots.game.dateTimeShort
 import org.dots.game.dump.DumpFormat
 import org.dots.game.dump.render
 import org.dots.game.getGameLink
 import org.dots.game.platform
+import org.dots.game.sgf.Sgf
+import org.dots.game.sgf.SgfRefiner
+import org.dots.game.sgf.SgfWriter
+import org.dots.game.toLineColumnDiagnostic
 import kotlin.time.Clock
+
+internal class SgfRefinement(
+    /** `null` if the games can't be refined. */
+    val sgf: String?,
+    val diagnostics: List<Diagnostic>,
+)
+
+/**
+ * [sgfContent] is reparsed instead of refining the games that are currently opened in the app,
+ * because [SgfRefiner] refines games in place.
+ */
+internal fun refineSgfContent(sgfContent: String): SgfRefinement {
+    val diagnostics = mutableListOf<Diagnostic>()
+    val games = Sgf.parseAndConvert(sgfContent) { diagnostics.add(it) }
+    val refinedGames = SgfRefiner.refine(games, diagnostics) { diagnostics.add(it) }
+    return SgfRefinement(refinedGames?.let { SgfWriter.write(it, ignoreSpaces = true) }, diagnostics)
+}
 
 @Composable
 fun SaveDialog(
@@ -70,12 +95,19 @@ fun SaveDialog(
     var printCoordinates by remember { mutableStateOf(dumpParameters.printCoordinates) }
     var debugInfo by remember { mutableStateOf(dumpParameters.debugInfo) }
 
+    var refineSgf by remember { mutableStateOf(dumpParameters.refineSgf) }
+
+    val sgfRefinement = remember(refineSgf) { if (refineSgf) refineSgfContent(sgfContent) else null }
+    // It's `null` if the games can't be refined, in such a case there is nothing to save
+    val sgfContentToSave = if (refineSgf) sgfRefinement?.sgf else sgfContent
+    val sgfLineOffsets = remember { sgfContent.buildLineOffsets() }
+
     var format by remember { mutableStateOf(EnumMode(dumpParameters.format)) }
-    var fieldRepresentation by remember(format, printNumbers, padding, printCoordinates, debugInfo) {
+    var fieldRepresentation by remember(format, printNumbers, padding, printCoordinates, debugInfo, refineSgf) {
         mutableStateOf(
             when (format.selected) {
                 DumpFormat.Sgf -> {
-                    sgfContent
+                    sgfContentToSave ?: sgfContent
                 }
                 else -> {
                     field.render(
@@ -96,9 +128,9 @@ fun SaveDialog(
     val inputTypeForGameSettings = remember { InputTypeDetector.tryGetInputTypeForPath(gameSettings.path ?: "") }
 
     val refinedLink = remember {
-        val refinedGameSettings = when (val inputType = inputTypeForGameSettings) {
+        val refinedGameSettings = when (inputTypeForGameSettings) {
             // Extract refined path for client URL
-            is InputType.SgfClientUrl -> gameSettings.copy(path = inputType.refinedPath)
+            is InputType.SgfClientUrl -> gameSettings.copy(path = inputTypeForGameSettings.refinedPath)
             else -> gameSettings
         }
         getGameLink(refinedGameSettings)
@@ -136,11 +168,12 @@ fun SaveDialog(
             padding = padding,
             printCoordinates = printCoordinates,
             debugInfo = debugInfo,
-            format = format.selected
+            format = format.selected,
+            refineSgf = refineSgf,
         )
     }
 
-    if (showSaveDialog) {
+    if (showSaveDialog && sgfContentToSave != null) {
         SaveFileDialog(
             title = strings.saveDialogTitle,
             selectedFile = path,
@@ -154,7 +187,7 @@ fun SaveDialog(
                 }
                 showSaveDialog = false
             },
-            content = sgfContent,
+            content = sgfContentToSave,
         )
     }
 
@@ -179,6 +212,33 @@ fun SaveDialog(
                     textStyle = TextStyle(fontFamily = FontFamily.Monospace),
                     maxLines = 20,
                 )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(strings.refine, Modifier.fillMaxWidth(configKeyTextFraction))
+                    Checkbox(refineSgf, onCheckedChange = {
+                        refineSgf = it
+                    })
+                }
+
+                if (sgfRefinement != null) {
+                    if (sgfRefinement.sgf == null) {
+                        Text(strings.refinementIsFailed, color = MaterialTheme.colors.error)
+                    }
+
+                    if (sgfRefinement.diagnostics.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 150.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            for (diagnostic in sgfRefinement.diagnostics) {
+                                Text(
+                                    diagnostic.toLineColumnDiagnostic(sgfLineOffsets).toString(),
+                                    style = MaterialTheme.typography.body2,
+                                )
+                            }
+                        }
+                    }
+                }
 
                 if (format.selected == DumpFormat.Plain) {
                     DiscreteSliderConfig(strings.padding, padding, 0, maxPadding) {
@@ -219,7 +279,7 @@ fun SaveDialog(
                         singleLine = true,
                     )
                     with(strings) {
-                        IconButton(Res.drawable.ic_save) {
+                        IconButton(Res.drawable.ic_save, enabled = sgfContentToSave != null) {
                             showSaveDialog = true
                         }
                     }

@@ -79,6 +79,8 @@ object RussianStrings : Strings {
     override val link = "Ссылка"
     override val copy = "Копировать"
     override val saveDialogTitle = "Сохранить игру"
+    override val refine = "Уточнить"
+    override val refinementIsFailed = "Игры не могут быть уточнены, поэтому они не сохраняются"
     override val tooLongLinkMessage = "Недоступно (слишком длинная ссылка)"
 
     // Settings
