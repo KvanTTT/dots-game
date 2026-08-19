@@ -13,13 +13,16 @@ sealed class SgfToken(textSpan: TextSpan, val value: String, val leadingWs: Whit
 
 data class TextSpan(val start: Int, val size: Int) {
     companion object {
-        val Empty: TextSpan = TextSpan(0, 0)
-
         fun fromBounds(start: Int, end: Int): TextSpan = TextSpan(start, end - start)
     }
 
     val end: Int
         get() = start + size
+
+    operator fun plus(other: TextSpan?): TextSpan {
+        if (other == null) return this
+        return fromBounds(minOf(start, other.start), maxOf(end, other.end))
+    }
 
     override fun toString(): String = "[$start..$end)"
 }
