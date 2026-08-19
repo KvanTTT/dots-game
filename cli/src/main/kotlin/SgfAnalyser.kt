@@ -1,13 +1,16 @@
+import org.dots.game.Diagnostic
+import org.dots.game.DiagnosticSeverity
 import org.dots.game.buildLineOffsets
 import org.dots.game.core.Games
 import org.dots.game.sgf.SgfConverter
 import org.dots.game.sgf.SgfParser
+import org.dots.game.sgf.SgfRefiner
 import org.dots.game.sgf.SgfRoot
 import org.dots.game.toLineColumnDiagnostic
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
-import java.util.Locale
+import java.util.*
 import kotlin.math.round
 import kotlin.time.Duration
 import kotlin.time.TimeSource
@@ -18,6 +21,9 @@ object SgfAnalyser {
         outputStream: PrintStream,
         fileOrDirectoryFile: File,
         logFile: File?,
+        sgfFileWriter: SgfFileWriter?,
+        refineOutput: Boolean,
+        minDiagnosticSeverity: DiagnosticSeverity,
         numberOfFilesToDrop: Int = 0,
         numberOfFilesToProcess: Int = Int.MAX_VALUE
     ) {
@@ -54,17 +60,14 @@ object SgfAnalyser {
                 null
             }
 
-            val diagnosticsLogger = { message: String ->
-                if (fileOutputWriter != null) {
-                    fileOutputWriter.write(message + "\n")
-                } else {
-                    println(message)
-                }
+            val writeMessage = { message: String ->
+                fileOutputWriter?.write(message + "\n")
+                println(message)
             }
+
             val exceptionLogger = { file: File, exception: Exception ->
                 "EXCEPTION on $file: $exception".let { message ->
-                    fileOutputWriter?.write(message + "\n")
-                    println(message)
+                    writeMessage(message)
                 }
             }
 
@@ -81,12 +84,55 @@ object SgfAnalyser {
             val totalTimeTimeMark = TimeSource.Monotonic.markNow()
 
             for ((index, file = value) in sgfFiles.withIndex()) {
-                val processingResult = processFile(file, diagnosticsLogger, exceptionLogger)
+                val processingResult = processFile(file, exceptionLogger)
                 if (processingResult != null) {
                     totalParserElapsed += processingResult.parserElapsed
                     totalConverterElapsed += processingResult.converterElapsed
                     totalFieldElapsed += processingResult.fieldElapsed
-                    totalMovesCount += processingResult.movesCount
+                    totalMovesCount += processingResult.games.sumOf {
+                        var counter = 0
+                        it.gameTree.forEachDepthFirst {
+                            counter++
+                            true
+                        }
+                        counter
+                    }
+
+                    val refinerDiagnostics = mutableListOf<Diagnostic>()
+                    if (sgfFileWriter != null) {
+                        val refinedGames: Games?
+                        val content: String?
+                        if (refineOutput) {
+                            content = null
+                            refinedGames = SgfRefiner.refine(processingResult.games, processingResult.diagnostics) {
+                                refinerDiagnostics += it
+                            }
+                        } else {
+                            content = processingResult.content
+                            refinedGames = processingResult.games
+                        }
+
+                        if (refinedGames != null) {
+                            val fileName = if (isDirectory) {
+                                file.relativeTo(fileOrDirectoryFile).toString().replace("/", "-")
+                            } else {
+                                file.name
+                            }
+                            sgfFileWriter.add(refinedGames, content, fileName)
+                        }
+                    }
+
+                    val diagnosticsToReport = (processingResult.diagnostics + refinerDiagnostics).filter {
+                        it.severity >= minDiagnosticSeverity
+                    }
+
+                    if (diagnosticsToReport.isNotEmpty()) {
+                        val lineOffsets = processingResult.content.buildLineOffsets()
+                        writeMessage("File $file contains diagnostics:")
+                        for (diagnostic in diagnosticsToReport) {
+                            writeMessage(diagnostic.toLineColumnDiagnostic(lineOffsets).toString())
+                        }
+                    }
                 }
 
                 val currentProgress = round((index.toDouble() / filesNumber) * 100).toInt()
@@ -127,47 +173,31 @@ object SgfAnalyser {
         }
     }
 
-    private fun processFile(file: File, diagnosticsLogger: (String) -> Unit, exceptionLogger: (File, Exception) -> Unit): ProcessingResult? {
+    private fun processFile(file: File, exceptionLogger: (File, Exception) -> Unit): ProcessingResult? {
         try {
             val content = file.readText()
-            val lineOffsets by lazy { content.buildLineOffsets() }
-            var diagnosticsCount = 0
+            val diagnostics = mutableListOf<Diagnostic>()
 
             val sgfParseTree: SgfRoot
             val parserElapsed = measureTime {
                 sgfParseTree = SgfParser.parse(content) { parseDiagnostic ->
-                    diagnosticsLogger(parseDiagnostic.toLineColumnDiagnostic(lineOffsets).toString())
-                    diagnosticsCount++
+                    diagnostics.add(parseDiagnostic)
                 }
             }
 
             val sgfConverter: SgfConverter
             val games: Games
-            val movesCount: Int
             val converterAndFieldStartElapsed = measureTime {
-                sgfConverter = SgfConverter(sgfParseTree, warnOnMultipleGames = false) { convertDiagnostic ->
-                    diagnosticsLogger(convertDiagnostic.toLineColumnDiagnostic(lineOffsets).toString())
-                    diagnosticsCount++
+                sgfConverter = SgfConverter(sgfParseTree, useEndingMove = false, warnOnMultipleGames = false) { convertDiagnostic ->
+                    diagnostics.add(convertDiagnostic)
                 }
                 games = sgfConverter.convert()
-                movesCount = games.sumOf {
-                    var counter = 0
-                    it.gameTree.forEachDepthFirst {
-                        counter++
-                        true
-                    }
-                    counter
-                }
             }
 
             val fieldTimeElapsed = sgfConverter.fieldTime
             val converterElapsed = converterAndFieldStartElapsed - fieldTimeElapsed
 
-            if (diagnosticsCount > 0 && games.isNotEmpty()) {
-                diagnosticsLogger("$file contains errors or warnings and has the following rules: ${games.first().comment}")
-            }
-
-            return ProcessingResult(parserElapsed, converterElapsed, fieldTimeElapsed, movesCount)
+            return ProcessingResult(parserElapsed, converterElapsed, fieldTimeElapsed, content, games, diagnostics)
         } catch (e: Exception) {
             exceptionLogger(file, e)
         }
@@ -178,6 +208,8 @@ object SgfAnalyser {
         val parserElapsed: Duration,
         val converterElapsed: Duration,
         val fieldElapsed: Duration,
-        val movesCount: Int,
+        val content: String,
+        val games: Games,
+        val diagnostics: List<Diagnostic>,
     )
 }
