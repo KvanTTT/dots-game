@@ -24,6 +24,8 @@ data class DumpParameters(
     val printBorders: Boolean = false,
     val debugInfo: Boolean = false,
     val format: DumpFormat = DumpFormat.Sgf,
+    /** Refines games by [org.dots.game.sgf.SgfRefiner] before writing them to sgf (unused on field rendering). */
+    val refineSgf: Boolean = false,
 ) : ClassSettings<DumpParameters>() {
     override val default: DumpParameters
         get() = DEFAULT

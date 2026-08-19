@@ -50,6 +50,7 @@ fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? 
                     setSetting(DumpParameters::printCoordinates)
                     setSetting(DumpParameters::debugInfo)
                     setSetting(DumpParameters::format)
+                    setSetting(DumpParameters::refineSgf)
                 }
             }
             is UiSettings -> {
@@ -138,6 +139,7 @@ fun <T : ClassSettings<T>> loadClassSettings(defaultSettingsObj: T, directory: S
                         printCoordinates = getSetting(DumpParameters::printCoordinates),
                         debugInfo = getSetting(DumpParameters::debugInfo),
                         format = getEnumSetting(DumpParameters::format),
+                        refineSgf = getSetting(DumpParameters::refineSgf),
                     )
                 }
             }
