@@ -27,7 +27,7 @@ object SgfRefiner {
                 // We should run consistency checks after grounding refinement
                 // Because it handles (removes) multiple manually made consecutive moves that
                 // are treated as invalid in this check.
-                if (!checkMovesConsistencyAndRemoveSecondaryBranches(refinedGame, diagnosticsReporter)) {
+                if (!checkMovesConsistencyAndRemoveIrrelevantInfo(refinedGame, diagnosticsReporter)) {
                     continue
                 }
 
@@ -37,7 +37,7 @@ object SgfRefiner {
         return if (refinedGames.isNotEmpty()) Games(refinedGames, games.parsedNode) else null
     }
 
-    fun checkMovesConsistencyAndRemoveSecondaryBranches(game: Game, diagnosticsReporter: (Diagnostic) -> Unit): Boolean {
+    fun checkMovesConsistencyAndRemoveIrrelevantInfo(game: Game, diagnosticsReporter: (Diagnostic) -> Unit): Boolean {
         val gameTree = game.gameTree
         gameTree.rewindToBegin()
 
@@ -80,6 +80,12 @@ object SgfRefiner {
                         )
                     )
                     return false
+                }
+
+                // Strip capturing information (`W[kj.lj.jj.ki]` -> `W[kj]`)
+                val playerMovesProperty = if (moveResult.player == Player.First) GameTreeNode::player1Moves else GameTreeNode::player2Moves
+                currentNode.properties[playerMovesProperty]?.let {
+                    currentNode.properties[playerMovesProperty] = it.copy(changed = true)
                 }
 
                 expectedNextPlayer = expectedNextPlayer.opposite()

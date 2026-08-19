@@ -204,6 +204,15 @@ AW[pn][qo][vt][wu][qu][rv][vl][wm]
         )
     }
 
+    @Test
+    fun removeCapturingPositions() {
+        val header = "(;GM[40]FF[4]SZ[20];B[lj];W[mj];B[jj];W[ij];B[ki];W[kh];B[en];W[ji];B[qn];W[li];B[hp];W[jk];B[np];W[lk];B[kp];"
+        check(
+            header + "W[kj.lj.jj.ki])",
+            header + "W[kj])",
+        )
+    }
+
     @IgnorableReturnValue
     private fun check(sgf: String, expectedRefinedSgf: String): Game {
         val diagnostics = mutableListOf<Diagnostic>()
