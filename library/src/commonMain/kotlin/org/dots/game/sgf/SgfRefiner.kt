@@ -1,5 +1,7 @@
 package org.dots.game.sgf
 
+import org.dots.game.DiagnosticSeverity
+import org.dots.game.LineColumnDiagnostic
 import org.dots.game.core.*
 
 /**
@@ -10,8 +12,12 @@ import org.dots.game.core.*
  * - Replaces manually made consecutive grounding moves with `B[]` or `B[resign]` and refines game result (`[W+93]` -> `[W+R]`)
  */
 object SgfRefiner {
-    fun refine(games: Games): Games? {
+    fun refine(games: Games, diagnostics: List<LineColumnDiagnostic> = emptyList()): Games? {
         val refinedGames = buildList {
+            if (diagnostics.any { it.severity == DiagnosticSeverity.Error || it.severity == DiagnosticSeverity.Critical }) {
+                return null
+            }
+
             for (game in games) {
                 val refinedGame = recognizeStartPosIfNeeded(game)
 
@@ -155,9 +161,8 @@ object SgfRefiner {
             val gameResult = game.result
             val manualGrounding = currentNode.moveResults.size > 1 || previousMoveResult.player == lastMovePlayer
             val notagoGrounding = game.appInfo?.appType == Notago && (gameResult as? EndGameResult)?.endGameKind == Grounding
-            val winGameResult = gameResult as? GameResult.WinGameResult
 
-            if ((manualGrounding || notagoGrounding) && winGameResult != null) {
+            if ((manualGrounding || notagoGrounding) && gameResult != null) {
                 val currentPlayer = if (manualGrounding) {
                     if (previousMoveResult.player == lastMovePlayer) {
                         // Drop multiple manually made grounding dots
@@ -168,7 +173,7 @@ object SgfRefiner {
                         require(gameTree.next(2))
                     } else {
                         // Drop last grounding move and a previous move before grounding to preserve alternation
-                        if (winGameResult.winner == lastMovePlayer) {
+                        if ((gameResult as GameResult.WinGameResult).winner == lastMovePlayer) {
                             require(gameTree.back(1))
                         }
                     }
@@ -178,7 +183,7 @@ object SgfRefiner {
                     lastMovePlayer.opposite()
                 }
 
-                val externalFinishReason = if (gameResult.winner != currentPlayer) {
+                val externalFinishReason = if (gameResult is GameResult.WinGameResult && gameResult.winner != currentPlayer) {
                     ExternalFinishReason.Resign
                 } else {
                     ExternalFinishReason.Grounding
@@ -188,7 +193,11 @@ object SgfRefiner {
                 gameTree.addChild(MoveInfo.createFinishingMove(currentPlayer, externalFinishReason))
 
                 // Make sure the performed transformation didn't change the winner.
-                require(gameResult.winner == (field.gameResult as GameResult.WinGameResult).winner)
+                require(if (gameResult is GameResult.WinGameResult) {
+                    gameResult.winner == (field.gameResult as GameResult.WinGameResult).winner
+                } else {
+                    field.gameResult is GameResult.Draw
+                })
 
                 game.result = field.gameResult
             }
