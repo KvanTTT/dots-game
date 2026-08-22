@@ -103,7 +103,7 @@ class CliArgs : CliktCommand() {
             RandomGameAnalyser.process(
                 fieldWidth,
                 fieldHeight,
-                initPosType = initPosType ?: InitPosType.Empty,
+                initPosType = initPosType ?: Rules.Standard.initPosType,
                 baseMode = baseMode,
                 gamesCount = warmUpGamesCount,
                 seed ?: 0L,
@@ -120,7 +120,7 @@ class CliArgs : CliktCommand() {
             RandomGameAnalyser.process(
                 fieldWidth,
                 fieldHeight,
-                initPosType = initPosType ?: InitPosType.Empty,
+                initPosType = initPosType ?: Rules.Standard.initPosType,
                 baseMode = baseMode,
                 gamesCount,
                 seed ?: 0L,
