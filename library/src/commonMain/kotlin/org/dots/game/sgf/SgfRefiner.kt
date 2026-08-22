@@ -9,7 +9,7 @@ import org.dots.game.core.*
  *
  * - Filters out invalid and empty games
  * - Filters out games with broken alternation order, with multiple-moves in a single node, with invalid moves
- * - Performs recognition of start pos ([InitPosType.Cross], [InitPosType.DoubleCross], [InitPosType.QuadrupleCross]) and transform it to `AB`, `AW` properties
+ * - Performs recognition of start pos ([InitPosType.Cross], [InitPosType.DoubleCross]) and transform it to `AB`, `AW` properties
  * - Replaces manually made consecutive grounding moves with `B[]` or `B[resign]` and refines game result (`[W+93]` -> `[W+R]`)
  */
 object SgfRefiner {
@@ -124,6 +124,7 @@ object SgfRefiner {
 
         gameTree.rewindToBegin()
         if (game.player1AddDots == null && game.player2AddDots == null) {
+            var canRecognize = true
             val initialMovesInfo = buildList {
                 // Repeat until max number of moves of initial start pos (DoubleCross).
                 // Detection of quadruple cross is less reliable, and it's rarely used.
@@ -132,11 +133,18 @@ object SgfRefiner {
                         return@buildList
                     }
 
-                    val legalMove = gameTree.currentNode.moveResults.firstOrNull() as? LegalMove ?: return@buildList
+                    val legalMove = gameTree.currentNode.moveResults.singleOrNull() as? LegalMove
+                    if (legalMove == null || legalMove is GameResult) {
+                        // Non-legal, multi-move, or finishing move encountered: abort recognition
+                        canRecognize = false
+                        return@buildList
+                    }
 
                     add(MoveInfo.fromLegalMove(legalMove, field, gameTree.currentNode.parsedNode))
                 }
             }
+
+            if (!canRecognize) return game
 
             val recognitionInfo = recognizeInitPosType(initialMovesInfo, field.width, field.height)
             when (val initPosType = recognitionInfo.initPosType) {
@@ -230,7 +238,7 @@ object SgfRefiner {
             val currentPlayer = if (manualGrounding) {
                 if (previousMoveResult.player == lastMovePlayer) {
                     // Drop multiple manually made grounding dots
-                    while (gameTree.currentNode.moveResults.all { it is LegalMove && it.player == lastMovePlayer }) {
+                    while (!gameTree.currentNode.isRoot && gameTree.currentNode.moveResults.all { it is LegalMove && it.player == lastMovePlayer }) {
                         gameTree.back()
                     }
                     // Remove all consecutive moves that start manual grounding

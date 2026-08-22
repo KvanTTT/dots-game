@@ -87,7 +87,7 @@ object RandomGameAnalyser {
                     }
                 }
 
-                finalGameStateHandler(field)
+                finalGameStateHandler(field.clone())
 
                 val gameResult = field.gameResult!!
                 if (gameResult is GameResult.Draw) {

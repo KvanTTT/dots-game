@@ -157,7 +157,7 @@ object GameLoader {
 
         val filesToMerge = if (sgfFiles.size > MAX_MERGED_FILES_COUNT) {
             report(
-                "The directory `${directory.name}` contains ${sgfFiles.size} sgf(s) files, the only first $MAX_MERGED_FILES_COUNT of them are used",
+                "The directory `${directory.name}` contains ${sgfFiles.size} sgf(s) files, only the first $MAX_MERGED_FILES_COUNT of them are used",
                 DiagnosticSeverity.Warning
             )
             sgfFiles.take(MAX_MERGED_FILES_COUNT)
