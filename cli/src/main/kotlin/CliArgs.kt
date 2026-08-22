@@ -116,6 +116,7 @@ class CliArgs : CliktCommand() {
             outputStream.println()
 
             outputStream.println("Start main loop...")
+            var gameCounter = 0
             RandomGameAnalyser.process(
                 fieldWidth,
                 fieldHeight,
@@ -125,7 +126,7 @@ class CliArgs : CliktCommand() {
                 seed ?: 0L,
                 checkRollback,
                 finalGameStateHandler = {
-                    sgfFileWriter?.add(Games.fromField(it), content = null, fileName = LocalDateTime.now().format(dateTimeFormatter))
+                    sgfFileWriter?.add(Games.fromField(it), content = null, fileName = LocalDateTime.now().format(dateTimeFormatter) + "-${++gameCounter}.sgf")
                 },
                 formatDouble = { String.format(Locale.ENGLISH, "%.4f", it) },
                 outputStream = { outputStream.println(it) },

@@ -114,7 +114,7 @@ object SgfAnalyser {
 
                         if (refinedGames != null) {
                             val fileName = if (isDirectory) {
-                                file.relativeTo(fileOrDirectoryFile).toString().replace("/", "-")
+                                file.relativeTo(fileOrDirectoryFile).path
                             } else {
                                 file.name
                             }

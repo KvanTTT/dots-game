@@ -213,6 +213,23 @@ AW[pn][qo][vt][wu][qu][rv][vl][wm]
         )
     }
 
+    @Test
+    fun startPosRecognitionSkippedForMultiMoveNode() {
+        // A node with multiple moves in the initial scan should abort recognition and leave game unchanged
+        val sgf = "(;GM[40]FF[4]SZ[39:32]RU[russian];B[tp]W[up];B[uq];W[tq];B[vq])"
+        // This game will fail consistency check (multiple moves in one node), so refine returns null
+        assertNull(SgfRefiner.refine(parseConvertAndCheck(sgf)))
+    }
+
+    @Test
+    fun startPosRecognitionSkippedForFinishingMove() {
+        // A result-only game with auto-added finishing move should not throw NPE during recognition
+        val sgf = "(;GM[40]FF[4]SZ[39:32]RU[russian]RE[B+R])"
+        val diagnostics = mutableListOf<Diagnostic>()
+        val games = Sgf.parseAndConvert(sgf) { diagnostics.add(it) }
+        val _ = SgfRefiner.refine(games, diagnostics)
+    }
+
     @IgnorableReturnValue
     private fun check(sgf: String, expectedRefinedSgf: String): Game {
         val diagnostics = mutableListOf<Diagnostic>()

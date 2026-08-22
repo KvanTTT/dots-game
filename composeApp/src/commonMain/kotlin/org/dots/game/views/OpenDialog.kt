@@ -78,6 +78,7 @@ fun OpenDialog(
         val text = pathOrContentTextFieldValue.text
         if (text != previousInput) {
             previousInput = text
+            loadResult = null
 
             loadJob?.cancel()
             loadJob = coroutineScope.launch {
