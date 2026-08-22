@@ -1,12 +1,15 @@
 import org.dots.game.Diagnostic
 import org.dots.game.DiagnosticSeverity
 import org.dots.game.buildLineOffsets
+import org.dots.game.core.GameResult
 import org.dots.game.core.Games
+import org.dots.game.core.Player
 import org.dots.game.sgf.SgfConverter
 import org.dots.game.sgf.SgfParser
 import org.dots.game.sgf.SgfRefiner
 import org.dots.game.sgf.SgfRoot
 import org.dots.game.toLineColumnDiagnostic
+import org.dots.game.toNeatNumber
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
@@ -78,7 +81,11 @@ object SgfAnalyser {
             var totalParserElapsed = Duration.ZERO
             var totalConverterElapsed = Duration.ZERO
             var totalFieldElapsed = Duration.ZERO
-            var totalMovesCount = 0
+            val allMovesCount = mutableListOf<Int>()
+            var movesBySizeRatioSum = 0.0
+            var gamesCount = 0
+            val sizes = mutableMapOf<Pair<Int, Int>, Int>()
+            val gameResults = mutableListOf<GameResult>()
             var progress = 0
 
             val totalTimeTimeMark = TimeSource.Monotonic.markNow()
@@ -89,36 +96,49 @@ object SgfAnalyser {
                     totalParserElapsed += processingResult.parserElapsed
                     totalConverterElapsed += processingResult.converterElapsed
                     totalFieldElapsed += processingResult.fieldElapsed
-                    totalMovesCount += processingResult.games.sumOf {
-                        var counter = 0
-                        it.gameTree.forEachDepthFirst {
-                            counter++
-                            true
-                        }
-                        counter
-                    }
 
                     val refinerDiagnostics = mutableListOf<Diagnostic>()
-                    if (sgfFileWriter != null) {
-                        val refinedGames: Games?
-                        val content: String?
-                        if (refineOutput) {
-                            content = null
-                            refinedGames = SgfRefiner.refine(processingResult.games, processingResult.diagnostics) {
-                                refinerDiagnostics += it
+                    val finalGamesToAccount: Games?
+                    val content: String?
+                    if (refineOutput) {
+                        content = null
+                        finalGamesToAccount = SgfRefiner.refine(processingResult.games, processingResult.diagnostics) {
+                            refinerDiagnostics += it
+                        }
+                    } else {
+                        content = processingResult.content
+                        finalGamesToAccount = processingResult.games
+                    }
+
+                    if (finalGamesToAccount != null) {
+                        gamesCount += finalGamesToAccount.size
+
+                        val currentGameMovesCount = finalGamesToAccount.sumOf {
+                            var counter = 0
+                            it.gameTree.forEachDepthFirst {
+                                counter++
+                                true
                             }
-                        } else {
-                            content = processingResult.content
-                            refinedGames = processingResult.games
+                            counter
+                        }
+                        allMovesCount.add(currentGameMovesCount)
+
+                        finalGamesToAccount.forEach { game ->
+                            game.result?.let {
+                                gameResults.add(it)
+                            }
+                            sizes[game.size] = sizes.getOrPut(game.size) { 0 } + 1
+
+                            movesBySizeRatioSum += currentGameMovesCount.toDouble() / (game.size.first * game.size.second)
                         }
 
-                        if (refinedGames != null) {
+                        if (sgfFileWriter != null) {
                             val fileName = if (isDirectory) {
                                 file.relativeTo(fileOrDirectoryFile).path
                             } else {
                                 file.name
                             }
-                            sgfFileWriter.add(refinedGames, content, fileName)
+                            sgfFileWriter.add(finalGamesToAccount, content, fileName)
                         }
                     }
 
@@ -154,6 +174,8 @@ object SgfAnalyser {
                     println("$name time: ${value.inWholeMilliseconds} ms (${(value * 100 / totalSgfElapsed).toInt()} %)")
                 }
 
+                val totalMovesCount = allMovesCount.sum()
+
                 println()
                 printTime("Parser", totalParserElapsed)
                 printTime("Converter", totalConverterElapsed)
@@ -161,14 +183,24 @@ object SgfAnalyser {
                 println("Total time: ${totalTime.inWholeMilliseconds} ms")
                 println("Total files count: ${sgfFiles.size}")
                 println("Total moves count: $totalMovesCount")
-                println("Field moves per second: ${(totalMovesCount.toDouble() / totalFieldElapsedNanos * nanosInSec).toInt()}")
-                println("Fields per second: ${(sgfFiles.size.toDouble() / totalFieldElapsedNanos * nanosInSec).toInt()}")
+                println("Game moves per second: ${(totalMovesCount.toDouble() / totalFieldElapsedNanos * nanosInSec).toInt()}")
+                println("Games per second: ${(gamesCount.toDouble() / totalFieldElapsedNanos * nanosInSec).toInt()}")
                 println(
-                    "Millis per field: ${
-                        String.format(Locale.ENGLISH, "%.4f", totalFieldElapsedNanos / sgfFiles.size / nanosInMs)
+                    "Millis per game: ${
+                        String.format(Locale.ENGLISH, "%.4f", totalFieldElapsedNanos / gamesCount / nanosInMs)
                     }"
                 )
-                println("Average number of moves per field: ${(totalMovesCount.toDouble() / sgfFiles.size).toInt()}")
+
+                println()
+                println("Average number of moves per game: ${(totalMovesCount.toDouble() / gamesCount).toInt()}")
+                println("Median number of moves per game: ${allMovesCount.median()?.toNeatNumber()}")
+                println("Max number of moves per game: ${allMovesCount.maxOrNull()}")
+                println("Average moves by size ratio: ${String.format(Locale.ENGLISH, "%.4f", movesBySizeRatioSum / gamesCount)}")
+                println("Sizes: ${sizes.map { "${it.key} : ${it.value}" }.joinToString("; ")}")
+                println("Blue wins: ${gameResults.count { (it as? GameResult.WinGameResult)?.winner == Player.First }}")
+                println("Red wins: ${gameResults.count { (it as? GameResult.WinGameResult)?.winner == Player.Second }}")
+                println("Draws: ${gameResults.count { it is GameResult.Draw }}")
+                println("Lack of time results: ${gameResults.count { it is GameResult.TimeWin }}")
             }
         }
     }
@@ -212,4 +244,19 @@ object SgfAnalyser {
         val games: Games,
         val diagnostics: List<Diagnostic>,
     )
+
+    fun <T : Number> Iterable<T>.median(): Double? {
+        val list = this.toList()
+        if (list.isEmpty()) return null
+
+        // Sort the list based on double values
+        val sorted = list.sortedBy { it.toDouble() }
+        val middle = sorted.size / 2
+
+        return if (sorted.size % 2 == 0) {
+            (sorted[middle - 1].toDouble() + sorted[middle].toDouble()) / 2.0
+        } else {
+            sorted[middle].toDouble()
+        }
+    }
 }
