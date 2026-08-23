@@ -42,7 +42,7 @@ object SgfRefiner {
         gameTree.rewindToBegin()
 
         var currentNode: GameTreeNode? = gameTree.rootNode
-        var expectedNextPlayer = Player.First
+        var expectedNextPlayer = gameTree.field.rules.initPosType.nextPlayer
 
         while (currentNode != null) {
             if (!currentNode.isRoot) {
