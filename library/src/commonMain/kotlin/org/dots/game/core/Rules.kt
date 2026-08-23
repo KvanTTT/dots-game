@@ -118,6 +118,14 @@ enum class InitPosType {
     QuadrupleCross,
     Custom;
 
+    val nextPlayer: Player
+        get() {
+            return when (this) {
+                Single -> Player.Second
+                else -> Player.First
+            }
+        }
+
     companion object {
         const val MARLOV_MIN_EDGE_DISTANCE: Int = 8
         const val MARLOV_MIN_CROSSES_DISTANCE: Int = 9
