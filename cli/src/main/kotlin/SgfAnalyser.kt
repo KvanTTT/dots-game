@@ -111,19 +111,16 @@ object SgfAnalyser {
                     }
 
                     if (finalGamesToAccount != null) {
-                        gamesCount += finalGamesToAccount.size
+                        finalGamesToAccount.forEach { game ->
+                            gamesCount++
 
-                        val currentGameMovesCount = finalGamesToAccount.sumOf {
-                            var counter = 0
-                            it.gameTree.forEachDepthFirst {
-                                counter++
+                            var currentGameMovesCount = 0
+                            game.gameTree.forEachDepthFirst {
+                                currentGameMovesCount++
                                 true
                             }
-                            counter
-                        }
-                        allMovesCount.add(currentGameMovesCount)
+                            allMovesCount.add(currentGameMovesCount)
 
-                        finalGamesToAccount.forEach { game ->
                             game.result?.let {
                                 gameResults.add(it)
                             }
@@ -169,7 +166,7 @@ object SgfAnalyser {
             val totalFieldElapsedNanos = totalFieldElapsed.inWholeNanoseconds.toDouble()
             val totalTime = totalTimeTimeMark.elapsedNow()
 
-            if (isDirectory) {
+            if (gamesCount > 1) {
                 fun printTime(name: String, value: Duration) {
                     println("$name time: ${value.inWholeMilliseconds} ms (${(value * 100 / totalSgfElapsed).toInt()} %)")
                 }
@@ -196,7 +193,8 @@ object SgfAnalyser {
                 println("Median number of moves per game: ${allMovesCount.median()?.toNeatNumber()}")
                 println("Max number of moves per game: ${allMovesCount.maxOrNull()}")
                 println("Average moves by size ratio: ${String.format(Locale.ENGLISH, "%.4f", movesBySizeRatioSum / gamesCount)}")
-                println("Sizes: ${sizes.map { "${it.key} : ${it.value}" }.joinToString("; ")}")
+
+                println("Sizes: ${sizes.map { "${it.key.first}x${it.key.second}: ${it.value}" }.joinToString("; ")}")
                 println("Blue wins: ${gameResults.count { (it as? GameResult.WinGameResult)?.winner == Player.First }}")
                 println("Red wins: ${gameResults.count { (it as? GameResult.WinGameResult)?.winner == Player.Second }}")
                 println("Draws: ${gameResults.count { it is GameResult.Draw }}")
