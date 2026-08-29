@@ -459,7 +459,7 @@ internal fun toGtpResponse(lines: List<String>): Response {
 
     return Response(
         message = lines.lastOrNull()?.removeGtpMarker() ?: "",
-        isError = markedLine?.startsWith(GTP_ERROR_MARKER) == true,
+    isError = markedLine == null || markedLine.startsWith(GTP_ERROR_MARKER),
         extraLines = lines.dropLast(1),
     )
 }

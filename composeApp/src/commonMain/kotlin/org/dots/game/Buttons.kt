@@ -19,6 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -89,7 +93,10 @@ fun ToggleIconButton(
     Tooltip(if (description != null) "$text\n$description" else text) {
         Button(
             onClick = onClick,
-            modifier = defaultButtonModifier,
+            modifier = defaultButtonModifier.semantics {
+                selected = checked
+                role = Role.Switch
+            },
             enabled = enabled,
             colors = if (checked)
                 ButtonDefaults.buttonColors(selectedModeButtonColor)
@@ -116,6 +123,7 @@ fun LongPressButton(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     enabled: Boolean = true,
+    checked: Boolean = false,
     colors: ButtonColors = ButtonDefaults.buttonColors(),
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -140,7 +148,10 @@ fun LongPressButton(
 
     Button(
         onClick = { if (longPressHandled) longPressHandled = false else onClick() },
-        modifier = defaultButtonModifier,
+        modifier = defaultButtonModifier.semantics {
+            selected = checked
+            role = Role.Switch
+        },
         enabled = enabled,
         interactionSource = interactionSource,
         colors = colors,

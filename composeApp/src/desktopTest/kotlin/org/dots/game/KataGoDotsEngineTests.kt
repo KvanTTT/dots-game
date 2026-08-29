@@ -212,7 +212,7 @@ class KataGoDotsEngineTests {
 
     @Test
     fun consecutiveMovesOfSameColor() {
-        // It checks a bug in KataGoDots that already should have been fixed (oterwise this test would fail)
+        // It checks a bug in KataGoDots that already should have been fixed (otherwise this test would fail)
         runEngine {
             val _ = it.makeMove(4, 3, Player.Second)
 

@@ -275,13 +275,15 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
          */
         suspend fun <T> withFrozenPosition(block: suspend () -> T): T {
             val gameTree = getGameTree()
-            engineCommandsInProgress++
-            gameTree.disabled = true
-            try {
-                return block()
-            } finally {
-                if (--engineCommandsInProgress == 0) {
-                    gameTree.disabled = false
+            return engineMutex.withLock {
+                engineCommandsInProgress++
+                gameTree.disabled = true
+                try {
+                    return block()
+                } finally {
+                    if (--engineCommandsInProgress == 0) {
+                        gameTree.disabled = false
+                    }
                 }
             }
         }
@@ -291,15 +293,15 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                 coroutineScope.launch {
                     engineIsCalculating = true
                     val moveInfo = withFrozenPosition {
-                        engineMutex.withLock {
-                            it.generateMove(getField(), moveMode.getMovePlayer(getField()))
+                        val generatedMove = it.generateMove(getField(), moveMode.getMovePlayer(getField()))
+                        if (generatedMove != null) {
+                            getGameTree().disabled = false
+                            getGameTree().addChild(generatedMove)
+                            updateFieldAndGameTree()
                         }
+                        generatedMove
                     }
                     engineIsCalculating = false
-                    if (moveInfo != null) {
-                        getGameTree().addChild(moveInfo)
-                        updateFieldAndGameTree()
-                    }
                     focusRequester.requestFocus()
                 }
             }
@@ -320,14 +322,12 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                 engineIsAnalyzing = true
                 try {
                     val analysis = withFrozenPosition {
-                        engineMutex.withLock {
-                            // An interrupted GTP exchange would leave the unread part of the response in the stream
-                            // and corrupt every following command, so it's never cancelled in the middle
-                            withContext(NonCancellable) {
-                                // The ownership is always requested, otherwise the very same position would be
-                                // evaluated differently depending on whether it's displayed
-                                engine.analyze(field, moveMode.getMovePlayer(field), withOwnership = true)
-                            }
+                        // An interrupted GTP exchange would leave the unread part of the response in the stream
+                        // and corrupt every following command, so it's never cancelled in the middle
+                        withContext(NonCancellable) {
+                            // The ownership is always requested, otherwise the very same position would be
+                            // evaluated differently depending on whether it's displayed
+                            engine.analyze(field, moveMode.getMovePlayer(field), withOwnership = true)
                         }
                     }
                     // The position may have changed while the engine was busy; the relaunched effect refreshes it
@@ -543,6 +543,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                                     saveClassSettings(kataGoDotsSettings)
                                     focusRequester.requestFocus()
                                 },
+                                checked = automove,
                                 enabled = !getField().isGameOver() && !engineIsCalculating && !engineIsAnalyzing &&
                                         doesKataSupportRules(getField().rules),
                                 colors = if (automove)

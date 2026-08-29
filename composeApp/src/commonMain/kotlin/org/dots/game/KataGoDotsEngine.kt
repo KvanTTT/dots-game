@@ -21,6 +21,9 @@ expect class KataGoDotsEngine {
      */
     suspend fun sync(field: Field): SyncType
 
+    /**
+     * @return `null` if the rules are unsupported, synchronization is rejected, or the engine reports no move.
+     */
     suspend fun generateMove(field: Field, player: Player?): MoveInfo?
 
     /**
@@ -29,7 +32,8 @@ expect class KataGoDotsEngine {
      *
      * @param withOwnership additionally requests [MoveAnalysis.ownership]. It's opt-in because
      * the engine then appends a value per field position, which is by far the largest part of the response.
-     * @return `null` if the rules are unsupported or if the engine reported no candidate move.
+     * @return `null` if the rules are unsupported, the engine rejected synchronization,
+     * the analysis command failed, or the engine reported no candidate move.
      */
     suspend fun analyze(field: Field, player: Player?, withOwnership: Boolean = false): MoveAnalysis?
 }
