@@ -24,6 +24,8 @@ data class UiSettings(
     val showScoreGraph: Boolean = true,
     val showWeightGraph: Boolean = false,
     val showVisitsGraph: Boolean = false,
+    val showCandidateMoves: Boolean = true,
+    val showOwnership: Boolean = false,
     val language: Language = Language.English,
 ) : ClassSettings<UiSettings>() {
     companion object {
@@ -32,6 +34,10 @@ data class UiSettings(
 
     override val default: UiSettings
         get() = Standard
+
+    /** The analysis is only run while something displays it, so it needs no option of its own. */
+    val analysisEnabled: Boolean
+        get() = showCandidateMoves || showOwnership
 
     fun toColor(player: Player): Color = if (player == Player.First) playerFirstColor else playerSecondColor
 }

@@ -29,6 +29,8 @@ actual class KataGoDotsEngine private constructor(
 
         const val KATA_GO_DOTS_APP_NAME = "KataGoDots"
 
+        private const val SEARCH_ANALYZE_COMMAND = "kata-search_analyze"
+        private const val OWNERSHIP_OPTION_NAME = "ownership"
         private const val RESIGN_MOVE = "resign"
         private const val GROUND_MOVE = "ground"
         private const val PLAYER1_MARKER = "P1"
@@ -128,7 +130,9 @@ actual class KataGoDotsEngine private constructor(
                 val message = "${property.name} = ${sendMessage("kata-get-param ${property.name}").message}"
                 onMessage(Diagnostic(message, severity = DiagnosticSeverity.Info))
             } else {
-                require(!sendMessage("kata-set-param ${property.name} $intValue").isError)
+                // A rejected parameter is reported by `trySendMessage`, and the engine stays usable
+                // with the default value of that parameter, so it must not fail the initialization
+                val _ = trySendMessage("kata-set-param ${property.name} $intValue")
             }
         }
 
@@ -138,12 +142,33 @@ actual class KataGoDotsEngine private constructor(
     }
 
     actual suspend fun generateMove(field: Field, player: Player?): MoveInfo? {
-        if (sync(field) == UnsupportedRules) return null
+        if (!sync(field).isSynchronized) return null
 
         val effectivePlayer = player ?: field.getCurrentPlayer()
 
         val response = sendMessage("genmove " + playerToGtp(effectivePlayer)).message
         return parseMoveInfo(response, field, effectivePlayer)
+    }
+
+    actual suspend fun analyze(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis? {
+        if (!sync(field).isSynchronized) return null
+
+        val effectivePlayer = player ?: field.getCurrentPlayer()
+
+        val command = buildString {
+            append(SEARCH_ANALYZE_COMMAND)
+            append(' ')
+            append(playerToGtp(effectivePlayer))
+            if (withOwnership) {
+                append(" $OWNERSHIP_OPTION_NAME true")
+            }
+        }
+
+        val response = sendMessage(command)
+        if (response.isError) return null
+
+        return parseMoveAnalysis(response.allLines, effectivePlayer, field.width, field.height)
+            .takeIf { it.moves.isNotEmpty() }
     }
 
     actual suspend fun sync(field: Field): SyncType {
@@ -153,16 +178,16 @@ actual class KataGoDotsEngine private constructor(
         logger(Diagnostic.info(syncType.toString()))
 
         if (syncType == FullSync) {
-            require(!sendMessage("boardsize ${field.width}:${field.height}").isError)
-            require(!sendMessage("kata-set-rule $CAPTURE_EMPTY_BASE_OPTION_NAME ${rules.baseMode == BaseMode.AnySurrounding}").isError)
-            require(!sendMessage("kata-set-rule $SUICIDE_OPTION_NAME ${rules.suicideAllowed}").isError)
-            require(!sendMessage("komi ${rules.komi}").isError)
+            if (!trySendMessage("boardsize ${field.width}:${field.height}")) return SyncFailed
+            if (!trySendMessage("kata-set-rule $CAPTURE_EMPTY_BASE_OPTION_NAME ${rules.baseMode == BaseMode.AnySurrounding}")) return SyncFailed
+            if (!trySendMessage("kata-set-rule $SUICIDE_OPTION_NAME ${rules.suicideAllowed}")) return SyncFailed
+            if (!trySendMessage("komi ${rules.komi}")) return SyncFailed
 
             val startPosMovesPieces = mutableListOf<String>()
             val movesPieces =  mutableListOf<String>()
 
             for ((index, legalMove = value) in field.moveSequence.withIndex()) {
-                val pieces = if (index < rules.initialMoves.size) {
+                val pieces = if (index < field.initialMovesCount) {
                     startPosMovesPieces
                 } else {
                     movesPieces
@@ -170,15 +195,19 @@ actual class KataGoDotsEngine private constructor(
                 pieces.add(MoveInfo.fromLegalMove(legalMove, field).toGtpMove(field))
             }
 
-            if (startPosMovesPieces.isNotEmpty()) {
-                require(!sendMessage("set_position ${startPosMovesPieces.joinToString(" ")}").isError)
-            }
+            /**
+             * `set_position` is sent even without moves, because it's the only way to drop the start position
+             * the engine installs on its own: both `boardsize` and `clear_board` restore the one
+             * of the `startPos` config option (`CROSS` by default) instead of clearing the board.
+             */
+            if (!trySendMessage("set_position ${startPosMovesPieces.joinToString(" ")}".trimEnd())) return SyncFailed
+
             if (movesPieces.isNotEmpty()) {
-                require(!sendMessage("play ${movesPieces.joinToString(" ")}").isError)
+                if (!trySendMessage("play ${movesPieces.joinToString(" ")}")) return SyncFailed
             }
         } else if (syncType is MovesSync) {
             if (syncType.undoMovesCount > 0) {
-                require(!sendMessage("undo ${syncType.undoMovesCount}").isError)
+                if (!trySendMessage("undo ${syncType.undoMovesCount}")) return SyncFailed
             }
 
             if (syncType.moves.isNotEmpty()) {
@@ -190,7 +219,7 @@ actual class KataGoDotsEngine private constructor(
                     }
                 }
 
-                require(!sendMessage(command).isError)
+                if (!trySendMessage(command)) return SyncFailed
             }
         }
 
@@ -257,13 +286,13 @@ actual class KataGoDotsEngine private constructor(
         val startPositionMoves = toMovesSequence(sendMessage("get_position").message, field)
 
         // The order of start moves doesn't matter
-        if (rules.initialMoves.toSortedSet(IgnoreParseNodeComparator) != startPositionMoves.toSortedSet(IgnoreParseNodeComparator)) {
+        if (field.initialMoves().toSortedSet(IgnoreParseNodeComparator) != startPositionMoves.toSortedSet(IgnoreParseNodeComparator)) {
             return FullSync
         }
 
         val engineMoves = toMovesSequence(sendMessage("get_moves").message, field)
 
-        val refinedMoves = field.moveSequence.drop(startPositionMoves.size).map {
+        val refinedMoves = field.moveSequence.drop(field.initialMovesCount).map {
             MoveInfo.fromLegalMove(it, field)
         }
 
@@ -304,6 +333,17 @@ actual class KataGoDotsEngine private constructor(
             GameResult.ScoreWin(score, endGameKind = null, winner, player = null)
         }
     }
+
+    /**
+     * The moves the field treats as its start position.
+     *
+     * [Rules.initialMoves] alone is not enough: [Field.create] also places [Rules.remainingInitMoves],
+     * that is the setup dots that don't fit the recognized [Rules.initPosType] pattern, and it skips
+     * the initial moves it finds illegal. [Field.initialMovesCount] is the only count that is guaranteed
+     * to match the beginning of [Field.moveSequence].
+     */
+    private fun Field.initialMoves(): List<MoveInfo> =
+        moveSequence.take(initialMovesCount).map { MoveInfo.fromLegalMove(it, this) }
 
     private fun MoveInfo.toGtpMove(field: Field): String {
         return playerToGtp(player) + " " + when (externalFinishReason) {
@@ -369,13 +409,65 @@ actual class KataGoDotsEngine private constructor(
     }
 
     private suspend fun sendMessage(message: String): Response = sendMessage(message, writer, reader, logger)
+
+    /**
+     * Sends [command] and reports its rejection to [logger] instead of throwing, because a command
+     * rejected in the middle of a synchronization would otherwise take the whole app down.
+     *
+     * @return `false` if the engine rejected the command.
+     */
+    private suspend fun trySendMessage(command: String): Boolean {
+        val response = sendMessage(command)
+        if (response.isError) {
+            logger(
+                Diagnostic(
+                    "The engine rejected `${command.trimMessageIfNecessary()}`: ${response.message}",
+                    severity = DiagnosticSeverity.Error,
+                )
+            )
+            return false
+        }
+        return true
+    }
 }
 
 data class Response(val message: String, val isError: Boolean, val extraLines: List<String> = emptyList()) {
+    /**
+     * The whole engine response, [message] being its last line.
+     * Multiline responses are produced by the analysis commands.
+     */
+    val allLines: List<String> get() = extraLines + message
+
     override fun toString(): String {
         return "Response: $message${if (isError) "; hasError" else ""}${if (extraLines.isNotEmpty()) "\n$extraLines" else ""}"
     }
 }
+
+private const val GTP_SUCCESS_MARKER = '='
+private const val GTP_ERROR_MARKER = '?'
+
+/**
+ * Builds a [Response] out of the raw engine output.
+ *
+ * A GTP response is marked with `=` when the command succeeded and with `?` when it failed.
+ * The marked line is neither necessarily the first one (the engine writes its warnings into the same stream,
+ * see `redirectErrorStream`) nor necessarily the last one (the analysis commands answer with several lines),
+ * so it's looked up explicitly.
+ */
+internal fun toGtpResponse(lines: List<String>): Response {
+    val markedLine = lines.firstOrNull { it.hasGtpMarker() }
+
+    return Response(
+        message = lines.lastOrNull()?.removeGtpMarker() ?: "",
+        isError = markedLine?.startsWith(GTP_ERROR_MARKER) == true,
+        extraLines = lines.dropLast(1),
+    )
+}
+
+private fun String.hasGtpMarker(): Boolean = startsWith(GTP_SUCCESS_MARKER) || startsWith(GTP_ERROR_MARKER)
+
+/** The app never sends a command id, thus a marker is never followed by one. */
+private fun String.removeGtpMarker(): String = (if (hasGtpMarker()) drop(1) else this).trim()
 
 private suspend fun sendMessage(command: String, writer: OutputStreamWriter, reader: BufferedReader, logger: (Diagnostic) -> Unit): Response {
     return try {
@@ -405,11 +497,7 @@ private suspend fun sendMessage(command: String, writer: OutputStreamWriter, rea
                 }
             }
 
-            Response(
-                lines.lastOrNull()?.removePrefix("= ")?.trim() ?: "",
-                false,
-                lines.takeIf { it.isNotEmpty() }?.take(lines.size - 1) ?: emptyList()
-            )
+            toGtpResponse(lines)
         }
     } catch (e: Exception) {
         Response(e.message ?: "Error communicating with GTP engine", true)

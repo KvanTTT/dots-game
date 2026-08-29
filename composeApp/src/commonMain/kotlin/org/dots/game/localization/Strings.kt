@@ -101,7 +101,26 @@ interface Strings {
     val previousGame: String
     val aiMove: String
     val aiThinking: String
-    val autoMove: String
+    val aiMoveDescription: String
+    val autoMoveDescription: String
+
+    // Move analysis
+    val analyzing: String
+    val moveAnalysis: String
+    val moveAnalysisDescription: String
+    val scoreLead: String
+    val prior: String
+    val variation: String
+    val utility: String
+    val lowerConfidenceBound: String
+    val deviation: String
+    val edgeVisits: String
+    val symmetryOf: String
+    val candidateMoves: String
+    val candidateMovesDescription: String
+    val ownership: String
+    val ownershipDescription: String
+    fun moreAnalyzedMoves(count: Int): String
 
     // Graph
     val winRate: String
