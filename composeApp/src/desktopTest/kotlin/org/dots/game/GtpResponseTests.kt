@@ -67,12 +67,12 @@ class GtpResponseTests {
     }
 
     @Test
-    fun anUnmarkedOutputIsNotReportedAsAFailure() {
-        assertFalse(toGtpResponse(emptyList()).isError)
+    fun anUnmarkedOutputIsReportedAsAFailure() {
+        assertTrue(toGtpResponse(emptyList()).isError)
         assertEquals("", toGtpResponse(emptyList()).message)
 
-        // Only a `?` marker means a failure, a stray line is not enough to claim one
-        assertFalse(toGtpResponse(listOf(WARNING)).isError)
+        // Any response without a GTP marker is malformed or truncated, so it must not be accepted
+        assertTrue(toGtpResponse(listOf(WARNING)).isError)
         assertEquals(WARNING, toGtpResponse(listOf(WARNING)).message)
     }
 }
