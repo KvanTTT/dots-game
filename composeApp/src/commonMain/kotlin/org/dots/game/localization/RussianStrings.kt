@@ -132,7 +132,33 @@ object RussianStrings : Strings {
     override val previousGame = "Предыдущая игра"
     override val aiMove = "Ход бота"
     override val aiThinking = "Бот думает..."
-    override val autoMove = "Авто"
+    override val aiMoveDescription = """Движок делает ход за игрока, который должен ходить.
+Долгое нажатие включает режим автохода, в котором движок автоматически отвечает на каждый ход."""
+    override val autoMoveDescription = """Режим автохода включён: движок автоматически отвечает на каждый ход.
+Долгое нажатие выключает его."""
+
+    override val analyzing = "Анализ..."
+    override val moveAnalysis = "Анализ ходов"
+    override val moveAnalysisDescription = """Все возможные ходы оцениваются для игрока, который должен сделать ход.
+Зелёным отмечены лучшие ходы, красным — худшие (учитываются и вероятность победы, и перевес в очках).
+Чем прозрачнее ход, тем меньше визитов он получил, а значит тем менее надёжна его оценка."""
+    override val scoreLead = "Перевес в очках"
+    override val prior = "Априорная оценка"
+    override val variation = "Вариант"
+    override val utility = "Полезность"
+    override val lowerConfidenceBound = "Нижняя граница доверия"
+    override val deviation = "Отклонение"
+    override val edgeVisits = "Визиты рёбер"
+    override val symmetryOf = "Симметрично"
+    override val candidateMoves = "Ходы-кандидаты"
+    override val candidateMovesDescription = """Подсвечивает на поле ходы, которые рассматривает движок; лучший обведён.
+Наведите курсор на ход, чтобы увидеть его вероятность победы.
+Оценка каждого показанного хода перечисляется ниже независимо от того, включена ли подсветка."""
+    override val ownership = "Владение"
+    override val ownershipDescription = """Закрашивает каждую позицию цветом игрока, который предположительно её захватит.
+Чем насыщеннее цвет, тем увереннее движок в том, кому достанется позиция.
+Наведите курсор на позицию, чтобы увидеть точное значение."""
+    override fun moreAnalyzedMoves(count: Int): String = "и ещё $count"
 
     override val winRate = "Вероятность победы"
     override val score = "Очки"

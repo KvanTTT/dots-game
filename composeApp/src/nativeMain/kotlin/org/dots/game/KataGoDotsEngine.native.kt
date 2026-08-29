@@ -21,6 +21,10 @@ actual class KataGoDotsEngine {
         TODO("Not yet implemented")
     }
 
+    actual suspend fun analyze(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis? {
+        TODO("Not yet implemented")
+    }
+
     actual companion object {
         actual val IS_SUPPORTED: Boolean = false
 

@@ -127,7 +127,33 @@ object EnglishStrings : Strings {
     override val previousGame = "Previous game"
     override val aiMove = "AI move"
     override val aiThinking = "AI is thinking..."
-    override val autoMove = "Auto"
+    override val aiMoveDescription = """Makes the engine move for the player to move.
+Long press to turn on the auto move mode, in which the engine answers every move automatically."""
+    override val autoMoveDescription = """The auto move mode is on: the engine answers every move automatically.
+Long press to turn it off."""
+
+    override val analyzing = "Analyzing..."
+    override val moveAnalysis = "Move Analysis"
+    override val moveAnalysisDescription = """Every candidate move is evaluated for the player to move.
+Green marks the best moves, red the worst ones (both the win rate and the score lead are taken into account).
+The more transparent a move is, the fewer visits it got, thus the less reliable its evaluation is."""
+    override val scoreLead = "Score Lead"
+    override val prior = "Prior"
+    override val variation = "Variation"
+    override val utility = "Utility"
+    override val lowerConfidenceBound = "Lower Confidence Bound"
+    override val deviation = "Deviation"
+    override val edgeVisits = "Edge Visits"
+    override val symmetryOf = "Symmetry of"
+    override val candidateMoves = "Candidate Moves"
+    override val candidateMovesDescription = """Highlights the moves the engine considers on the field, the best one is circled.
+Point at a move to see its win rate.
+The evaluation of every shown move is still listed below no matter whether the highlighting is on."""
+    override val ownership = "Ownership"
+    override val ownershipDescription = """Shades every position with the color of the player who is expected to capture it.
+The more saturated a position is, the more certain the engine is about its owner.
+Point at a position to see its exact value."""
+    override fun moreAnalyzedMoves(count: Int): String = "and $count more"
 
     override val winRate = "Win Rate"
     override val score = "Score"

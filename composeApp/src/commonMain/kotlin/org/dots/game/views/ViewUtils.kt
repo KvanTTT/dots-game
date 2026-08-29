@@ -18,10 +18,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import org.dots.game.core.Field
+import org.dots.game.core.PositionXY
 import org.dots.game.splitByUppercase
 import kotlin.math.round
 
 const val configKeyTextFraction = 0.4f
+
+/**
+ * The coordinates are rendered the way the field labels its grid, so that a position of a view is the very same
+ * position on the field: the regular ones start at `1` in the bottom left corner, the way the players count them,
+ * while the developer mode exposes the internal ones instead, whose origin is the top left corner of the field.
+ */
+fun xCoordinateToDisplayString(x: Int, developerMode: Boolean): String =
+    (if (developerMode) x - Field.OFFSET else x).toString()
+
+/** @see xCoordinateToDisplayString */
+fun yCoordinateToDisplayString(y: Int, field: Field, developerMode: Boolean): String =
+    (if (developerMode) y - Field.OFFSET else field.height + Field.OFFSET - y).toString()
+
+/** @see xCoordinateToDisplayString */
+fun PositionXY.toDisplayString(field: Field, developerMode: Boolean): String =
+    xCoordinateToDisplayString(x, developerMode) + "-" + yCoordinateToDisplayString(y, field, developerMode)
 
 @Composable
 fun DiscreteSliderConfig(

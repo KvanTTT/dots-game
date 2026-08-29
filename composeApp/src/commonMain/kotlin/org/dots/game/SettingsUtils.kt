@@ -69,6 +69,8 @@ fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? 
                     setSetting(UiSettings::showScoreGraph)
                     setSetting(UiSettings::showWeightGraph)
                     setSetting(UiSettings::showVisitsGraph)
+                    setSetting(UiSettings::showCandidateMoves)
+                    setSetting(UiSettings::showOwnership)
                 }
             }
             is OpenGameSettings -> {
@@ -160,6 +162,8 @@ fun <T : ClassSettings<T>> loadClassSettings(defaultSettingsObj: T, directory: S
                         showScoreGraph = getSetting(UiSettings::showScoreGraph),
                         showWeightGraph = getSetting(UiSettings::showWeightGraph),
                         showVisitsGraph = getSetting(UiSettings::showVisitsGraph),
+                        showCandidateMoves = getSetting(UiSettings::showCandidateMoves),
+                        showOwnership = getSetting(UiSettings::showOwnership),
                     )
                 }
             }

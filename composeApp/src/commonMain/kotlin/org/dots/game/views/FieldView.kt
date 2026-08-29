@@ -12,7 +12,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
@@ -20,17 +22,22 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import org.dots.game.MoveAnalysis
 import org.dots.game.UiSettings
 import org.dots.game.core.Field
 import org.dots.game.core.GameResult
@@ -38,6 +45,7 @@ import org.dots.game.core.LegalMove
 import org.dots.game.core.MoveMode
 import org.dots.game.core.Player
 import org.dots.game.core.Position
+import org.dots.game.core.PositionXY
 import org.dots.game.core.features.getOneMoveCapturingAndBasePositions
 import org.dots.game.core.features.getPositionsAtDistance
 import org.dots.game.core.features.squareDistances
@@ -47,6 +55,7 @@ import org.dots.game.core.getStrongConnectionLinePositions
 import org.dots.game.core.squareDistanceTo
 import org.dots.game.maxFieldDimension
 import org.dots.game.platform
+import kotlin.math.abs
 import kotlin.math.round
 
 private val borderPaddingRatio = 2.0f
@@ -73,6 +82,46 @@ private val maxDistanceId = 2
 
 private val capturingMoveMarkerSize = cellSize * 0.35f
 private val capturingBaseMoveMarkerSize = cellSize * 0.2f
+
+private val analyzedMoveRadius = cellSize * 0.44f
+private val bestAnalyzedMoveThickness = 2.dp
+
+/**
+ * The candidate moves are reported for the whole field, but only the most promising ones are highlighted,
+ * otherwise a large field turns into an unreadable mess of numbers.
+ */
+private const val maxAnalyzedMovesToHighlight = 30
+
+private const val maxOwnershipAlpha = 0.5f
+
+/** Below this the ownership is indistinguishable from the model noise, so it's not worth shading. */
+private const val minRenderedOwnership = 0.01
+
+/**
+ * Above this the ownership of a position is settled, so it's not shaded on top of the filling of the base
+ * that already reports the very same owner.
+ */
+private const val minSettledOwnership = 0.95
+
+private const val hintFractionDigits = 0
+
+/**
+ * The values are named the way the engine itself reports them, because the hint exists to check the engine
+ * against the field, and a bare percentage tells neither which value it is nor where it comes from.
+ */
+private const val winRateHintName = "winrate"
+private const val ownershipHintName = "ownership"
+private val hintTextStyle = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold)
+internal val hintDarkBackgroundColor = Color.hsv(0.0f, 0.0f, 0.15f, 0.85f)
+internal val hintLightBackgroundColor = Color.hsv(0.0f, 0.0f, 0.97f, 0.85f)
+private val hintPadding = 4.dp
+private val hintCornerRadius = 3.dp
+
+/** Every value keeps a background of its own, because a single one can't suit any pair of value colors. */
+private val hintLineGap = 2.dp
+
+/** Keeps the hint clear of both the hovered dot and the mouse cursor. */
+private val hintIndent = cellSize * 0.55f
 
 enum class ConnectionDrawMode {
     None,
@@ -126,10 +175,13 @@ fun FieldView(
     moveMode: MoveMode,
     field: Field,
     uiSettings: UiSettings,
+    moveAnalysis: MoveAnalysis? = null,
     onMovePlaced: (Position, Player) -> Unit = { pos, player -> require(field.makeMoveUnsafe(pos, player) is LegalMove) }
 ) {
     val currentDensity = LocalDensity.current
     var pointerFieldPosition: Position? by remember { mutableStateOf(null) }
+    // Tracked separately from [pointerFieldPosition], which only holds the positions a move may be placed on
+    var hoveredPositionXY: PositionXY? by remember { mutableStateOf(null) }
 
     Box(
         Modifier
@@ -142,6 +194,8 @@ fun FieldView(
                         val currentPlayer = moveMode.getMovePlayer(field)
                         when (event.type) {
                             PointerEventType.Move -> {
+                                hoveredPositionXY = event.toFieldPositionXY(field, currentDensity)
+
                                 val newPointerFieldPosition = event.toFieldPositionIfValid(field, currentPlayer, currentDensity)
                                 if (newPointerFieldPosition != pointerFieldPosition) {
                                     pointerFieldPosition = newPointerFieldPosition
@@ -166,6 +220,7 @@ fun FieldView(
                             }
                             PointerEventType.Exit -> {
                                 pointerFieldPosition = null
+                                hoveredPositionXY = null
                                 isPrimaryPressed = false
                             }
                         }
@@ -174,6 +229,10 @@ fun FieldView(
             }
     ) {
         Grid(field, uiSettings)
+        // Drawn before the dots and the bases so that they stay on top of the shading
+        if (moveAnalysis != null && uiSettings.showOwnership) {
+            AnalyzedOwnership(moveAnalysis, field, uiSettings)
+        }
         Moves(updateFieldObject, field, uiSettings)
         if (!field.isGameOver()) {
             if (uiSettings.showDiagonalConnections) {
@@ -183,8 +242,17 @@ fun FieldView(
             if (uiSettings.showThreats || uiSettings.showSurroundings) {
                 ThreatsAndSurroundings(updateFieldObject, field, uiSettings)
             }
+
+            if (moveAnalysis != null && uiSettings.showCandidateMoves) {
+                AnalyzedMoves(moveAnalysis, uiSettings)
+            }
         }
         Pointer(pointerFieldPosition, moveMode, field, uiSettings)
+
+        // The topmost layer, so that the hint is never covered by the field content
+        if (moveAnalysis != null) {
+            hoveredPositionXY?.let { AnalysisHint(it, moveAnalysis, uiSettings) }
+        }
     }
 }
 
@@ -205,7 +273,7 @@ private fun Grid(field: Field, uiSettings: UiSettings) {
             for (x in Field.OFFSET until field.width + Field.OFFSET) {
                 val xPx = x.coordinateToPx(this)
 
-                val xCoordinateText = (x + (if (uiSettings.developerMode) -1 else 0)) .toString()
+                val xCoordinateText = xCoordinateToDisplayString(x, uiSettings.developerMode)
                 val textLayoutResult = textMeasurer.measure(xCoordinateText)
 
                 val textX = xPx - textLayoutResult.size.width / 2
@@ -225,7 +293,7 @@ private fun Grid(field: Field, uiSettings: UiSettings) {
             for (y in Field.OFFSET until field.height + Field.OFFSET) {
                 val yPx = y.coordinateToPx(this)
 
-                val yCoordinateText = (if (uiSettings.developerMode) y - 1 else field.height + Field.OFFSET - y).toString()
+                val yCoordinateText = yCoordinateToDisplayString(y, field, uiSettings.developerMode)
                 val textLayoutResult = textMeasurer.measure(yCoordinateText)
 
                 val textX = textPaddingPx - textLayoutResult.size.width
@@ -471,6 +539,194 @@ private fun ThreatsAndSurroundings(updateObject: Any?, field: Field, uiSettings:
     }
 }
 
+/**
+ * Shades every position with the color of the player who is expected to capture it, see
+ * [MoveAnalysis.ownershipOf]. The stronger the expectation, the more opaque the shading is.
+ *
+ * The positions that are captured by the very player who is expected to own them are left to the filling of
+ * their base, see [minSettledOwnership]. A base the ownership disagrees with is shaded as any other position.
+ */
+@Composable
+private fun AnalyzedOwnership(moveAnalysis: MoveAnalysis, field: Field, uiSettings: UiSettings) {
+    Canvas(Modifier.fillMaxSize().graphicsLayer()) {
+        val cellSizePx = cellSize.toPx()
+        val cellOffsetPx = cellSizePx / 2
+        val cellArea = Size(cellSizePx, cellSizePx)
+
+        for (x in Field.OFFSET until field.width + Field.OFFSET) {
+            val xPx = x.coordinateToPx(this)
+
+            for (y in Field.OFFSET until field.height + Field.OFFSET) {
+                val ownership = moveAnalysis.ownershipOf(PositionXY(x, y)) ?: continue
+                val absOwnership = abs(ownership)
+                if (absOwnership < minRenderedOwnership) continue
+
+                // The ownership is reported for the analyzed player, so a negative value is the opponent's one
+                val owner = if (ownership > 0) moveAnalysis.player else moveAnalysis.player.opposite()
+
+                if (uiSettings.baseDrawMode.drawFill) {
+                    // The base filling already conveys such a position, and the two colorings on top of each other
+                    // are only harder to read; the hint of the position still reports the exact value.
+                    // A base captured by the other player is shaded nevertheless, because it's a disagreement worth
+                    // seeing rather than a duplicated coloring
+                    if (absOwnership >= minSettledOwnership && field.capturedBy(x, y) == owner) continue
+                }
+
+                drawRect(
+                    uiSettings.toColor(owner).copy(alpha = absOwnership.toFloat() * maxOwnershipAlpha),
+                    topLeft = Offset(xPx - cellOffsetPx, y.coordinateToPx(this) - cellOffsetPx),
+                    size = cellArea,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * @return the player whose base fills the position according to the [Field] logic,
+ * or `null` if the position isn't captured.
+ */
+private fun Field.capturedBy(x: Int, y: Int): Player? =
+    getPositionIfWithinBounds(x, y)?.getState()?.takeIf { it.isTerritory() }?.getActivePlayer()
+
+/** A value of the hovered position, colored with whatever the value refers to. */
+private class HintLine(val text: String, val color: Color)
+
+/**
+ * Shows the exact values of the position under the cursor, because the field conveys them roughly only:
+ * [AnalyzedMoves] encodes how good a candidate move is by a color of a gradient, and the shading of
+ * [AnalyzedOwnership] conveys the expected owner with a rough confidence.
+ *
+ * Unlike the shading, the ownership is reported on the captured positions as well, to tell a correctly
+ * calculated ownership from a wrong one there; only the positions the shading skips as too uncertain
+ * ([minRenderedOwnership]) get no ownership line either. The ownership is signed the same way
+ * [MoveAnalysis.ownershipOf] reports it, and it's colored with the expected owner, so that a negative value
+ * doesn't have to be mentally inverted.
+ */
+@Composable
+private fun AnalysisHint(positionXY: PositionXY, moveAnalysis: MoveAnalysis, uiSettings: UiSettings) {
+    val lines = buildList {
+        if (uiSettings.showCandidateMoves) {
+            moveAnalysis.moveAt(positionXY)?.let { move ->
+                // The transparency of the highlighting encodes the confidence,
+                // but a transparent text is just unreadable
+                val color = moveAnalysis.colorOf(move).copy(alpha = 1.0f)
+                add(HintLine(winRateHintName + ": " + (move.winRate * 100).toFixed(hintFractionDigits) + "%", color))
+            }
+        }
+
+        if (uiSettings.showOwnership) {
+            val ownership = moveAnalysis.ownershipOf(positionXY)
+            // Such a low value conveys no expected owner at all, the same way the shading skips it
+            if (ownership != null && abs(ownership) >= minRenderedOwnership) {
+                val owner = if (ownership > 0) moveAnalysis.player else moveAnalysis.player.opposite()
+                val text = ownershipHintName + ": " + (ownership * 100).toFixed(hintFractionDigits) + "%"
+                add(HintLine(text, uiSettings.toColor(owner)))
+            }
+        }
+    }
+    if (lines.isEmpty()) return
+
+    val textMeasurer = rememberTextMeasurer()
+
+    Canvas(Modifier.fillMaxSize().graphicsLayer()) {
+        val paddingPx = hintPadding.toPx()
+        val gapPx = hintLineGap.toPx()
+        val cornerRadius = CornerRadius(hintCornerRadius.toPx())
+
+        val textLayouts = lines.map { textMeasurer.measure(it.text, hintTextStyle) }
+        val lineHeights = textLayouts.map { it.size.height + paddingPx * 2 }
+        val hintWidth = textLayouts.maxOf { it.size.width } + paddingPx * 2
+        val hintHeight = lineHeights.sum() + gapPx * (lines.size - 1)
+
+        // Above and to the right of the position, but never past the field bounds, otherwise it gets clipped
+        val indentPx = hintIndent.toPx()
+        val left = (positionXY.x.coordinateToPx(this) + indentPx).coerceIn(0f, (size.width - hintWidth).coerceAtLeast(0f))
+        var top = (positionXY.y.coordinateToPx(this) - indentPx - hintHeight).coerceAtLeast(0f)
+
+        for (index in lines.indices) {
+            val line = lines[index]
+
+            drawRoundRect(
+                mostContrastingHintBackground(line.color),
+                topLeft = Offset(left, top),
+                size = Size(hintWidth, lineHeights[index]),
+                cornerRadius = cornerRadius,
+            )
+
+            drawText(
+                textLayouts[index],
+                color = line.color,
+                topLeft = Offset(left + paddingPx, top + paddingPx),
+            )
+
+            top += lineHeights[index] + gapPx
+        }
+    }
+}
+
+/**
+ * The player colors are configurable, and no single background suits every one of them: the default
+ * blue of the first player is barely readable on a dark background, while the default red of
+ * the second one is more readable on a dark background than on a light one.
+ *
+ * @return the background that gives [textColor] the higher [contrastRatio].
+ */
+internal fun mostContrastingHintBackground(textColor: Color): Color {
+    return if (contrastRatio(textColor, hintDarkBackgroundColor) >=
+        contrastRatio(textColor, hintLightBackgroundColor)
+    ) {
+        hintDarkBackgroundColor
+    } else {
+        hintLightBackgroundColor
+    }
+}
+
+/**
+ * The [WCAG contrast ratio](https://www.w3.org/TR/WCAG21/#dfn-contrast-ratio) of two colors,
+ * from `1.0` (indistinguishable) to `21.0` (black against white).
+ */
+internal fun contrastRatio(first: Color, second: Color): Float {
+    val firstLuminance = first.luminance()
+    val secondLuminance = second.luminance()
+
+    return (maxOf(firstLuminance, secondLuminance) + 0.05f) / (minOf(firstLuminance, secondLuminance) + 0.05f)
+}
+
+/**
+ * Highlights the candidate moves of [moveAnalysis]: the color encodes how good a move is and the transparency
+ * encodes how reliable its evaluation is, see [colorOf]. The exact win rate is reported by [AnalysisHint],
+ * because the numbers of the neighboring moves are unreadable on a dense field.
+ *
+ * The best move is circled with the color of the player it's analyzed for: it stands out from both the
+ * highlighting of the move and the [fieldColor] background, and it tells whose move is being suggested.
+ */
+@Composable
+private fun AnalyzedMoves(moveAnalysis: MoveAnalysis, uiSettings: UiSettings) {
+    Canvas(Modifier.fillMaxSize().graphicsLayer()) {
+        val radiusPx = analyzedMoveRadius.toPx()
+        val bestMoveColor = uiSettings.toColor(moveAnalysis.player)
+
+        for (move in moveAnalysis.moves.take(maxAnalyzedMovesToHighlight)) {
+            val center = Offset(
+                move.positionXY.x.coordinateToPx(this),
+                move.positionXY.y.coordinateToPx(this),
+            )
+
+            drawCircle(moveAnalysis.colorOf(move), radiusPx, center)
+
+            if (move === moveAnalysis.best) {
+                drawCircle(
+                    bestMoveColor,
+                    radiusPx,
+                    center,
+                    style = Stroke(width = bestAnalyzedMoveThickness.toPx()),
+                )
+            }
+        }
+    }
+}
+
 private fun DrawScope.drawStrongConnectionLines(
     field: Field,
     moveResultPosition: Position,
@@ -574,6 +830,25 @@ private fun Pointer(position: Position?, moveMode: MoveMode, field: Field, uiSet
             dotRadius.toPx(),
             position.toPxOffset(field,this)
         )
+    }
+}
+
+/**
+ * Unlike [toFieldPositionIfValid], every position of the field is returned, an occupied one included,
+ * because the ownership is reported for all of them, and the captured dots are the most interesting ones.
+ */
+private fun PointerEvent.toFieldPositionXY(field: Field, currentDensity: Density): PositionXY? {
+    val offset = changes.first().position
+
+    with (currentDensity) {
+        val x = round((offset.x.toDp() - fieldPadding) / cellSize).toInt() + Field.OFFSET
+        val y = round((offset.y.toDp() - fieldPadding) / cellSize).toInt() + Field.OFFSET
+
+        return if (x in Field.OFFSET until field.width + Field.OFFSET && y in Field.OFFSET until field.height + Field.OFFSET) {
+            PositionXY(x, y)
+        } else {
+            null
+        }
     }
 }
 
