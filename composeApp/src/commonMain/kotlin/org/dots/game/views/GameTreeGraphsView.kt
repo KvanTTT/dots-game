@@ -22,9 +22,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.dots.game.MoveAnalysis
 import org.dots.game.Tooltip
 import org.dots.game.UiSettings
 import org.dots.game.core.GameTreeNode
+import org.dots.game.core.Player
 import org.dots.game.localization.Strings
 import org.dots.game.toPercent
 import kotlin.math.abs
@@ -74,7 +76,8 @@ private sealed class GraphProperties<T : Number>(
         Strings::score,
         Strings::scoreDescription,
         UiSettings::showScoreGraph,
-        renderValue = { "${if (it > 0) "+" else ""}$it" },
+        // The tail of a raw value is noise rather than information
+        renderValue = { it.toDouble().toSigned(1) },
     )
 
     object Weight : GraphProperties<Float>(
@@ -83,6 +86,7 @@ private sealed class GraphProperties<T : Number>(
         Strings::weight,
         Strings::weightDescription,
         UiSettings::showWeightGraph,
+        renderValue = { it.toDouble().toFixed(1) },
     )
 
     object Visits : GraphProperties<Int>(
@@ -101,11 +105,17 @@ private val allGraphProperties = listOf(
     GraphProperties.Visits,
 )
 
+/**
+ * @param gameAnalysis the evaluations of the positions of the game the engine has reported, see
+ * `KataGoDotsEngine.analyzeGame`. They take precedence over the values of a KataGo SGF, because they are
+ * made by the engine of the user rather than by whoever saved the game.
+ */
 @Composable
 fun GameTreeGraphsView(
     currentNode: GameTreeNode?,
     gameTreeViewData: GameTreeViewData,
     uiSettings: UiSettings,
+    gameAnalysis: Map<GameTreeNode, MoveAnalysis>,
     onUiSettingsChange: (UiSettings) -> Unit,
     onChangeCurrentNode: () -> Unit,
 ) {
@@ -114,19 +124,21 @@ fun GameTreeGraphsView(
     val strings = uiSettings.language.getStrings()
     val textMeasurer = rememberTextMeasurer()
 
-    val graphData = remember(gameTreeViewData) {
+    val graphData = remember(gameTreeViewData, gameAnalysis) {
         val graphPointData = mutableListOf<GraphPointData>()
 
         var node: GameTreeNode? = gameTree.rootNode
         while (node != null) {
-            node.getKataGoGraphPointData()?.let { graphPointData.add(it) }
-            node = node.children.firstOrNull { it.mainBranch }
+            val analyzedNode = node
+            val analyzedPointData = gameAnalysis[analyzedNode]?.getGraphPointData(analyzedNode)
+            (analyzedPointData ?: analyzedNode.getKataGoGraphPointData())?.let { graphPointData.add(it) }
+            node = analyzedNode.children.firstOrNull { it.mainBranch }
         }
         GraphData(graphPointData)
     }
 
     // Exit if there are no points to prevent division by zero and because there is nothing useful to draw.
-    if (!graphData.hasAnyComment || graphData.points.isEmpty()) return
+    if (!graphData.hasAnyValue || graphData.points.isEmpty()) return
     val coef = 1.0f / (graphData.points.size - 1).let { if (it == 0) 1f else it.toFloat() }
 
     val density = LocalDensity.current
@@ -393,10 +405,28 @@ private fun GameTreeNode?.getKataGoGraphPointData(): GraphPointData? {
     }
 }
 
+/**
+ * The evaluations of the engine are reported for the player to move, while the graphs are drawn from
+ * the perspective of the second player, the same way the values of a KataGo SGF are: `100%` and a positive
+ * score are a win of the second player.
+ */
+private fun MoveAnalysis.getGraphPointData(node: GameTreeNode): GraphPointData? {
+    val position = position ?: return null
+    val isSecondPlayer = player == Player.Second
+
+    return GraphPointData(
+        node,
+        winRate = (if (isSecondPlayer) position.winRate else 1.0 - position.winRate).toFloat(),
+        score = (if (isSecondPlayer) position.scoreLead else -position.scoreLead).toFloat(),
+        visits = position.visits,
+        weight = position.weight.toFloat(),
+    )
+}
+
 private data class GraphPointData(val node: GameTreeNode, val winRate: Float?, val score: Float?, val visits: Int?, val weight: Float?)
 
 private data class GraphData(val points: List<GraphPointData>) {
-    val hasAnyComment: Boolean = points.any { it.winRate != null || it.score != null || it.visits != null || it.weight != null }
+    val hasAnyValue: Boolean = points.any { it.winRate != null || it.score != null || it.visits != null || it.weight != null }
 
     val minScore: Float by lazy(LazyThreadSafetyMode.PUBLICATION) { points.minOf { it.score ?: 0.0f } }
     val maxScore: Float by lazy(LazyThreadSafetyMode.PUBLICATION) { points.maxOf { it.score ?: 0.0f } }

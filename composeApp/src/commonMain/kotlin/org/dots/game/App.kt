@@ -35,6 +35,7 @@ import dotsgame.composeapp.generated.resources.Res
 import dotsgame.composeapp.generated.resources.ic_ai_move
 import dotsgame.composeapp.generated.resources.ic_ai_settings
 import dotsgame.composeapp.generated.resources.ic_candidate_moves
+import dotsgame.composeapp.generated.resources.ic_game_analysis
 import dotsgame.composeapp.generated.resources.ic_ground
 import dotsgame.composeapp.generated.resources.ic_load_game
 import dotsgame.composeapp.generated.resources.ic_new_game
@@ -47,6 +48,33 @@ import dotsgame.composeapp.generated.resources.ic_save_as
 import dotsgame.composeapp.generated.resources.ic_settings
 import org.dots.game.dump.DumpParameters
 import org.dots.game.sgf.SgfParsedNode
+
+/**
+ * The moves of a game and the node every turn of it leads to, a turn being the number of the moves played
+ * before the position, see `KataGoDotsEngine.analyzeGame`.
+ */
+private data class MainLineTurns(val moves: List<MoveInfo>, val nodeByTurn: Map<Int, GameTreeNode>)
+
+/**
+ * @return the main line of the tree, ending at a move that finishes the game (a grounding or a resignation),
+ * because there is nothing to evaluate after such a move.
+ */
+private fun GameTree.mainLineTurns(): MainLineTurns {
+    val moves = mutableListOf<MoveInfo>()
+    val nodeByTurn = mutableMapOf<Int, GameTreeNode>()
+
+    var node: GameTreeNode? = rootNode
+    while (node != null) {
+        val nodeMoves = node.player1Moves.orEmpty() + node.player2Moves.orEmpty()
+        if (nodeMoves.any { it.externalFinishReason != null }) break
+
+        moves.addAll(nodeMoves)
+        nodeByTurn[moves.size] = node
+        node = node.children.firstOrNull { it.mainBranch }
+    }
+
+    return MainLineTurns(moves, nodeByTurn)
+}
 
 @Composable
 @Preview
@@ -89,6 +117,10 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
         var engineCommandsInProgress by remember { mutableStateOf(0) }
         var engineIsAnalyzing by remember { mutableStateOf(false) }
         var moveAnalysis by remember { mutableStateOf<MoveAnalysis?>(null) }
+        var engineIsAnalyzingGame by remember { mutableStateOf(false) }
+        // Keyed by the node rather than by the number of a move, so that the analysis of the nodes that stay
+        // survives a move that is added or taken back
+        var gameAnalysis by remember { mutableStateOf<Map<GameTreeNode, MoveAnalysis>>(emptyMap()) }
 
         // The engine answers several queries at once, but a command that changes the position must not
         // run along with another one, see `withFrozenPosition`
@@ -117,6 +149,8 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
 
         fun switchGame(gameNumber: Int?) {
             gameSettings.game = gameNumber
+            // The analysis is keyed by the nodes of the game that is being left
+            gameAnalysis = emptyMap()
             currentGame = gameNumber?.let { games.elementAtOrNull(it) } ?: games[0]
             val node = gameSettings.node
 
@@ -346,6 +380,32 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     }
                 } finally {
                     engineIsAnalyzing = false
+                }
+            }
+        }
+
+        if (uiSettings.showGameAnalysis) {
+            // The analysis of a whole game is long, and it neither depends on the current position nor changes
+            // it, so unlike the other commands it doesn't freeze the game: the moves that are added while
+            // it runs are analyzed by the restarted effect, the ones that are analyzed already are not.
+            // The reported turns are no key of the effect: they arrive one by one, and restarting it on every
+            // one of them would cancel the very query that reports them
+            LaunchedEffect(kataGoDotsEngine, currentGame, gameTreeViewData) {
+                val engine = kataGoDotsEngine ?: return@LaunchedEffect
+                val field = getField()
+                if (!doesKataSupportRules(field.rules)) return@LaunchedEffect
+
+                val mainLine = getGameTree().mainLineTurns()
+                val turnNumbers = mainLine.nodeByTurn.filterValues { it !in gameAnalysis }.keys.sorted()
+                if (turnNumbers.isEmpty()) return@LaunchedEffect
+
+                engineIsAnalyzingGame = true
+                try {
+                    engine.analyzeGame(field, mainLine.moves, turnNumbers) { turnNumber, analysis ->
+                        mainLine.nodeByTurn[turnNumber]?.let { gameAnalysis += it to analysis }
+                    }
+                } finally {
+                    engineIsAnalyzingGame = false
                 }
             }
         }
@@ -599,16 +659,43 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                             ) {
                                 switchAnalysisOption(uiSettings.copy(showOwnership = !uiSettings.showOwnership))
                             }
+
+                            ToggleIconButton(
+                                Res.drawable.ic_game_analysis,
+                                checked = uiSettings.showGameAnalysis,
+                                description = strings.gameAnalysisDescription,
+                                enabled = doesKataSupportRules(getField().rules),
+                            ) {
+                                uiSettings = uiSettings.copy(showGameAnalysis = !uiSettings.showGameAnalysis)
+                                saveClassSettings(uiSettings)
+                                if (!uiSettings.showGameAnalysis) {
+                                    // The graphs are gone along with the option, and the game goes on,
+                                    // so the evaluations would be outdated by the time it's switched on again
+                                    gameAnalysis = emptyMap()
+                                }
+                                focusRequester.requestFocus()
+                            }
                         }
 
                         // A single indicator of a busy engine, no matter which command it's busy with:
                         // the button of a command keeps its icon, so that the row doesn't jump around
-                        if (engineIsCalculating || engineIsAnalyzing) {
+                        if (engineIsCalculating || engineIsAnalyzing || engineIsAnalyzingGame) {
                             Box(Modifier.align(Alignment.CenterVertically).padding(start = 3.dp)) {
-                                Tooltip(if (engineIsCalculating) strings.aiThinking else strings.analyzing) {
+                                Tooltip(when {
+                                    engineIsCalculating -> strings.aiThinking
+                                    engineIsAnalyzing -> strings.analyzing
+                                    else -> strings.analyzingGame
+                                }) {
                                     CircularProgressIndicator(Modifier.size(20.dp))
                                 }
                             }
+                        }
+                    }
+
+                    // The analysis of the current position, no matter which of the buttons above requested it
+                    (moveAnalysis ?: currentGameTreeNode?.let { gameAnalysis[it] })?.let { analysis ->
+                        Row(rowModifier) {
+                            PositionEvaluationView(analysis, uiSettings, strings)
                         }
                     }
 
@@ -629,11 +716,12 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     updateCurrentNode()
                 }
 
-                if (gameTreeViewData.gameTree.game?.appInfo?.appType == AppType.Katago) {
+                if (gameAnalysis.isNotEmpty() || gameTreeViewData.gameTree.game?.appInfo?.appType == AppType.Katago) {
                     GameTreeGraphsView(
                         currentGameTreeNode,
                         gameTreeViewData,
                         uiSettings,
+                        gameAnalysis,
                         onUiSettingsChange = {
                             uiSettings = it
                             saveClassSettings(uiSettings)

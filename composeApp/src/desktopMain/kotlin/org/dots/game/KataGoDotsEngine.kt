@@ -6,6 +6,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -54,9 +56,6 @@ actual class KataGoDotsEngine private constructor(
         private const val READY_MARKER = "Started, ready to begin handling requests"
 
         private const val ANALYSIS_COMMAND = "analysis"
-
-        private const val PLAYER1_MARKER = "P1"
-        private const val PLAYER2_MARKER = "P2"
 
         val DEFAULT_KATA_GO_DOTS_DIR: String = Paths.get(System.getProperty("user.dir"), "src/desktopMain/resources/$KATA_GO_DOTS_APP_NAME").toString()
 
@@ -124,8 +123,13 @@ actual class KataGoDotsEngine private constructor(
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    /** The queries that are still waiting for their response, keyed by [QUERY_ID_KEY]. */
-    private val pendingQueries = ConcurrentHashMap<String, CompletableDeferred<JsonObject?>>()
+    /**
+     * The queries that are still waiting for their responses, keyed by [QUERY_ID_KEY]. A query is answered
+     * with a single response, except the one of a whole game, which is answered with one response per turn,
+     * so the responses are streamed rather than awaited one by one. A `null` means the engine dropped
+     * the query and nothing else is coming.
+     */
+    private val pendingQueries = ConcurrentHashMap<String, Channel<JsonObject?>>()
 
     private val queryCounter = AtomicLong()
 
@@ -164,7 +168,7 @@ actual class KataGoDotsEngine private constructor(
             // The engine is gone, so nothing is going to answer the queries that are still waiting
             ready.complete(false)
             for (queryId in pendingQueries.keys.toList()) {
-                pendingQueries.remove(queryId)?.complete(null)
+                pendingQueries[queryId]?.trySend(null)
             }
         }
     }
@@ -177,7 +181,7 @@ actual class KataGoDotsEngine private constructor(
         when {
             error != null -> {
                 logger(Diagnostic(response.describe(error), severity = DiagnosticSeverity.Error))
-                queryId?.let { pendingQueries.remove(it)?.complete(null) }
+                queryId?.let { pendingQueries[it]?.trySend(null) }
             }
             warning != null -> {
                 // A warning precedes the response of the very same query, which is still to come
@@ -186,7 +190,7 @@ actual class KataGoDotsEngine private constructor(
             // A partial report of a search that is still running: only the final one is of interest
             (response[IS_DURING_SEARCH_KEY] as? JsonPrimitive)?.booleanOrNull == true -> {}
             queryId != null -> {
-                pendingQueries.remove(queryId)?.complete(response.takeIf { NO_RESULTS_KEY !in it })
+                pendingQueries[queryId]?.trySend(response.takeIf { NO_RESULTS_KEY !in it })
             }
         }
     }
@@ -236,25 +240,62 @@ actual class KataGoDotsEngine private constructor(
         return query(field, player, withOwnership)?.takeIf { it.moves.isNotEmpty() }
     }
 
+    actual suspend fun analyzeGame(
+        field: Field,
+        moves: List<MoveInfo>,
+        turnNumbers: List<Int>,
+        onTurnAnalyzed: (turnNumber: Int, analysis: MoveAnalysis) -> Unit,
+    ) {
+        if (!doesKataSupportRules(field.rules) || turnNumbers.isEmpty()) return
+
+        val queryId = queryCounter.incrementAndGet().toString()
+        val query = buildQuery(
+            queryId, field, moves,
+            // Every turn is analyzed for the player it's the turn of, and the ownership of a whole game
+            // would be a value per position per turn, which no graph of it displays
+            player = null, turnNumbers = turnNumbers, withOwnership = false,
+        )
+
+        val _ = withQuery(queryId, query) { responses ->
+            // The engine reports a turn as soon as it's searched, and the turns of a query may be searched
+            // in any order, so every response tells the turn it's about
+            repeat(turnNumbers.size) {
+                val response = responses.receive() ?: return@withQuery
+                val turnNumber = turnNumberOf(response) ?: return@withQuery
+                onTurnAnalyzed(
+                    turnNumber,
+                    parseMoveAnalysis(response, field.getCurrentPlayer(), field.width, field.height),
+                )
+            }
+        }
+    }
+
     /** @return `null` if the engine reported no analysis at all, that is it rejected or dropped the query. */
     private suspend fun query(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis? {
         if (!doesKataSupportRules(field.rules)) return null
 
         val effectivePlayer = player ?: field.getCurrentPlayer()
         val queryId = queryCounter.incrementAndGet().toString()
-        val response = send(queryId, buildQuery(queryId, field, effectivePlayer, withOwnership)) ?: return null
+        val moves = field.moveSequence.drop(field.initialMovesCount).map { MoveInfo.fromLegalMove(it, field) }
+        val query = buildQuery(queryId, field, moves, effectivePlayer, turnNumbers = null, withOwnership)
+        val response = send(queryId, query) ?: return null
 
         return parseMoveAnalysis(response, effectivePlayer, field.width, field.height)
     }
 
-    private suspend fun send(queryId: String, query: JsonObject): JsonObject? {
-        val response = CompletableDeferred<JsonObject?>()
-        pendingQueries[queryId] = response
+    /** Sends [query] and lets [receiveResponses] take its responses until it's done with them. */
+    private suspend fun <T> withQuery(
+        queryId: String,
+        query: JsonObject,
+        receiveResponses: suspend (ReceiveChannel<JsonObject?>) -> T,
+    ): T? {
+        val responses = Channel<JsonObject?>(Channel.UNLIMITED)
+        pendingQueries[queryId] = responses
 
         try {
             writeLine(query.toString())
 
-            return response.await()
+            return receiveResponses(responses)
         } catch (e: IOException) {
             // The engine is gone, and the app has to keep running without it
             logger(Diagnostic(e.message ?: e.toString(), severity = DiagnosticSeverity.Critical))
@@ -268,6 +309,9 @@ actual class KataGoDotsEngine private constructor(
             pendingQueries.remove(queryId)
         }
     }
+
+    private suspend fun send(queryId: String, query: JsonObject): JsonObject? =
+        withQuery(queryId, query) { responses -> responses.receive() }
 
     /** Asks the engine to stop the search of [queryId], see [send]. */
     private fun terminate(queryId: String) {
@@ -295,15 +339,25 @@ actual class KataGoDotsEngine private constructor(
 
     /**
      * The engine is told the whole position rather than the difference from the previous one: the start
-     * position as `initialStones` (they are placed rather than played, the same way the field sets them up)
-     * and the rest as `moves`.
+     * position of [field] as `initialStones` (they are placed rather than played, the same way the field
+     * sets them up) and [moves] as `moves`.
      *
      * `playerToMove` is a KataGoDots extension: in Go the player to move follows from the moves, while
      * in Dots either player may move at any point, and the app even lets the user choose the one to analyze.
+     * It's left out for [turnNumbers], where every turn is analyzed for the player whose turn it is.
+     *
+     * @param turnNumbers the turns of the game to analyze, `null` for the position [moves] end at.
      */
-    private fun buildQuery(queryId: String, field: Field, player: Player, withOwnership: Boolean): JsonObject {
+    private fun buildQuery(
+        queryId: String,
+        field: Field,
+        moves: List<MoveInfo>,
+        player: Player?,
+        turnNumbers: List<Int>?,
+        withOwnership: Boolean,
+    ): JsonObject {
         val rules = field.rules
-        val moves = field.moveSequence.map { MoveInfo.fromLegalMove(it, field) }
+        val initialStones = field.moveSequence.take(field.initialMovesCount).map { MoveInfo.fromLegalMove(it, field) }
 
         return buildJsonObject {
             put(QUERY_ID_KEY, queryId)
@@ -324,16 +378,23 @@ actual class KataGoDotsEngine private constructor(
             put(KOMI_KEY, rules.komi)
 
             putJsonArray(INITIAL_STONES_KEY) {
-                for (move in moves.take(field.initialMovesCount)) {
+                for (move in initialStones) {
                     addMove(move, field)
                 }
             }
             putJsonArray(MOVES_KEY) {
-                for (move in moves.drop(field.initialMovesCount)) {
+                for (move in moves) {
                     addMove(move, field)
                 }
             }
-            put(PLAYER_TO_MOVE_KEY, player.toEngineMarker())
+            player?.let { put(PLAYER_TO_MOVE_KEY, it.toEngineMarker()) }
+            turnNumbers?.let { turns ->
+                putJsonArray(ANALYZE_TURNS_KEY) {
+                    for (turnNumber in turns) {
+                        add(turnNumber)
+                    }
+                }
+            }
 
             put(INCLUDE_OWNERSHIP_KEY, withOwnership)
 
@@ -354,7 +415,7 @@ actual class KataGoDotsEngine private constructor(
         process.destroy()
         ready.complete(false)
         for (queryId in pendingQueries.keys.toList()) {
-            pendingQueries.remove(queryId)?.complete(null)
+            pendingQueries[queryId]?.trySend(null)
         }
         scope.cancel()
     }
@@ -398,13 +459,6 @@ actual class KataGoDotsEngine private constructor(
         InitPosType.Custom -> EMPTY_START_POS
     }
 
-    private fun Player.toEngineMarker(): String {
-        return when (this) {
-            Player.First -> PLAYER1_MARKER
-            Player.Second -> PLAYER2_MARKER
-            else -> error("Unexpected player $this")
-        }
-    }
 }
 
 private const val QUERY_ID_KEY = "id"
@@ -428,6 +482,7 @@ private const val KOMI_KEY = "komi"
 private const val INITIAL_STONES_KEY = "initialStones"
 private const val MOVES_KEY = "moves"
 private const val PLAYER_TO_MOVE_KEY = "playerToMove"
+private const val ANALYZE_TURNS_KEY = "analyzeTurns"
 private const val INCLUDE_OWNERSHIP_KEY = "includeOwnership"
 private const val MAX_VISITS_KEY = "maxVisits"
 private const val OVERRIDE_SETTINGS_KEY = "overrideSettings"

@@ -158,6 +158,11 @@ The evaluation of every shown move is still listed below no matter whether the h
     override val ownershipDescription = """Shades every position with the color of the player who is expected to capture it.
 The more saturated a position is, the more certain the engine is about its owner.
 Point at a position to see its exact value."""
+    override val gameAnalysis = "Game Analysis"
+    override val gameAnalysisDescription = """Evaluates every position of the game from its start to its end
+and draws the graphs of the values below the game tree.
+The moves that are added afterwards are evaluated as well, the analyzed ones are not evaluated twice."""
+    override val analyzingGame = "Analyzing the game..."
     override fun moreAnalyzedMoves(count: Int): String = "and $count more"
 
     override val winRate = "Win Rate"

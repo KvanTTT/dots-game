@@ -31,6 +31,7 @@ import dotsgame.composeapp.generated.resources.ic_ai_move
 import dotsgame.composeapp.generated.resources.ic_ai_settings
 import dotsgame.composeapp.generated.resources.ic_browse
 import dotsgame.composeapp.generated.resources.ic_candidate_moves
+import dotsgame.composeapp.generated.resources.ic_game_analysis
 import dotsgame.composeapp.generated.resources.ic_copy
 import dotsgame.composeapp.generated.resources.ic_ground
 import dotsgame.composeapp.generated.resources.ic_load_game
@@ -176,6 +177,7 @@ fun textForIcon(icon: DrawableResource, strings: Strings): String {
         Res.drawable.ic_ai_move -> strings.aiMove
         Res.drawable.ic_candidate_moves -> strings.candidateMoves
         Res.drawable.ic_ownership -> strings.ownership
+        Res.drawable.ic_game_analysis -> strings.gameAnalysis
         Res.drawable.ic_browse -> strings.browse
         Res.drawable.ic_copy -> strings.copy
         else -> error("Unbound icon $icon")

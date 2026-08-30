@@ -16,6 +16,15 @@ actual class KataGoDotsEngine {
         TODO("Not yet implemented")
     }
 
+    actual suspend fun analyzeGame(
+        field: Field,
+        moves: List<MoveInfo>,
+        turnNumbers: List<Int>,
+        onTurnAnalyzed: (turnNumber: Int, analysis: MoveAnalysis) -> Unit,
+    ) {
+        TODO("Not yet implemented")
+    }
+
     actual fun close() {
         TODO("Not yet implemented")
     }

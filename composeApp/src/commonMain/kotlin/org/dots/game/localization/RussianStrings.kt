@@ -158,6 +158,11 @@ object RussianStrings : Strings {
     override val ownershipDescription = """Закрашивает каждую позицию цветом игрока, который предположительно её захватит.
 Чем насыщеннее цвет, тем увереннее движок в том, кому достанется позиция.
 Наведите курсор на позицию, чтобы увидеть точное значение."""
+    override val gameAnalysis = "Анализ партии"
+    override val gameAnalysisDescription = """Оценивает каждую позицию партии от начала до конца
+и строит графики значений под деревом игры.
+Добавленные позже ходы тоже оцениваются, а уже проанализированные не оцениваются повторно."""
+    override val analyzingGame = "Анализ партии..."
     override fun moreAnalyzedMoves(count: Int): String = "и ещё $count"
 
     override val winRate = "Вероятность победы"

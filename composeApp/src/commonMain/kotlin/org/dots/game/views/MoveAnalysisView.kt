@@ -73,6 +73,31 @@ private val analysisValueColumns = listOf(
     AnalysisColumn({ it.prior }, { (it.prior * 100).toFixed(1) + "%" }),
 )
 
+/**
+ * The evaluation of the current position in numbers, which the field and the graphs only convey roughly.
+ * It's colored with the player the values are reported for, that is the player to move.
+ */
+@Composable
+fun PositionEvaluationView(moveAnalysis: MoveAnalysis, uiSettings: UiSettings, strings: Strings) {
+    val position = moveAnalysis.position ?: return
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Tooltip(moveAnalysis.playerName(strings)) {
+            Box(
+                Modifier.padding(end = 5.dp).size(moveMarkerSize).clip(CircleShape)
+                    .border(1.dp, Color.White, CircleShape)
+                    .background(uiSettings.toColor(moveAnalysis.player))
+            )
+        }
+        Text(
+            "${strings.winRate}: ${(position.winRate * 100).toFixed(1)}%" +
+                    " · ${strings.score}: ${position.scoreLead.toSigned(1)}" +
+                    " · ${strings.visits}: ${position.visits}",
+            style = MaterialTheme.typography.caption,
+        )
+    }
+}
+
 @Composable
 fun MoveAnalysisView(moveAnalysis: MoveAnalysis, field: Field, uiSettings: UiSettings, strings: Strings) {
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
@@ -158,7 +183,7 @@ private fun AnalyzedMove.renderDetails(field: Field, developerMode: Boolean, str
     append("${strings.variation}: ${pv.joinToString(" ") { it.toDisplayString(field, developerMode) }}")
 }
 
-private fun Double.toSigned(digits: Int): String = (if (this > 0.0) "+" else "") + toFixed(digits)
+internal fun Double.toSigned(digits: Int): String = (if (this > 0.0) "+" else "") + toFixed(digits)
 
 /** Formats the value with exactly [digits] fraction digits, because `String.format` is unavailable in common code. */
 internal fun Double.toFixed(digits: Int): String {

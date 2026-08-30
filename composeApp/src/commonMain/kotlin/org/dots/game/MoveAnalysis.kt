@@ -42,6 +42,17 @@ data class AnalyzedMove(
 )
 
 /**
+ * The evaluation of the analyzed position itself (the `rootInfo` of a response) rather than of a move in it,
+ * reported from the perspective of [MoveAnalysis.player] the same way [AnalyzedMove] is.
+ */
+data class AnalyzedPosition(
+    val winRate: Double,
+    val scoreLead: Double,
+    val visits: Int,
+    val weight: Double,
+)
+
+/**
  * The result of a single analysis query, see [AnalyzedMove] for the evaluation perspective
  * and [parseMoveAnalysis] for the response it's parsed from.
  */
@@ -56,6 +67,8 @@ data class MoveAnalysis(
     val ownership: List<Double>? = null,
     /** Needed to address [ownership], which is a flat row-major array. */
     val fieldWidth: Int = 0,
+    /** How the position itself is evaluated, which is what a graph of a whole game is drawn of. */
+    val position: AnalyzedPosition? = null,
     /**
      * The move the engine would play itself, which is not necessarily [best]: the engine varies its play
      * by `chosenMoveTemperature`. It's a finishing move when the engine decided to ground or to resign,
@@ -132,11 +145,29 @@ private const val LCB_KEY = "lcb"
 private const val PRIOR_KEY = "prior"
 private const val WEIGHT_KEY = "weight"
 private const val OWNERSHIP_KEY = "ownership"
+private const val ROOT_INFO_KEY = "rootInfo"
+private const val CURRENT_PLAYER_KEY = "currentPlayer"
+private const val TURN_NUMBER_KEY = "turnNumber"
 private const val CHOSEN_MOVE_KEY = "chosenMove"
 private const val RESIGN_REASONABLE_KEY = "resignReasonable"
 
 internal const val GROUND_MOVE = "ground"
 internal const val RESIGN_MOVE = "resign"
+
+internal const val PLAYER1_MARKER = "P1"
+internal const val PLAYER2_MARKER = "P2"
+
+internal fun Player.toEngineMarker(): String = when (this) {
+    Player.First -> PLAYER1_MARKER
+    Player.Second -> PLAYER2_MARKER
+    else -> error("Unexpected player $this")
+}
+
+private fun String.toPlayerOrNull(): Player? = when (this) {
+    PLAYER1_MARKER -> Player.First
+    PLAYER2_MARKER -> Player.Second
+    else -> null
+}
 
 /**
  * Parses a response of the analysis engine (`katago analysis`), which reports a whole query as a single
@@ -145,7 +176,8 @@ internal const val RESIGN_MOVE = "resign"
  * The values that are absent are reported as their neutral defaults rather than as a failure, because
  * the set of the reported ones depends on the query (the ownership) and on the version of the engine.
  *
- * @param player the player the query was made for, see [MoveAnalysis.player].
+ * @param player the player the query was made for, used only if the response reports none of its own,
+ * see [MoveAnalysis.player].
  */
 fun parseMoveAnalysis(response: JsonObject, player: Player, fieldWidth: Int, fieldHeight: Int): MoveAnalysis {
     val moves = (response[MOVE_INFOS_KEY] as? JsonArray)
@@ -153,14 +185,30 @@ fun parseMoveAnalysis(response: JsonObject, player: Player, fieldWidth: Int, fie
         ?.sortedBy { it.order }
         ?: emptyList()
 
+    val rootInfo = response[ROOT_INFO_KEY] as? JsonObject
+    // A query of a whole game analyzes the turns of both players at once, so the player of a response
+    // is the one the response itself reports rather than the one the query was made for
+    val analyzedPlayer = rootInfo?.string(CURRENT_PLAYER_KEY)?.toPlayerOrNull() ?: player
+
     return MoveAnalysis(
-        player,
+        analyzedPlayer,
         moves,
         ownership = parseOwnership(response, fieldWidth, fieldHeight),
         fieldWidth = fieldWidth,
-        chosenMove = parseChosenMove(response, player, fieldWidth, fieldHeight),
+        position = rootInfo?.let {
+            AnalyzedPosition(
+                winRate = it.double(WIN_RATE_KEY),
+                scoreLead = it.double(SCORE_LEAD_KEY),
+                visits = it.int(VISITS_KEY),
+                weight = it.double(WEIGHT_KEY),
+            )
+        },
+        chosenMove = parseChosenMove(response, analyzedPlayer, fieldWidth, fieldHeight),
     )
 }
+
+/** @return the turn of a game the response is about, see the `analyzeTurns` of a query. */
+fun turnNumberOf(response: JsonObject): Int? = (response[TURN_NUMBER_KEY] as? JsonPrimitive)?.intOrNull
 
 /**
  * The ownership is reported once for the whole position rather than per candidate move, and it's laid out

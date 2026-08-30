@@ -26,6 +26,7 @@ data class UiSettings(
     val showVisitsGraph: Boolean = false,
     val showCandidateMoves: Boolean = true,
     val showOwnership: Boolean = false,
+    val showGameAnalysis: Boolean = false,
     val language: Language = Language.English,
 ) : ClassSettings<UiSettings>() {
     companion object {

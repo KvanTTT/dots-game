@@ -120,6 +120,9 @@ interface Strings {
     val candidateMovesDescription: String
     val ownership: String
     val ownershipDescription: String
+    val gameAnalysis: String
+    val gameAnalysisDescription: String
+    val analyzingGame: String
     fun moreAnalyzedMoves(count: Int): String
 
     // Graph

@@ -159,6 +159,40 @@ class KataGoDotsEngineTests {
     }
 
     /**
+     * A whole game is analyzed by a single query: the engine reports every turn of it on its own,
+     * and the turn of a response tells which position it is about.
+     */
+    @Test
+    fun analyzeGame() {
+        runEngine { field ->
+            val moves = listOf(
+                MoveInfo(PositionXY(3, 3), Player.First),
+                MoveInfo(PositionXY(6, 6), Player.Second),
+                MoveInfo(PositionXY(3, 6), Player.First),
+            )
+            val turnNumbers = listOf(0, 1, 2, 3)
+
+            val analyzedTurns = mutableMapOf<Int, MoveAnalysis>()
+            defaultEngine.analyzeGame(field, moves, turnNumbers) { turnNumber, analysis ->
+                analyzedTurns[turnNumber] = analysis
+            }
+
+            assertEquals(turnNumbers.toSet(), analyzedTurns.keys)
+
+            // Every turn is analyzed for the player whose turn it is rather than for a single one
+            assertEquals(listOf(Player.First, Player.Second, Player.First, Player.Second), turnNumbers.map {
+                analyzedTurns.getValue(it).player
+            })
+
+            for (turnNumber in turnNumbers) {
+                val position = assertNotNull(analyzedTurns.getValue(turnNumber).position, "turn $turnNumber")
+                assertTrue(position.winRate in 0.0..1.0, "The win rate of the turn $turnNumber is ${position.winRate}")
+                assertTrue(position.visits > 0)
+            }
+        }
+    }
+
+    /**
      * A query carries the whole position rather than the difference from the previous one, so nothing
      * of the previous query may leak into the next one, an undone move included.
      */
