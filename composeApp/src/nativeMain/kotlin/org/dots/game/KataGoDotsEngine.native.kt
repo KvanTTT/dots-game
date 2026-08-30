@@ -10,10 +10,6 @@ actual class KataGoDotsEngine {
     actual val logger: (Diagnostic) -> Unit
         get() = TODO("Not yet implemented")
 
-    actual suspend fun sync(field: Field): SyncType {
-        TODO("Not yet implemented")
-    }
-
     actual suspend fun generateMove(
         field: Field,
         player: Player?
@@ -22,6 +18,10 @@ actual class KataGoDotsEngine {
     }
 
     actual suspend fun analyze(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis? {
+        TODO("Not yet implemented")
+    }
+
+    actual fun close() {
         TODO("Not yet implemented")
     }
 

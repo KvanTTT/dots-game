@@ -1,12 +1,20 @@
 package org.dots.game
 
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
+import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.Field
+import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
 import kotlin.math.sqrt
 
 /**
- * A single `info` block of a `kata-search_analyze` response.
+ * A single `moveInfos` entry of an analysis engine response.
  *
  * Every evaluation is reported from the perspective of the player to move (`reportAnalysisWinratesAs = SIDETOMOVE`),
  * that is [MoveAnalysis.player]: the greater [winRate] and [scoreLead], the better the move is for that player.
@@ -33,7 +41,10 @@ data class AnalyzedMove(
     val pv: List<PositionXY>,
 )
 
-/** The result of a `kata-search_analyze` request, see [AnalyzedMove] for the evaluation perspective. */
+/**
+ * The result of a single analysis query, see [AnalyzedMove] for the evaluation perspective
+ * and [parseMoveAnalysis] for the response it's parsed from.
+ */
 data class MoveAnalysis(
     val player: Player,
     /** Candidate moves ordered by [AnalyzedMove.order], the best one first. */
@@ -45,6 +56,12 @@ data class MoveAnalysis(
     val ownership: List<Double>? = null,
     /** Needed to address [ownership], which is a flat row-major array. */
     val fieldWidth: Int = 0,
+    /**
+     * The move the engine would play itself, which is not necessarily [best]: the engine varies its play
+     * by `chosenMoveTemperature`. It's a finishing move when the engine decided to ground or to resign,
+     * and `null` when the engine reported no move at all.
+     */
+    val chosenMove: MoveInfo? = null,
 ) {
     val best: AnalyzedMove? = moves.firstOrNull()
 
@@ -97,7 +114,7 @@ data class MoveAnalysis(
     }
 }
 
-private const val INFO_MARKER = "info"
+private const val MOVE_INFOS_KEY = "moveInfos"
 private const val MOVE_KEY = "move"
 private const val PV_KEY = "pv"
 private const val SYMMETRY_OF_KEY = "isSymmetryOf"
@@ -115,134 +132,117 @@ private const val LCB_KEY = "lcb"
 private const val PRIOR_KEY = "prior"
 private const val WEIGHT_KEY = "weight"
 private const val OWNERSHIP_KEY = "ownership"
+private const val CHOSEN_MOVE_KEY = "chosenMove"
+private const val RESIGN_REASONABLE_KEY = "resignReasonable"
 
-/** The keys that are followed by exactly one value. */
-private val scalarKeys = setOf(
-    MOVE_KEY, SYMMETRY_OF_KEY, ORDER_KEY, VISITS_KEY, EDGE_VISITS_KEY, WIN_RATE_KEY,
-    SCORE_LEAD_KEY, SCORE_MEAN_KEY, SCORE_STDEV_KEY, SCORE_SELFPLAY_KEY,
-    UTILITY_KEY, UTILITY_LCB_KEY, LCB_KEY, PRIOR_KEY, WEIGHT_KEY,
-)
-
-/** The keys that are followed by a variable number of values. */
-private val listKeys = setOf(
-    PV_KEY, "pvVisits", "pvEdgeVisits",
-    OWNERSHIP_KEY, "ownershipStdev", "movesOwnership", "movesOwnershipStdev",
-)
-
-private val knownKeys = scalarKeys + listKeys
+internal const val GROUND_MOVE = "ground"
+internal const val RESIGN_MOVE = "resign"
 
 /**
- * Parses a `kata-search_analyze` response that looks like
- * `info move 21-15 visits 276 ... order 0 pv 21-15 22-17 info move 19-17 visits 83 ... order 1 pv 19-17 21-18`.
+ * Parses a response of the analysis engine (`katago analysis`), which reports a whole query as a single
+ * JSON line, see the [Analysis Engine documentation](https://github.com/lightvector/KataGo/blob/master/docs/Analysis_Engine.md).
  *
- * All the `info` blocks are reported on a single line; a trailing `play <move>` line is ignored
- * because the same move is also reported as the block with `order 0`.
+ * The values that are absent are reported as their neutral defaults rather than as a failure, because
+ * the set of the reported ones depends on the query (the ownership) and on the version of the engine.
  *
- * The parsing is key-based rather than position-based, because the set of the reported keys varies
- * ([SYMMETRY_OF_KEY] is only present for symmetric moves) and because [PV_KEY] has a variable length.
- *
- * If `ownership true` was requested, a single [OWNERSHIP_KEY] array of `fieldWidth * fieldHeight` values
- * is appended after the last block, see [parseOwnership].
+ * @param player the player the query was made for, see [MoveAnalysis.player].
  */
-fun parseMoveAnalysis(responseLines: List<String>, player: Player, fieldWidth: Int, fieldHeight: Int): MoveAnalysis {
-    // If a reporting interval is requested, the engine emits several reports; the last one is the most complete.
-    val infoLine = responseLines.lastOrNull { it.startsWith("$INFO_MARKER ") }
-        ?: return MoveAnalysis(player, emptyList())
-
-    val tokens = infoLine.split(' ').filter { it.isNotEmpty() }
-    // A `pv` move never looks like `info`, so the marker unambiguously delimits the blocks
-    val blockStarts = tokens.indices.filter { tokens[it] == INFO_MARKER }
-
-    val moves = blockStarts.mapIndexedNotNull { index, blockStart ->
-        val blockEnd = blockStarts.getOrNull(index + 1) ?: tokens.size
-        parseAnalyzedMove(tokens.subList(blockStart + 1, blockEnd), fieldWidth, fieldHeight)
-    }
+fun parseMoveAnalysis(response: JsonObject, player: Player, fieldWidth: Int, fieldHeight: Int): MoveAnalysis {
+    val moves = (response[MOVE_INFOS_KEY] as? JsonArray)
+        ?.mapNotNull { (it as? JsonObject)?.let { moveInfo -> parseAnalyzedMove(moveInfo, fieldWidth, fieldHeight) } }
+        ?.sortedBy { it.order }
+        ?: emptyList()
 
     return MoveAnalysis(
         player,
-        moves.sortedBy { it.order },
-        ownership = parseOwnership(tokens, fieldWidth, fieldHeight),
+        moves,
+        ownership = parseOwnership(response, fieldWidth, fieldHeight),
         fieldWidth = fieldWidth,
+        chosenMove = parseChosenMove(response, player, fieldWidth, fieldHeight),
     )
 }
 
 /**
- * The ownership array is reported once for the whole response rather than per `info` block,
- * and it's laid out row by row starting from the topmost one, which matches the order
- * [MoveAnalysis.ownershipOf] addresses it by.
+ * The ownership is reported once for the whole position rather than per candidate move, and it's laid out
+ * row by row starting from the topmost one, which matches the order [MoveAnalysis.ownershipOf] addresses it by.
  *
  * @return `null` if the ownership wasn't requested or if the reported array doesn't cover the field,
  * because a partial array can't be mapped to the positions reliably.
  */
-private fun parseOwnership(tokens: List<String>, fieldWidth: Int, fieldHeight: Int): List<Double>? {
-    val ownershipIndex = tokens.indexOf(OWNERSHIP_KEY)
-    if (ownershipIndex < 0) return null
+private fun parseOwnership(response: JsonObject, fieldWidth: Int, fieldHeight: Int): List<Double>? =
+    (response[OWNERSHIP_KEY] as? JsonArray)
+        ?.mapNotNull { (it as? JsonPrimitive)?.doubleOrNull }
+        ?.takeIf { it.size == fieldWidth * fieldHeight }
 
-    return tokens.drop(ownershipIndex + 1)
-        .mapNotNull { it.toDoubleOrNull() }
-        .takeIf { it.size == fieldWidth * fieldHeight }
-}
-
-private fun parseAnalyzedMove(tokens: List<String>, fieldWidth: Int, fieldHeight: Int): AnalyzedMove? {
-    val values = mutableMapOf<String, String>()
-    var pv: List<PositionXY> = emptyList()
-
-    var index = 0
-    while (index < tokens.size) {
-        val key = tokens[index]
-        if (key in scalarKeys) {
-            values[key] = tokens.getOrNull(index + 1) ?: break
-            index += 2
-        } else {
-            // A list-valued or an unknown key: its values last until the next known key.
-            // Resynchronizing on a key instead of counting the values keeps the scalars aligned
-            // no matter how many values a list has.
-            val valuesEnd = (index + 1 until tokens.size).firstOrNull { tokens[it] in knownKeys } ?: tokens.size
-            if (key == PV_KEY) {
-                pv = tokens.subList(index + 1, valuesEnd).mapNotNull { parseGtpPosition(it, fieldWidth, fieldHeight) }
-            }
-            index = valuesEnd
-        }
+/**
+ * The engine reports the move it would play itself along with the evaluation of every candidate, so that
+ * the very same query both analyzes a position and plays it.
+ *
+ * Resigning is a decision of a player rather than of the search, and the engine reports it separately:
+ * a lost position is resigned the same way the GTP `genmove` of KataGoDots resigns it.
+ */
+private fun parseChosenMove(response: JsonObject, player: Player, fieldWidth: Int, fieldHeight: Int): MoveInfo? {
+    if (response.boolean(RESIGN_REASONABLE_KEY)) {
+        return MoveInfo.createFinishingMove(player, ExternalFinishReason.Resign)
     }
 
-    // Non-coordinate moves (`ground`, `resign`) are not worth highlighting on the field
-    val positionXY = parseGtpPosition(values[MOVE_KEY] ?: return null, fieldWidth, fieldHeight) ?: return null
+    return when (val move = response.string(CHOSEN_MOVE_KEY)) {
+        null -> null
+        GROUND_MOVE -> MoveInfo.createFinishingMove(player, ExternalFinishReason.Grounding)
+        RESIGN_MOVE -> MoveInfo.createFinishingMove(player, ExternalFinishReason.Resign)
+        else -> parseAnalysisPosition(move, fieldWidth, fieldHeight)?.let { MoveInfo(it, player) }
+    }
+}
 
-    fun double(key: String): Double = values[key]?.toDoubleOrNull() ?: 0.0
-    fun int(key: String): Int = values[key]?.toIntOrNull() ?: 0
+private fun parseAnalyzedMove(moveInfo: JsonObject, fieldWidth: Int, fieldHeight: Int): AnalyzedMove? {
+    // Non-coordinate moves (`ground`, `resign`) are not worth highlighting on the field
+    val positionXY = parseAnalysisPosition(moveInfo.string(MOVE_KEY) ?: return null, fieldWidth, fieldHeight)
+        ?: return null
 
     return AnalyzedMove(
         positionXY = positionXY,
-        order = int(ORDER_KEY),
-        visits = int(VISITS_KEY),
-        edgeVisits = int(EDGE_VISITS_KEY),
-        winRate = double(WIN_RATE_KEY),
-        scoreLead = double(SCORE_LEAD_KEY),
-        scoreMean = double(SCORE_MEAN_KEY),
-        scoreStdev = double(SCORE_STDEV_KEY),
-        scoreSelfplay = double(SCORE_SELFPLAY_KEY),
-        utility = double(UTILITY_KEY),
-        utilityLcb = double(UTILITY_LCB_KEY),
-        lcb = double(LCB_KEY),
-        prior = double(PRIOR_KEY),
-        weight = double(WEIGHT_KEY),
-        symmetryOf = values[SYMMETRY_OF_KEY]?.let { parseGtpPosition(it, fieldWidth, fieldHeight) },
-        pv = pv,
+        order = moveInfo.int(ORDER_KEY),
+        visits = moveInfo.int(VISITS_KEY),
+        edgeVisits = moveInfo.int(EDGE_VISITS_KEY),
+        winRate = moveInfo.double(WIN_RATE_KEY),
+        scoreLead = moveInfo.double(SCORE_LEAD_KEY),
+        scoreMean = moveInfo.double(SCORE_MEAN_KEY),
+        scoreStdev = moveInfo.double(SCORE_STDEV_KEY),
+        scoreSelfplay = moveInfo.double(SCORE_SELFPLAY_KEY),
+        utility = moveInfo.double(UTILITY_KEY),
+        utilityLcb = moveInfo.double(UTILITY_LCB_KEY),
+        lcb = moveInfo.double(LCB_KEY),
+        prior = moveInfo.double(PRIOR_KEY),
+        weight = moveInfo.double(WEIGHT_KEY),
+        symmetryOf = moveInfo.string(SYMMETRY_OF_KEY)?.let { parseAnalysisPosition(it, fieldWidth, fieldHeight) },
+        pv = (moveInfo[PV_KEY] as? JsonArray)?.mapNotNull {
+            (it as? JsonPrimitive)?.takeIf { primitive -> primitive.isString }
+                ?.let { primitive -> parseAnalysisPosition(primitive.content, fieldWidth, fieldHeight) }
+        } ?: emptyList(),
     )
 }
 
 /**
- * Converts an `x-y` GTP move to [PositionXY].
- * The vertical axis is inverted in GTP (it counts from the bottom), the same way as in `MoveInfo.toGtpMove`.
+ * Converts an `x-y` move of the engine to [PositionXY].
+ * The vertical axis is inverted (the engine counts it from the bottom), the same way as in `toEngineMove`.
  */
-private fun parseGtpPosition(token: String, fieldWidth: Int, fieldHeight: Int): PositionXY? {
-    val dashIndex = token.indexOf('-')
+internal fun parseAnalysisPosition(move: String, fieldWidth: Int, fieldHeight: Int): PositionXY? {
+    val dashIndex = move.indexOf('-')
     if (dashIndex <= 0) return null
 
-    val x = token.substring(0, dashIndex).toIntOrNull() ?: return null
-    val y = token.substring(dashIndex + 1).toIntOrNull() ?: return null
+    val x = move.substring(0, dashIndex).toIntOrNull() ?: return null
+    val y = move.substring(dashIndex + 1).toIntOrNull() ?: return null
 
     if (x !in 1..fieldWidth || y !in 1..fieldHeight) return null
 
     return PositionXY(x, fieldHeight - y + 1)
 }
+
+private fun JsonObject.string(key: String): String? =
+    (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+private fun JsonObject.double(key: String): Double = (this[key] as? JsonPrimitive)?.doubleOrNull ?: 0.0
+
+private fun JsonObject.int(key: String): Int = (this[key] as? JsonPrimitive)?.intOrNull ?: 0
+
+private fun JsonObject.boolean(key: String): Boolean = (this[key] as? JsonPrimitive)?.booleanOrNull == true

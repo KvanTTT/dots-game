@@ -24,12 +24,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import org.dots.game.core.*
 import org.dots.game.views.*
 import org.jetbrains.compose.resources.painterResource
@@ -92,7 +90,8 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
         var engineIsAnalyzing by remember { mutableStateOf(false) }
         var moveAnalysis by remember { mutableStateOf<MoveAnalysis?>(null) }
 
-        // A single GTP stream is shared by all the engine commands, thus they must not interleave
+        // The engine answers several queries at once, but a command that changes the position must not
+        // run along with another one, see `withFrozenPosition`
         val engineMutex = remember { Mutex() }
 
         fun updateCurrentNode() {
@@ -260,6 +259,8 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                 showKataGoDotsSettingsForm = false
                 focusRequester.requestFocus()
                 kataGoDotsSettings = it.settings
+                // The engine is a process of its own, and the replaced one would keep running otherwise
+                kataGoDotsEngine?.close()
                 kataGoDotsEngine = it
                 saveClassSettings(it.settings)
             }) {
@@ -293,7 +294,15 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                 coroutineScope.launch {
                     engineIsCalculating = true
                     val moveInfo = withFrozenPosition {
-                        val generatedMove = it.generateMove(getField(), moveMode.getMovePlayer(getField()))
+                        val movePlayer = moveMode.getMovePlayer(getField())
+                        // The analysis of the current position already reports the move the engine would play,
+                        // so an AI move in the analysis mode needs no search of its own. The analysis is dropped
+                        // as soon as the position or the player to move changes, thus a present one always
+                        // matches what is being asked for
+                        val analyzedMove = moveAnalysis
+                            ?.takeIf { analysis -> analysis.player == movePlayer }
+                            ?.chosenMove
+                        val generatedMove = analyzedMove ?: it.generateMove(getField(), movePlayer)
                         if (generatedMove != null) {
                             getGameTree().disabled = false
                             getGameTree().addChild(generatedMove)
@@ -321,18 +330,19 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
 
                 engineIsAnalyzing = true
                 try {
-                    val analysis = withFrozenPosition {
-                        // An interrupted GTP exchange would leave the unread part of the response in the stream
-                        // and corrupt every following command, so it's never cancelled in the middle
-                        withContext(NonCancellable) {
-                            // The ownership is always requested, otherwise the very same position would be
-                            // evaluated differently depending on whether it's displayed
-                            engine.analyze(field, moveMode.getMovePlayer(field), withOwnership = true)
+                    withFrozenPosition {
+                        // The ownership is always requested, otherwise the very same position would be
+                        // evaluated differently depending on whether it's displayed.
+                        // A cancelled analysis (the player to move has changed, for one) is dropped by
+                        // the engine as well, so that its threads are freed for the query that replaces it
+                        val analysis = engine.analyze(field, moveMode.getMovePlayer(field), withOwnership = true)
+
+                        // The position may have changed while the engine was busy; the relaunched effect
+                        // refreshes it. The result is published before the position is released, so that
+                        // an AI move that is waiting for it takes it over instead of searching once more
+                        if (isActive) {
+                            moveAnalysis = analysis
                         }
-                    }
-                    // The position may have changed while the engine was busy; the relaunched effect refreshes it
-                    if (isActive) {
-                        moveAnalysis = analysis
                     }
                 } finally {
                     engineIsAnalyzing = false
@@ -534,10 +544,6 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                                 // The auto move mode is switched by a long press, because it's the very same
                                 // action, just repeated after every move, and it needs no button of its own
                                 onLongClick = {
-                                    // Switching the mode off shouldn't make a move the user is turning off
-                                    if (!automove) {
-                                        makeAIMove()
-                                    }
                                     automove = !automove
                                     kataGoDotsSettings = kataGoDotsSettings.copy(autoMove = automove)
                                     saveClassSettings(kataGoDotsSettings)
@@ -551,15 +557,11 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                                 else
                                     ButtonDefaults.buttonColors(),
                             ) {
-                                if (engineIsCalculating) {
-                                    CircularProgressIndicator(Modifier.size(20.dp))
-                                } else {
-                                    Icon(
-                                        painterResource(Res.drawable.ic_ai_move),
-                                        contentDescription = strings.aiMove,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
+                                Icon(
+                                    painterResource(Res.drawable.ic_ai_move),
+                                    contentDescription = strings.aiMove,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
 
@@ -599,9 +601,11 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                             }
                         }
 
-                        if (engineIsAnalyzing) {
+                        // A single indicator of a busy engine, no matter which command it's busy with:
+                        // the button of a command keeps its icon, so that the row doesn't jump around
+                        if (engineIsCalculating || engineIsAnalyzing) {
                             Box(Modifier.align(Alignment.CenterVertically).padding(start = 3.dp)) {
-                                Tooltip(strings.analyzing) {
+                                Tooltip(if (engineIsCalculating) strings.aiThinking else strings.analyzing) {
                                     CircularProgressIndicator(Modifier.size(20.dp))
                                 }
                             }

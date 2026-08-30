@@ -1,5 +1,9 @@
 package org.dots.game
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
 import org.dots.game.views.toFixed
@@ -10,33 +14,55 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
- * The test data is a real `kata-search_analyze P1` response for a cross-initialized 8x8 field
- * (`set_position P1 4-4 P2 5-4 P2 4-5 P1 5-5`).
+ * The test data is a real response of `katago analysis` for a cross-initialized 8x8 field,
+ * shortened to the first candidate moves.
  */
 class MoveAnalysisTests {
     companion object {
         private const val FIELD_WIDTH = 8
         private const val FIELD_HEIGHT = 8
 
-        private const val INFO_LINE =
-            "info move 5-6 visits 119 edgeVisits 119 utility -0.132423 winrate 0.491757 scoreMean -1.07043 " +
-                "scoreStdev 8.4554 scoreLead -1.07043 scoreSelfplay 0.502535 prior 0.156628 lcb 0.364556 " +
-                "utilityLcb -0.488586 weight 66.5761 order 0 pv 5-6 5-3 3-3 3-6 " +
-                "info move 4-3 visits 119 edgeVisits 119 utility -0.132423 winrate 0.491757 scoreMean -1.07043 " +
-                "scoreStdev 8.4554 scoreLead -1.07043 scoreSelfplay 0.502535 prior 0.156628 lcb 0.364556 " +
-                "utilityLcb -0.488586 weight 66.5761 isSymmetryOf 5-6 order 1 pv 4-3 4-6 6-6 6-3 " +
-                "info move 3-3 visits 1 edgeVisits 1 utility -1.01275 winrate 0.0968801 scoreMean -0.726382 " +
-                "scoreStdev 6.47739 scoreLead -8.726382 scoreSelfplay -5.56129 prior 0.0652113 lcb -1.15312 " +
-                "utilityLcb -4.51275 weight 0.647309 order 2 pv 3-3"
-
-        private val RESPONSE_LINES = listOf("=", INFO_LINE, "play 5-6")
+        private const val RESPONSE = """{
+            "id": "1",
+            "isDuringSearch": false,
+            "turnNumber": 0,
+            "chosenMove": "5-6",
+            "resignReasonable": false,
+            "rootInfo": { "currentPlayer": "P1", "visits": 240, "winrate": 0.491757 },
+            "moveInfos": [
+                {
+                    "move": "5-6", "order": 0, "visits": 119, "edgeVisits": 119, "winrate": 0.491757,
+                    "scoreLead": -1.07043, "scoreMean": -1.07043, "scoreStdev": 8.4554, "scoreSelfplay": 0.502535,
+                    "utility": -0.132423, "utilityLcb": -0.488586, "lcb": 0.364556, "prior": 0.156628,
+                    "weight": 66.5761, "pv": ["5-6", "5-3", "3-3", "3-6"]
+                },
+                {
+                    "move": "4-3", "order": 1, "visits": 119, "edgeVisits": 119, "winrate": 0.491757,
+                    "scoreLead": -1.07043, "scoreMean": -1.07043, "scoreStdev": 8.4554, "scoreSelfplay": 0.502535,
+                    "utility": -0.132423, "utilityLcb": -0.488586, "lcb": 0.364556, "prior": 0.156628,
+                    "weight": 66.5761, "isSymmetryOf": "5-6", "pv": ["4-3", "4-6", "6-6", "6-3"]
+                },
+                {
+                    "move": "3-3", "order": 2, "visits": 1, "edgeVisits": 1, "winrate": 0.0968801,
+                    "scoreLead": -8.726382, "scoreMean": -0.726382, "scoreStdev": 6.47739, "scoreSelfplay": -5.56129,
+                    "utility": -1.01275, "utilityLcb": -4.51275, "lcb": -1.15312, "prior": 0.0652113,
+                    "weight": 0.647309, "pv": ["3-3"]
+                }
+            ]
+        }"""
     }
 
-    private fun parse(lines: List<String> = RESPONSE_LINES): MoveAnalysis =
-        parseMoveAnalysis(lines, Player.First, FIELD_WIDTH, FIELD_HEIGHT)
+    private fun parse(
+        response: String = RESPONSE,
+        player: Player = Player.First,
+        fieldWidth: Int = FIELD_WIDTH,
+        fieldHeight: Int = FIELD_HEIGHT,
+    ): MoveAnalysis = parseMoveAnalysis(response.toJsonObject(), player, fieldWidth, fieldHeight)
+
+    private fun String.toJsonObject(): JsonObject = Json.parseToJsonElement(this).jsonObject
 
     @Test
-    fun allInfoBlocksAreParsed() {
+    fun allCandidateMovesAreParsed() {
         val analysis = parse()
 
         assertEquals(Player.First, analysis.player)
@@ -47,13 +73,13 @@ class MoveAnalysisTests {
 
     @Test
     fun theVerticalAxisIsInverted() {
-        // `5-6` in GTP is the 6th row from the bottom, that is the 3rd one from the top of an 8-row field
+        // `5-6` of the engine is the 6th row from the bottom, that is the 3rd one from the top of an 8-row field
         assertEquals(PositionXY(5, 3), parse().moves[0].positionXY)
         assertEquals(PositionXY(4, 6), parse().moves[1].positionXY)
     }
 
     @Test
-    fun allValuesOfABlockAreParsed() {
+    fun allValuesOfACandidateMoveAreParsed() {
         val move = parse().moves[0]
 
         assertEquals(119, move.visits)
@@ -72,7 +98,7 @@ class MoveAnalysisTests {
     }
 
     @Test
-    fun theVariationLastsUntilTheEndOfItsBlock() {
+    fun theVariationIsParsed() {
         assertEquals(
             listOf(PositionXY(5, 3), PositionXY(5, 6), PositionXY(3, 6), PositionXY(3, 3)),
             parse().moves[0].pv,
@@ -81,52 +107,36 @@ class MoveAnalysisTests {
     }
 
     @Test
-    fun theOptionalSymmetryKeyDoesNotShiftTheOtherValues() {
+    fun theOptionalSymmetryIsParsed() {
         val symmetricMove = parse().moves[1]
 
         assertEquals(PositionXY(5, 3), symmetricMove.symmetryOf)
         assertEquals(1, symmetricMove.order)
         assertEquals(119, symmetricMove.visits)
-        assertEquals(listOf(PositionXY(4, 6), PositionXY(4, 3), PositionXY(6, 3), PositionXY(6, 6)), symmetricMove.pv)
     }
 
     @Test
-    fun aKeyAfterTheVariationIsStillRecognized() {
-        val analysis = parse(listOf("info move 5-6 order 0 pv 5-6 5-3 pvVisits 119 60 visits 119"))
-        val move = analysis.moves.single()
-
-        assertEquals(listOf(PositionXY(5, 3), PositionXY(5, 6)), move.pv)
-        assertEquals(119, move.visits)
-    }
-
-    @Test
-    fun theBlocksAreSortedByOrder() {
-        val analysis = parse(listOf("info move 5-6 order 2 pv 5-6 info move 4-3 order 0 pv 4-3"))
+    fun theCandidateMovesAreSortedByOrder() {
+        val analysis = parse(
+            """{"moveInfos":[{"move":"5-6","order":2},{"move":"4-3","order":0}]}"""
+        )
 
         assertEquals(listOf(0, 2), analysis.moves.map { it.order })
         assertEquals(PositionXY(4, 6), analysis.best?.positionXY)
     }
 
     @Test
-    fun theNonInfoLinesAreIgnored() {
-        assertTrue(parse(listOf("=", "play 5-6")).moves.isEmpty())
-        assertTrue(parse(emptyList()).moves.isEmpty())
-        assertTrue(parse(listOf("")).moves.isEmpty())
-    }
-
-    @Test
-    fun onlyTheLastReportIsTakenIntoAccount() {
-        val analysis = parse(listOf("info move 5-6 visits 1 order 0 pv 5-6", "info move 5-6 visits 50 order 0 pv 5-6"))
-
-        assertEquals(50, analysis.moves.single().visits)
+    fun aResponseWithoutCandidateMovesIsParsedAsAnEmptyOne() {
+        assertTrue(parse("""{"id":"1"}""").moves.isEmpty())
+        assertTrue(parse("""{"id":"1","moveInfos":[]}""").moves.isEmpty())
     }
 
     @Test
     fun theMovesOutsideOfTheFieldAndTheNonCoordinateOnesAreSkipped() {
-        assertTrue(parse(listOf("info move 9-1 order 0 pv 9-1")).moves.isEmpty())
-        assertTrue(parse(listOf("info move 1-9 order 0 pv 1-9")).moves.isEmpty())
-        assertTrue(parse(listOf("info move resign order 0")).moves.isEmpty())
-        assertTrue(parse(listOf("info move ground order 0")).moves.isEmpty())
+        assertTrue(parse("""{"moveInfos":[{"move":"9-1","order":0}]}""").moves.isEmpty())
+        assertTrue(parse("""{"moveInfos":[{"move":"1-9","order":0}]}""").moves.isEmpty())
+        assertTrue(parse("""{"moveInfos":[{"move":"resign","order":0}]}""").moves.isEmpty())
+        assertTrue(parse("""{"moveInfos":[{"move":"ground","order":0}]}""").moves.isEmpty())
     }
 
     @Test
@@ -157,15 +167,41 @@ class MoveAnalysisTests {
     @Test
     fun theLossIsAffectedByTheScoreLeadEvenWhenTheWinRateIsTheSame() {
         val analysis = parse(
-            listOf(
-                "info move 5-6 visits 10 winrate 0.5 scoreLead 4.0 order 0 pv 5-6 " +
-                    "info move 4-3 visits 10 winrate 0.5 scoreLead 0.0 order 1 pv 4-3"
-            )
+            """{"moveInfos":[
+                {"move":"5-6","order":0,"visits":10,"winrate":0.5,"scoreLead":4.0},
+                {"move":"4-3","order":1,"visits":10,"winrate":0.5,"scoreLead":0.0}
+            ]}"""
         )
 
         assertEquals(0.0, analysis.lossOf(analysis.moves[0]))
         // A half of the meaningful score lead loss weighted by `1 - WIN_RATE_LOSS_WEIGHT`
         assertEquals(0.175, analysis.lossOf(analysis.moves[1]), absoluteTolerance = 1e-9)
+    }
+
+    @Test
+    fun theChosenMoveIsTheMoveTheEngineWouldPlay() {
+        val chosenMove = assertNotNullMove(parse().chosenMove)
+
+        assertEquals(PositionXY(5, 3), chosenMove.positionXY)
+        assertEquals(Player.First, chosenMove.player)
+    }
+
+    @Test
+    fun theChosenMoveIsAFinishingOneWhenTheEngineGroundsOrResigns() {
+        val grounding = assertNotNullMove(parse("""{"chosenMove":"ground"}""", Player.Second).chosenMove)
+        assertEquals(ExternalFinishReason.Grounding, grounding.externalFinishReason)
+        assertEquals(Player.Second, grounding.player)
+
+        // A lost position is resigned no matter which move the search has chosen
+        val resign = assertNotNullMove(parse("""{"chosenMove":"5-6","resignReasonable":true}""").chosenMove)
+        assertEquals(ExternalFinishReason.Resign, resign.externalFinishReason)
+    }
+
+    @Test
+    fun theChosenMoveIsAbsentUnlessTheEngineReportedOne() {
+        assertNull(parse("""{"id":"1"}""").chosenMove)
+        // The engine reports a move it has none for as `null`
+        assertNull(parse("""{"chosenMove":"null"}""").chosenMove)
     }
 
     @Test
@@ -179,20 +215,17 @@ class MoveAnalysisTests {
     /**
      * The array is laid out row by row starting from the topmost one, which is the same order
      * the field positions are numbered in, so no flipping is needed (unlike for the moves).
-     *
-     * The values below are a real `kata-search_analyze P1 ownership true` response for a 4x3 field
-     * shrunk to one value per position.
      */
     @Test
     fun theOwnershipIsMappedToThePositionsRowByRowFromTheTop() {
         val ownershipValues = listOf(
-            "0.11", "0.12", "0.13", "0.14",
-            "0.21", "0.22", "0.23", "0.24",
-            "-0.31", "-0.32", "-0.33", "0.86",
+            0.11, 0.12, 0.13, 0.14,
+            0.21, 0.22, 0.23, 0.24,
+            -0.31, -0.32, -0.33, 0.86,
         )
-        val analysis = parseMoveAnalysis(
-            listOf("info move 1-3 order 0 pv 1-3 ownership ${ownershipValues.joinToString(" ")}"),
-            Player.First,
+        val analysis = parse(
+            """{"moveInfos":[{"move":"1-3","order":0,"pv":["1-3"]}],
+               "ownership":[${ownershipValues.joinToString(",")}]}""",
             fieldWidth = 4,
             fieldHeight = 3,
         )
@@ -208,16 +241,14 @@ class MoveAnalysisTests {
         // A negative value means the position is expected to be captured by the opponent
         assertEquals(-0.31, analysis.ownershipOf(PositionXY(1, 3)))
 
-        // The variation must not swallow the ownership array
         assertEquals(listOf(PositionXY(1, 1)), analysis.moves.single().pv)
     }
 
     @Test
     fun anOwnershipThatDoesNotCoverTheFieldIsRejected() {
         // A partial array can't be mapped to the positions, so it's dropped instead of being misaligned
-        val analysis = parseMoveAnalysis(
-            listOf("info move 1-3 order 0 pv 1-3 ownership 0.11 0.12 0.13"),
-            Player.First,
+        val analysis = parse(
+            """{"moveInfos":[{"move":"1-3","order":0}],"ownership":[0.11,0.12,0.13]}""",
             fieldWidth = 4,
             fieldHeight = 3,
         )
@@ -228,7 +259,7 @@ class MoveAnalysisTests {
 
     /** The details of an analyzed move render the values with exactly two fraction digits. */
     @Test
-    fun theOwnershipIsFormattedWithTwoFractionDigits() {
+    fun theValuesAreFormattedWithTwoFractionDigits() {
         assertEquals("0.86", 0.86.toFixed(2))
         assertEquals("-0.42", (-0.42).toFixed(2))
         assertEquals("0.00", 0.0.toFixed(2))
@@ -252,5 +283,9 @@ class MoveAnalysisTests {
         assertEquals("0.100", 0.0999.toFixed(3))
         assertEquals("-13", (-13.4).toFixed(0))
         assertEquals("294.6", 294.632.toFixed(1))
+    }
+
+    private fun assertNotNullMove(move: org.dots.game.core.MoveInfo?): org.dots.game.core.MoveInfo {
+        return move ?: error("The chosen move is expected to be reported")
     }
 }

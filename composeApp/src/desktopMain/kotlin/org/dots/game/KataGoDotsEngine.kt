@@ -1,26 +1,47 @@
 package org.dots.game
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
-import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.time.delay
-import kotlinx.coroutines.time.withTimeout
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.dots.game.core.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonArray
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
+import org.dots.game.core.BaseMode
+import org.dots.game.core.ExternalFinishReason
+import org.dots.game.core.Field
+import org.dots.game.core.InitPosGenType
+import org.dots.game.core.InitPosType
+import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.OutputStreamWriter
 import java.nio.file.Paths
-import java.time.Duration
-import kotlin.reflect.KProperty1
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * Talks to `katago analysis`: a query is a single JSON line and so is its response, and the two are matched
+ * by the `id` of the query rather than by their order, which is what makes the queries independent.
+ */
 actual class KataGoDotsEngine private constructor(
     actual val settings: KataGoDotsSettings,
-    val writer: OutputStreamWriter,
-    val reader: BufferedReader,
-    val errorReader: BufferedReader,
+    private val process: Process,
+    private val writer: OutputStreamWriter,
     actual val logger: (Diagnostic) -> Unit,
 ) {
     actual companion object {
@@ -29,14 +50,13 @@ actual class KataGoDotsEngine private constructor(
 
         const val KATA_GO_DOTS_APP_NAME = "KataGoDots"
 
-        private const val SEARCH_ANALYZE_COMMAND = "kata-search_analyze"
-        private const val OWNERSHIP_OPTION_NAME = "ownership"
-        private const val RESIGN_MOVE = "resign"
-        private const val GROUND_MOVE = "ground"
+        /** The engine reports it on the standard error once it has loaded the model and is ready to be queried. */
+        private const val READY_MARKER = "Started, ready to begin handling requests"
+
+        private const val ANALYSIS_COMMAND = "analysis"
+
         private const val PLAYER1_MARKER = "P1"
         private const val PLAYER2_MARKER = "P2"
-        private const val SUICIDE_OPTION_NAME = "suicide"
-        private const val CAPTURE_EMPTY_BASE_OPTION_NAME = "dotsCaptureEmptyBase"
 
         val DEFAULT_KATA_GO_DOTS_DIR: String = Paths.get(System.getProperty("user.dir"), "src/desktopMain/resources/$KATA_GO_DOTS_APP_NAME").toString()
 
@@ -56,65 +76,44 @@ actual class KataGoDotsEngine private constructor(
 
             try {
                 return withContext(Dispatchers.IO) {
-                    val args = buildList {
-                        add(kataGoDotsSettings.exePath)
-                        add("gtp")
-                        add("-model")
-                        add(kataGoDotsSettings.modelPath)
-                        add("-config")
-                        add(kataGoDotsSettings.configPath)
-                        // MacOS doesn't allow writing to a `user.home` directory without extra permissions, so don't use it for now
-                        // Probably it makes sense to introduce logging to a custom directory.
-                        // add("-override-config")
-                        // add("${kataGoDotsSettings::logDir.name}=\"${kataGoDotsSettings.logDir ?: DEFAULT_LOGS_DIR}\"")
-                    }
+                    val args = listOf(
+                        kataGoDotsSettings.exePath,
+                        ANALYSIS_COMMAND,
+                        "-model", kataGoDotsSettings.modelPath,
+                        "-config", kataGoDotsSettings.configPath,
+                    )
 
-                    val processBuilder = ProcessBuilder(args).redirectErrorStream(true)
+                    // The standard error carries the startup log of the engine, while the standard output
+                    // carries the responses, so the two streams must not be merged
+                    val process = ProcessBuilder(args).start()
 
-                    val process = processBuilder.start()
+                    val engine = KataGoDotsEngine(
+                        kataGoDotsSettings,
+                        process,
+                        OutputStreamWriter(process.outputStream),
+                        logger,
+                    )
+                    engine.readResponses(process.inputStream.bufferedReader())
+                    engine.readStartupLog(process.errorStream.bufferedReader())
 
-                    val writer = OutputStreamWriter(process.outputStream)
-                    val reader = process.inputStream.bufferedReader()
-                    val errorReader = process.errorStream.bufferedReader()
-
-                    val initResponse = sendMessage("version", writer, reader, logger)
-                    delay(Duration.ofMillis(500))
-
-                    if (process.isAlive) {
-                        initResponse.extraLines.forEach {
-                            logger(Diagnostic(it, severity = DiagnosticSeverity.Info))
-                        }
-
-                        val nameResponse = sendMessage("name", writer, reader, logger)
-                        if (nameResponse.message != KATA_GO_DOTS_APP_NAME) {
-                            logger(
-                                Diagnostic(
-                                    "The engine should support Dots game mode (expected name is `$KATA_GO_DOTS_APP_NAME`, actual is `${nameResponse.message}`)",
-                                    severity = DiagnosticSeverity.Error
-                                )
-                            )
-                            return@withContext null
-                        }
-                    } else {
-                        val errorMessage = when (val exitValue = process.exitValue()) {
-                            DLL_NOT_FOUND_ERROR_CODE -> {
-                                "Some of the following libraries are missing: 'zip.dll', 'zlib1.dll', 'bz2.dll', 'OpenCL.dll' or Microsoft Visual C++ Redistributable libraries. " +
-                                        "Ensure they are present in the 'katago.exe' directory (or accessible via PATH)."
-                            }
-                            ACCESS_VIOLATION_ERROR_CODE -> {
-                                "Access violation during engine initialization."
-                            }
-                            else -> {
-                                "Error during engine initialization (error code: $exitValue)"
-                            }
-                        }
-                        logger(Diagnostic(errorMessage, severity = DiagnosticSeverity.Critical))
+                    if (!engine.ready.await()) {
+                        engine.close()
+                        logger(Diagnostic(engine.startupFailureMessage(), severity = DiagnosticSeverity.Critical))
                         return@withContext null
                     }
 
-                    return@withContext KataGoDotsEngine(kataGoDotsSettings, writer, reader, errorReader, logger).also {
-                        it.setUpSettings { diagnostic -> logger(diagnostic) }
+                    if (!engine.isKataGoDots) {
+                        engine.close()
+                        logger(
+                            Diagnostic(
+                                "The engine should support Dots game mode (expected `$KATA_GO_DOTS_APP_NAME` engine)",
+                                severity = DiagnosticSeverity.Error
+                            )
+                        )
+                        return@withContext null
                     }
+
+                    engine
                 }
             } catch (e: Exception) {
                 logger(Diagnostic(e.message ?: e.toString(), severity = DiagnosticSeverity.Critical))
@@ -123,233 +122,257 @@ actual class KataGoDotsEngine private constructor(
         }
     }
 
-    suspend fun setUpSettings(onMessage: (Diagnostic) -> Unit) {
-        suspend fun getOrSetParam(property: KProperty1<KataGoDotsSettings, Int>) {
-            val intValue = property.get(settings)
-            if (intValue == 0) {
-                val message = "${property.name} = ${sendMessage("kata-get-param ${property.name}").message}"
-                onMessage(Diagnostic(message, severity = DiagnosticSeverity.Info))
-            } else {
-                // A rejected parameter is reported by `trySendMessage`, and the engine stays usable
-                // with the default value of that parameter, so it must not fail the initialization
-                val _ = trySendMessage("kata-set-param ${property.name} $intValue")
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    /** The queries that are still waiting for their response, keyed by [QUERY_ID_KEY]. */
+    private val pendingQueries = ConcurrentHashMap<String, CompletableDeferred<JsonObject?>>()
+
+    private val queryCounter = AtomicLong()
+
+    /** The queries are sent by several coroutines at once, and a line of one must not be split by another. */
+    private val writeMutex = Mutex()
+
+    /** Completed with `false` if the engine dies before it reports [READY_MARKER]. */
+    private val ready = CompletableDeferred<Boolean>()
+
+    @Volatile
+    private var isKataGoDots = false
+
+    /** The last thing the engine said before it died, which is the reason it reports a broken setup by. */
+    @Volatile
+    private var lastStartupLogLine: String? = null
+
+    /**
+     * Reads the responses until the engine exits. Every line that isn't a response is reported as is:
+     * the engine writes its warnings (an outdated model, for one) into the very same stream.
+     */
+    private fun readResponses(reader: BufferedReader) {
+        scope.launch {
+            reader.use {
+                for (line in it.lineSequence()) {
+                    val response = line.toJsonObjectOrNull()
+                    if (response == null) {
+                        if (line.isNotBlank()) {
+                            logger(Diagnostic(line.trimMessageIfNecessary(), severity = DiagnosticSeverity.Warning))
+                        }
+                        continue
+                    }
+                    handleResponse(response)
+                }
+            }
+
+            // The engine is gone, so nothing is going to answer the queries that are still waiting
+            ready.complete(false)
+            for (queryId in pendingQueries.keys.toList()) {
+                pendingQueries.remove(queryId)?.complete(null)
             }
         }
+    }
 
-        getOrSetParam(KataGoDotsSettings::maxTime)
-        getOrSetParam(KataGoDotsSettings::maxVisits)
-        getOrSetParam(KataGoDotsSettings::maxPlayouts)
+    private fun handleResponse(response: JsonObject) {
+        val queryId = response.stringOrNull(QUERY_ID_KEY)
+        val error = response.stringOrNull(ERROR_KEY)
+        val warning = response.stringOrNull(WARNING_KEY)
+
+        when {
+            error != null -> {
+                logger(Diagnostic(response.describe(error), severity = DiagnosticSeverity.Error))
+                queryId?.let { pendingQueries.remove(it)?.complete(null) }
+            }
+            warning != null -> {
+                // A warning precedes the response of the very same query, which is still to come
+                logger(Diagnostic(response.describe(warning), severity = DiagnosticSeverity.Warning))
+            }
+            // A partial report of a search that is still running: only the final one is of interest
+            (response[IS_DURING_SEARCH_KEY] as? JsonPrimitive)?.booleanOrNull == true -> {}
+            queryId != null -> {
+                pendingQueries.remove(queryId)?.complete(response.takeIf { NO_RESULTS_KEY !in it })
+            }
+        }
+    }
+
+    private fun readStartupLog(reader: BufferedReader) {
+        scope.launch {
+            reader.use {
+                for (line in it.lineSequence()) {
+                    if (line.startsWith(KATA_GO_DOTS_APP_NAME)) {
+                        isKataGoDots = true
+                    }
+                    if (line.contains(READY_MARKER)) {
+                        ready.complete(true)
+                    }
+                    if (line.isNotBlank()) {
+                        lastStartupLogLine = line
+                        logger(Diagnostic(line.trimMessageIfNecessary(), severity = DiagnosticSeverity.Info))
+                    }
+                }
+            }
+
+            ready.complete(false)
+        }
+    }
+
+    private fun startupFailureMessage(): String {
+        if (process.isAlive) return "The engine stopped answering during the initialization"
+
+        val reason = when (val exitValue = process.exitValue()) {
+            DLL_NOT_FOUND_ERROR_CODE -> {
+                "Some of the following libraries are missing: 'zip.dll', 'zlib1.dll', 'bz2.dll', 'OpenCL.dll' or Microsoft Visual C++ Redistributable libraries. " +
+                        "Ensure they are present in the 'katago.exe' directory (or accessible via PATH)."
+            }
+            ACCESS_VIOLATION_ERROR_CODE -> "Access violation during engine initialization."
+            else -> "Error during engine initialization (error code: $exitValue)"
+        }
+
+        return lastStartupLogLine?.let { "$reason: ${it.trimMessageIfNecessary()}" } ?: reason
     }
 
     actual suspend fun generateMove(field: Field, player: Player?): MoveInfo? {
-        if (!sync(field).isSynchronized) return null
-
-        val effectivePlayer = player ?: field.getCurrentPlayer()
-
-        val response = sendMessage("genmove " + playerToGtp(effectivePlayer)).message
-        return parseMoveInfo(response, field, effectivePlayer)
+        // The ownership is of no use for a move, and it's by far the largest part of a response
+        return query(field, player, withOwnership = false)?.chosenMove
     }
 
     actual suspend fun analyze(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis? {
-        if (!sync(field).isSynchronized) return null
+        return query(field, player, withOwnership)?.takeIf { it.moves.isNotEmpty() }
+    }
+
+    /** @return `null` if the engine reported no analysis at all, that is it rejected or dropped the query. */
+    private suspend fun query(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis? {
+        if (!doesKataSupportRules(field.rules)) return null
 
         val effectivePlayer = player ?: field.getCurrentPlayer()
+        val queryId = queryCounter.incrementAndGet().toString()
+        val response = send(queryId, buildQuery(queryId, field, effectivePlayer, withOwnership)) ?: return null
 
-        val command = buildString {
-            append(SEARCH_ANALYZE_COMMAND)
-            append(' ')
-            append(playerToGtp(effectivePlayer))
-            if (withOwnership) {
-                append(" $OWNERSHIP_OPTION_NAME true")
-            }
-        }
-
-        val response = sendMessage(command)
-        if (response.isError) return null
-
-        return parseMoveAnalysis(response.allLines, effectivePlayer, field.width, field.height)
-            .takeIf { it.moves.isNotEmpty() }
+        return parseMoveAnalysis(response, effectivePlayer, field.width, field.height)
     }
 
-    actual suspend fun sync(field: Field): SyncType {
-        val rules = field.rules
+    private suspend fun send(queryId: String, query: JsonObject): JsonObject? {
+        val response = CompletableDeferred<JsonObject?>()
+        pendingQueries[queryId] = response
 
-        val syncType = getSyncType(field)
-        logger(Diagnostic.info(syncType.toString()))
+        try {
+            writeLine(query.toString())
 
-        if (syncType == FullSync) {
-            if (!trySendMessage("boardsize ${field.width}:${field.height}")) return SyncFailed
-            if (!trySendMessage("kata-set-rule $CAPTURE_EMPTY_BASE_OPTION_NAME ${rules.baseMode == BaseMode.AnySurrounding}")) return SyncFailed
-            if (!trySendMessage("kata-set-rule $SUICIDE_OPTION_NAME ${rules.suicideAllowed}")) return SyncFailed
-            if (!trySendMessage("komi ${rules.komi}")) return SyncFailed
-
-            val startPosMovesPieces = mutableListOf<String>()
-            val movesPieces =  mutableListOf<String>()
-
-            for ((index, legalMove = value) in field.moveSequence.withIndex()) {
-                val pieces = if (index < field.initialMovesCount) {
-                    startPosMovesPieces
-                } else {
-                    movesPieces
-                }
-                pieces.add(MoveInfo.fromLegalMove(legalMove, field).toGtpMove(field))
-            }
-
-            /**
-             * `set_position` is sent even without moves, because it's the only way to drop the start position
-             * the engine installs on its own: both `boardsize` and `clear_board` restore the one
-             * of the `startPos` config option (`CROSS` by default) instead of clearing the board.
-             */
-            if (!trySendMessage("set_position ${startPosMovesPieces.joinToString(" ")}".trimEnd())) return SyncFailed
-
-            if (movesPieces.isNotEmpty()) {
-                if (!trySendMessage("play ${movesPieces.joinToString(" ")}")) return SyncFailed
-            }
-        } else if (syncType is MovesSync) {
-            if (syncType.undoMovesCount > 0) {
-                if (!trySendMessage("undo ${syncType.undoMovesCount}")) return SyncFailed
-            }
-
-            if (syncType.moves.isNotEmpty()) {
-                val command = buildString {
-                    append("play ")
-                    for (move in syncType.moves) {
-                        append(move.toGtpMove(field))
-                        append(" ")
-                    }
-                }
-
-                if (!trySendMessage(command)) return SyncFailed
-            }
+            return response.await()
+        } catch (e: IOException) {
+            // The engine is gone, and the app has to keep running without it
+            logger(Diagnostic(e.message ?: e.toString(), severity = DiagnosticSeverity.Critical))
+            return null
+        } catch (cancellation: CancellationException) {
+            // The engine keeps searching a query nobody waits for anymore, and it's the queries of
+            // the current position that its threads are needed for
+            terminate(queryId)
+            throw cancellation
+        } finally {
+            pendingQueries.remove(queryId)
         }
-
-        return syncType
     }
 
-    suspend fun getSyncType(field: Field): SyncType {
-        val rules = field.rules
-
-        if (rules.captureByBorder || rules.baseMode == BaseMode.OnlyOpponentDots) {
-            return UnsupportedRules
-        }
-
-        val boardsizeResponse = sendMessage("get_boardsize")
-
-        val pieces = boardsizeResponse.message.split(":")
-        require(pieces.size.let { it == 1 || it == 2 })
-        val width: Int = pieces[0].toInt()
-        val height: Int = if (pieces.size == 1) {
-            width
-        } else {
-            pieces[1].toInt()
-        }
-
-        if (width != field.width || height != field.height) {
-            return FullSync
-        }
-
-        val rulesResponse = sendMessage("kata-get-rules")
-        val keyValuePairs = rulesResponse.message.removeSurrounding("{", "}").split(",")
-        for (keyValuePair in keyValuePairs) {
-            val keyValuePairPieces = keyValuePair.split(":")
-            val key = keyValuePairPieces[0].removeSurrounding("\"")
-            val value = keyValuePairPieces[1].removeSurrounding("\"")
-
-            when (key) {
-                "dots" -> {
-                    require(value.toBoolean())
-                }
-                CAPTURE_EMPTY_BASE_OPTION_NAME -> {
-                    val engineCaptureEmptyBase = value.toBoolean()
-                    val isSame = when (rules.baseMode) {
-                        BaseMode.AtLeastOneOpponentDot -> !engineCaptureEmptyBase
-                        BaseMode.AnySurrounding -> engineCaptureEmptyBase
-                        BaseMode.OnlyOpponentDots -> return UnsupportedRules
-                    }
-                    if (!isSame) {
-                        return FullSync
-                    }
-                }
-                SUICIDE_OPTION_NAME -> {
-                    if (rules.suicideAllowed != value.toBoolean()) {
-                        return FullSync
-                    }
-                }
+    /** Asks the engine to stop the search of [queryId], see [send]. */
+    private fun terminate(queryId: String) {
+        scope.launch {
+            val query = buildJsonObject {
+                put(QUERY_ID_KEY, "$queryId-terminate")
+                put(ACTION_KEY, TERMINATE_ACTION)
+                put(TERMINATE_ID_KEY, queryId)
             }
+
+            // The engine may be gone already, and a termination that doesn't reach it changes nothing
+            val _ = runCatching { writeLine(query.toString()) }
         }
-
-        val engineKomi = sendMessage("get_komi").message.toDouble()
-        if (rules.komi != engineKomi) {
-            return FullSync
-        }
-
-        val startPositionMoves = toMovesSequence(sendMessage("get_position").message, field)
-
-        // The order of start moves doesn't matter
-        if (field.initialMoves().toSortedSet(IgnoreParseNodeComparator) != startPositionMoves.toSortedSet(IgnoreParseNodeComparator)) {
-            return FullSync
-        }
-
-        val engineMoves = toMovesSequence(sendMessage("get_moves").message, field)
-
-        val refinedMoves = field.moveSequence.drop(field.initialMovesCount).map {
-            MoveInfo.fromLegalMove(it, field)
-        }
-
-        val minSize = minOf(refinedMoves.size, engineMoves.size)
-        var firstDistinctIndex = minSize
-        for (index in 0 until minSize) {
-            if (!refinedMoves[index].equalsIgnoringParseNode(engineMoves[index])) {
-                firstDistinctIndex = index
-                break
-            }
-        }
-
-        val undoMovesCount = engineMoves.size - firstDistinctIndex
-        val newMoves = refinedMoves.drop(firstDistinctIndex)
-
-        return if (undoMovesCount > 0 || newMoves.isNotEmpty())
-            MovesSync(undoMovesCount, newMoves)
-        else
-            NoSync
     }
 
-    /**
-     * @return `null` if game is not yet completed, or it's a draw.
-     * Currently, it's not a part of public API, however, it's useful for the engine testing.
-     */
-    suspend fun getGameResult(): GameResult? {
-        val message = sendMessage("final_score").message
-
-        if (message == "0") return null
-
-        val pieces = message.split("+")
-        val winner = parsePlayer(pieces[0])
-        val score = pieces[1].toDouble()
-
-        return if (score == 0.0) {
-            GameResult.ResignWin(winner)
-        } else {
-            GameResult.ScoreWin(score, endGameKind = null, winner, player = null)
+    private suspend fun writeLine(line: String) {
+        writeMutex.withLock {
+            withContext(Dispatchers.IO) {
+                writer.write(line)
+                writer.write("\n")
+                writer.flush()
+            }
         }
     }
 
     /**
-     * The moves the field treats as its start position.
+     * The engine is told the whole position rather than the difference from the previous one: the start
+     * position as `initialStones` (they are placed rather than played, the same way the field sets them up)
+     * and the rest as `moves`.
      *
-     * [Rules.initialMoves] alone is not enough: [Field.create] also places [Rules.remainingInitMoves],
-     * that is the setup dots that don't fit the recognized [Rules.initPosType] pattern, and it skips
-     * the initial moves it finds illegal. [Field.initialMovesCount] is the only count that is guaranteed
-     * to match the beginning of [Field.moveSequence].
+     * `playerToMove` is a KataGoDots extension: in Go the player to move follows from the moves, while
+     * in Dots either player may move at any point, and the app even lets the user choose the one to analyze.
      */
-    private fun Field.initialMoves(): List<MoveInfo> =
-        moveSequence.take(initialMovesCount).map { MoveInfo.fromLegalMove(it, this) }
+    private fun buildQuery(queryId: String, field: Field, player: Player, withOwnership: Boolean): JsonObject {
+        val rules = field.rules
+        val moves = field.moveSequence.map { MoveInfo.fromLegalMove(it, field) }
 
-    private fun MoveInfo.toGtpMove(field: Field): String {
-        return playerToGtp(player) + " " + when (externalFinishReason) {
-            ExternalFinishReason.Grounding -> {
-                GROUND_MOVE
+        return buildJsonObject {
+            put(QUERY_ID_KEY, queryId)
+            put(BOARD_X_SIZE_KEY, field.width)
+            put(BOARD_Y_SIZE_KEY, field.height)
+
+            putJsonObject(RULES_KEY) {
+                put(DOTS_KEY, true)
+                // The dots of the start position are sent as `initialStones` in any case: the analysis engine
+                // never generates them out of the rule the way the GTP one does on `boardsize`,
+                // so the rule only tells it which pattern the game started from
+                put(START_POS_KEY, rules.initPosType.toEngineStartPos())
+                // The engine only shuffles a generated start position by it, so this one is descriptive too
+                put(START_POS_IS_RANDOM_KEY, rules.initPosGenType != InitPosGenType.Static)
+                put(SUICIDE_KEY, rules.suicideAllowed)
+                put(CAPTURE_EMPTY_BASE_KEY, rules.baseMode == BaseMode.AnySurrounding)
             }
+            put(KOMI_KEY, rules.komi)
+
+            putJsonArray(INITIAL_STONES_KEY) {
+                for (move in moves.take(field.initialMovesCount)) {
+                    addMove(move, field)
+                }
+            }
+            putJsonArray(MOVES_KEY) {
+                for (move in moves.drop(field.initialMovesCount)) {
+                    addMove(move, field)
+                }
+            }
+            put(PLAYER_TO_MOVE_KEY, player.toEngineMarker())
+
+            put(INCLUDE_OWNERSHIP_KEY, withOwnership)
+
+            // A zero means "unset" in the settings, and the engine then keeps the limit of its config
+            settings.maxVisits.takeIf { it > 0 }?.let { put(MAX_VISITS_KEY, it) }
+            if (settings.maxTime > 0 || settings.maxPlayouts > 0) {
+                putJsonObject(OVERRIDE_SETTINGS_KEY) {
+                    settings.maxTime.takeIf { it > 0 }?.let { put(MAX_TIME_KEY, it) }
+                    settings.maxPlayouts.takeIf { it > 0 }?.let { put(MAX_PLAYOUTS_KEY, it) }
+                }
+            }
+        }
+    }
+
+    actual fun close() {
+        // The process is stopped first, so that the reading of its output ends by itself, and whoever
+        // is waiting for a response is released rather than left waiting for an engine that is gone
+        process.destroy()
+        ready.complete(false)
+        for (queryId in pendingQueries.keys.toList()) {
+            pendingQueries.remove(queryId)?.complete(null)
+        }
+        scope.cancel()
+    }
+
+    private fun kotlinx.serialization.json.JsonArrayBuilder.addMove(move: MoveInfo, field: Field) {
+        addJsonArray {
+            add(move.player.toEngineMarker())
+            add(move.toEngineMove(field))
+        }
+    }
+
+    /**
+     * The vertical axis is inverted (the engine counts it from the bottom),
+     * the same way as in [parseAnalysisPosition].
+     */
+    private fun MoveInfo.toEngineMove(field: Field): String {
+        return when (externalFinishReason) {
+            ExternalFinishReason.Grounding -> GROUND_MOVE
             ExternalFinishReason.Resign,
             ExternalFinishReason.Time,
             ExternalFinishReason.Interrupt,
@@ -364,145 +387,72 @@ actual class KataGoDotsEngine private constructor(
         }
     }
 
-    private fun toMovesSequence(input: String, field: Field): List<MoveInfo> {
-        if (input.isEmpty()) return emptyList()
-        val pieces = input.split(" ")
-        return buildList {
-            for (i in pieces.indices step 2) {
-                val player = parsePlayer(pieces[i])
-                add(parseMoveInfo(pieces[i + 1], field, player))
-            }
-        }
+    /** The start position patterns of the engine, see `Rules::startPosNameToId` of KataGoDots. */
+    private fun InitPosType.toEngineStartPos(): String = when (this) {
+        InitPosType.Empty -> EMPTY_START_POS
+        InitPosType.Single -> SINGLE_START_POS
+        InitPosType.Cross -> CROSS_START_POS
+        InitPosType.DoubleCross -> DOUBLE_CROSS_START_POS
+        InitPosType.QuadrupleCross -> QUADRUPLE_CROSS_START_POS
+        // A start position of its own fits no pattern of the engine, and its dots are sent as they are
+        InitPosType.Custom -> EMPTY_START_POS
     }
 
-    private fun parseMoveInfo(string: String, field: Field, player: Player): MoveInfo {
-        return when (string) {
-            GROUND_MOVE -> {
-                MoveInfo.createFinishingMove(player, ExternalFinishReason.Grounding)
-            }
-            RESIGN_MOVE -> {
-                MoveInfo.createFinishingMove(player, ExternalFinishReason.Resign)
-            }
-            else -> {
-                val dashIndex = string.indexOf('-')
-                val x = string.take(dashIndex).toInt()
-                val y = string.substring(dashIndex + 1, string.length).toInt()
-                MoveInfo(PositionXY(x, field.height - y + 1), player)
-            }
-        }
-    }
-
-    private fun playerToGtp(player: Player): String {
-        return when (player) {
+    private fun Player.toEngineMarker(): String {
+        return when (this) {
             Player.First -> PLAYER1_MARKER
             Player.Second -> PLAYER2_MARKER
-            else -> error("Unexpected player $player")
+            else -> error("Unexpected player $this")
         }
-    }
-
-    private fun parsePlayer(str: String): Player {
-        return when (str) {
-            PLAYER1_MARKER -> Player.First
-            PLAYER2_MARKER -> Player.Second
-            else -> error("Unexpected GTP player `$str`")
-        }
-    }
-
-    private suspend fun sendMessage(message: String): Response = sendMessage(message, writer, reader, logger)
-
-    /**
-     * Sends [command] and reports its rejection to [logger] instead of throwing, because a command
-     * rejected in the middle of a synchronization would otherwise take the whole app down.
-     *
-     * @return `false` if the engine rejected the command.
-     */
-    private suspend fun trySendMessage(command: String): Boolean {
-        val response = sendMessage(command)
-        if (response.isError) {
-            logger(
-                Diagnostic(
-                    "The engine rejected `${command.trimMessageIfNecessary()}`: ${response.message}",
-                    severity = DiagnosticSeverity.Error,
-                )
-            )
-            return false
-        }
-        return true
     }
 }
 
-data class Response(val message: String, val isError: Boolean, val extraLines: List<String> = emptyList()) {
-    /**
-     * The whole engine response, [message] being its last line.
-     * Multiline responses are produced by the analysis commands.
-     */
-    val allLines: List<String> get() = extraLines + message
+private const val QUERY_ID_KEY = "id"
+private const val ACTION_KEY = "action"
+private const val TERMINATE_ACTION = "terminate"
+private const val TERMINATE_ID_KEY = "terminateId"
+private const val BOARD_X_SIZE_KEY = "boardXSize"
+private const val BOARD_Y_SIZE_KEY = "boardYSize"
+private const val RULES_KEY = "rules"
+private const val DOTS_KEY = "dots"
+private const val START_POS_KEY = "startPos"
+private const val EMPTY_START_POS = "EMPTY"
+private const val SINGLE_START_POS = "SINGLE"
+private const val CROSS_START_POS = "CROSS"
+private const val DOUBLE_CROSS_START_POS = "CROSS_2"
+private const val QUADRUPLE_CROSS_START_POS = "CROSS_4"
+private const val START_POS_IS_RANDOM_KEY = "startPosIsRandom"
+private const val SUICIDE_KEY = "suicide"
+private const val CAPTURE_EMPTY_BASE_KEY = "dotsCaptureEmptyBase"
+private const val KOMI_KEY = "komi"
+private const val INITIAL_STONES_KEY = "initialStones"
+private const val MOVES_KEY = "moves"
+private const val PLAYER_TO_MOVE_KEY = "playerToMove"
+private const val INCLUDE_OWNERSHIP_KEY = "includeOwnership"
+private const val MAX_VISITS_KEY = "maxVisits"
+private const val OVERRIDE_SETTINGS_KEY = "overrideSettings"
+private const val MAX_TIME_KEY = "maxTime"
+private const val MAX_PLAYOUTS_KEY = "maxPlayouts"
+private const val ERROR_KEY = "error"
+private const val FIELD_KEY = "field"
+private const val WARNING_KEY = "warning"
+private const val IS_DURING_SEARCH_KEY = "isDuringSearch"
+private const val NO_RESULTS_KEY = "noResults"
 
-    override fun toString(): String {
-        return "Response: $message${if (isError) "; hasError" else ""}${if (extraLines.isNotEmpty()) "\n$extraLines" else ""}"
-    }
+private val json = Json { ignoreUnknownKeys = true }
+
+/** @return `null` if the line is not a response of the engine but a message it printed along with them. */
+internal fun String.toJsonObjectOrNull(): JsonObject? {
+    if (!trimStart().startsWith("{")) return null
+
+    return runCatching { json.parseToJsonElement(this) as? JsonObject }.getOrNull()
 }
 
-private const val GTP_SUCCESS_MARKER = '='
-private const val GTP_ERROR_MARKER = '?'
-
-/**
- * Builds a [Response] out of the raw engine output.
- *
- * A GTP response is marked with `=` when the command succeeded and with `?` when it failed.
- * The marked line is neither necessarily the first one (the engine writes its warnings into the same stream,
- * see `redirectErrorStream`) nor necessarily the last one (the analysis commands answer with several lines),
- * so it's looked up explicitly.
- */
-internal fun toGtpResponse(lines: List<String>): Response {
-    val markedLine = lines.firstOrNull { it.hasGtpMarker() }
-
-    return Response(
-        message = lines.lastOrNull()?.removeGtpMarker() ?: "",
-    isError = markedLine == null || markedLine.startsWith(GTP_ERROR_MARKER),
-        extraLines = lines.dropLast(1),
-    )
+/** The field a message is about is reported separately, and it's the most useful part of it. */
+private fun JsonObject.describe(message: String): String {
+    val field = stringOrNull(FIELD_KEY)
+    return (if (field != null) "$field: $message" else message).trimMessageIfNecessary()
 }
 
-private fun String.hasGtpMarker(): Boolean = startsWith(GTP_SUCCESS_MARKER) || startsWith(GTP_ERROR_MARKER)
-
-/** The app never sends a command id, thus a marker is never followed by one. */
-private fun String.removeGtpMarker(): String = (if (hasGtpMarker()) drop(1) else this).trim()
-
-private suspend fun sendMessage(command: String, writer: OutputStreamWriter, reader: BufferedReader, logger: (Diagnostic) -> Unit): Response {
-    return try {
-        withContext(Dispatchers.IO) {
-            writer.write(command + "\n")
-            writer.flush()
-
-            logger(Diagnostic.info("Command: $command"))
-
-            val channel = Channel<String>(UNLIMITED)
-
-            launch(Dispatchers.IO) {
-                while (true) {
-                    val line = reader.readLine() ?: break
-                    if (line.isBlank()) break // GTP responses are separated by a blank line
-                    channel.send(line)
-                }
-                channel.close()
-            }
-
-            val lines = mutableListOf<String>()
-
-            // Perform non-blocking awaiting
-            withTimeout(Duration.ofSeconds(100)) {
-                channel.consumeEach {
-                    lines.add(it)
-                }
-            }
-
-            toGtpResponse(lines)
-        }
-    } catch (e: Exception) {
-        Response(e.message ?: "Error communicating with GTP engine", true)
-    }.also {
-        logger(Diagnostic.info(it.toString()))
-        logger(Diagnostic.info(""))
-    }
-}
+private fun JsonObject.stringOrNull(key: String): String? =
+    (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content

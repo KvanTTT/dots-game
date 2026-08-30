@@ -115,6 +115,8 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.multiplatform.settings)
+            // The analysis engine speaks JSON, see `KataGoDotsEngine`
+            implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

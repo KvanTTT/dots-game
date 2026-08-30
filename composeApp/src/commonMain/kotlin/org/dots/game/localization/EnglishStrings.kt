@@ -94,7 +94,12 @@ object EnglishStrings : Strings {
 
     // AI Settings
     override fun aiSettingsFilePath(fileType: KataGoDotsSettingsFileType): String {
-        return "$fileType file"
+        return when (fileType) {
+            KataGoDotsSettingsFileType.Exe -> "Exe file"
+            KataGoDotsSettingsFileType.Model -> "Model file"
+            // The engine is run in its analysis mode, and a config of another mode doesn't fit it
+            KataGoDotsSettingsFileType.Config -> "Analysis config file"
+        }
     }
     override fun aiSettingsSelectFile(fileType: KataGoDotsSettingsFileType): String {
         return "Select${fileType.extensions.filter { it.isNotEmpty() }.joinToString(",") { " .${it}" }} file"

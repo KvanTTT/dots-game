@@ -98,7 +98,7 @@ object RussianStrings : Strings {
         return when (fileType) {
             KataGoDotsSettingsFileType.Exe -> "Исполняемый файл"
             KataGoDotsSettingsFileType.Model -> "Файл модели"
-            KataGoDotsSettingsFileType.Config -> "Файл конфигурации"
+            KataGoDotsSettingsFileType.Config -> "Файл конфигурации анализа"
         }
     }
     override fun aiSettingsSelectFile(fileType: KataGoDotsSettingsFileType): String {
