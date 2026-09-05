@@ -1,10 +1,10 @@
 package org.dots.game
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.dots.game.core.BaseMode
+import org.dots.game.core.ExternalFinishReason
 import org.dots.game.core.Field
+import org.dots.game.core.GameResult
 import org.dots.game.core.InitPosGenType
 import org.dots.game.core.InitPosType
 import org.dots.game.core.LegalMove
@@ -19,25 +19,26 @@ import kotlin.random.Random
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-const val KataGoDotsEngineKey = "KataGoDotsEngine"
-const val KataGoDotsModelKey = "KataGoDotsModel"
-const val KataGoDotsConfigKey = "KataGoDotsConfig"
-const val KataGoDotsGtpConfigKey = "KataGoDotsGtpConfig"
-
+/**
+ * The engine tests of the GTP protocol, see [KataGoDotsEngineTests] for the analysis one.
+ *
+ * Unlike the analysis engine, the GTP one keeps a position of its own, so most of the tests are about
+ * the synchronization of that position with the field, see [GtpProtocol.sync].
+ */
 @Execution(ExecutionMode.SAME_THREAD)
 @EnabledIfEnvironmentVariable(named = KataGoDotsEngineKey, matches = ".*")
 @EnabledIfEnvironmentVariable(named = KataGoDotsModelKey, matches = ".*")
-@EnabledIfEnvironmentVariable(named = KataGoDotsConfigKey, matches = ".*")
-class KataGoDotsEngineTests {
+@EnabledIfEnvironmentVariable(named = KataGoDotsGtpConfigKey, matches = ".*")
+class GtpEngineTests {
     companion object {
-        val TEST_ENGINE: String = System.getenv(KataGoDotsEngineKey)!!
-        val TEST_MODEL: String = System.getenv(KataGoDotsModelKey)!!
-        val TEST_CONFIG: String = System.getenv(KataGoDotsConfigKey)!!
+        /** The engine reads the config of the mode it's run in, thus a GTP config rather than an analysis one. */
+        val TEST_GTP_CONFIG: String = System.getenv(KataGoDotsGtpConfigKey)!!
     }
 
     private val testRandom = Random(2)
@@ -47,15 +48,22 @@ class KataGoDotsEngineTests {
     /** Every engine is a process of its own, and a test class instance is created per test. */
     private val engines = mutableListOf<KataGoDotsEngine>()
 
-    private val defaultEngine = initialize(KataGoDotsSettings(
-        TEST_ENGINE,
-        TEST_MODEL,
-        TEST_CONFIG
-    ))!!
+    private val defaultEngine = initialize()!!
 
-    private fun initialize(kataGoDotsSettings: KataGoDotsSettings): KataGoDotsEngine? {
+    /** The GTP protocol of [defaultEngine]: the position of the engine is no part of the API of the app. */
+    private val gtp: GtpProtocol
+        get() = assertNotNull(defaultEngine.gtp)
+
+    private fun initialize(): KataGoDotsEngine? {
         return runBlocking {
-            KataGoDotsEngine.initialize(kataGoDotsSettings) {
+            KataGoDotsEngine.initialize(
+                KataGoDotsSettings(
+                    KataGoDotsEngineTests.TEST_ENGINE,
+                    KataGoDotsEngineTests.TEST_MODEL,
+                    TEST_GTP_CONFIG,
+                    protocol = EngineProtocol.Gtp,
+                )
+            ) {
                 diagnostics.add(it)
                 println(it)
             }
@@ -68,39 +76,115 @@ class KataGoDotsEngineTests {
     }
 
     @Test
-    fun incorrectExe() {
-        assertNull(initialize(KataGoDotsSettings(
-            "invalid path",
-            TEST_MODEL,
-            TEST_CONFIG,
-        )))
-    }
-
-    @Test
-    fun incorrectModel() {
-        assertNull(initialize(KataGoDotsSettings(
-            TEST_ENGINE,
-            "invalid model",
-            TEST_CONFIG,
-        )))
-    }
-
-    @Test
-    fun incorrectConfig() {
-        assertNull(initialize(KataGoDotsSettings(
-            TEST_ENGINE,
-            TEST_MODEL,
-            "invalid config",
-        )))
-    }
-
-    @Test
-    fun unsupportedRulesAreNotEvenQueried() {
+    fun unsupportedRules() {
         runBlocking {
             val fieldWithUnsupportedRules = createField(captureByBorder = true)
 
+            assertEquals(UnsupportedRules, gtp.getSyncType(fieldWithUnsupportedRules))
+            assertFalse(UnsupportedRules.isSynchronized)
+
             assertNull(defaultEngine.analyze(fieldWithUnsupportedRules, Player.First))
             assertNull(defaultEngine.generateMove(fieldWithUnsupportedRules, Player.First))
+        }
+    }
+
+    @Test
+    fun fullResync() {
+        runEngine {
+            // Field with another size should cause a full resync
+            val field2 = Field.create(
+                Rules.create(
+                    9, 9,
+                    captureByBorder = false, baseMode = BaseMode.AtLeastOneOpponentDot,
+                    suicideAllowed = true, initPosType = InitPosType.Cross,
+                    random = testRandom,
+                    initPosGenType = InitPosGenType.Static,
+                    komi = 0.0
+                )
+            )
+            assertIs<FullSync>(gtp.getSyncType(field2))
+        }
+    }
+
+    @Test
+    fun noSync() {
+        runEngine {
+            assertIs<LegalMove>(it.makeMove(2, 2, Player.First))
+            assertIs<MovesSync>(gtp.sync(it))
+            assertIs<NoSync>(gtp.sync(it))
+        }
+    }
+
+    @Test
+    fun singleMoveAndUndo() {
+        runEngine {
+            // Check a single move
+            assertIs<LegalMove>(it.makeMove(2, 2, Player.First))
+            val syncTypeAfterFirstMove = assertIs<MovesSync>(gtp.getSyncType(it))
+            assertEquals(0, syncTypeAfterFirstMove.undoMovesCount)
+            assertEquals(listOf(MoveInfo(PositionXY(2, 2), Player.First)), syncTypeAfterFirstMove.moves)
+            assertIs<MovesSync>(gtp.sync(it))
+
+            // Check single undo
+            assertIs<LegalMove>(it.unmakeMove())
+            val syncTypeAfterUndo = assertIs<MovesSync>(gtp.getSyncType(it))
+            assertEquals(1, syncTypeAfterUndo.undoMovesCount)
+            assertTrue(syncTypeAfterUndo.moves.isEmpty())
+        }
+    }
+
+    @Test
+    fun complexSync() {
+        runEngine {
+            val field2 = it.clone()
+            // Check undo + move
+            assertIs<LegalMove>(it.makeMove(2, 3, Player.First))
+            assertIs<MovesSync>(gtp.sync(it))
+            assertIs<LegalMove>(field2.makeMove(2, 4, Player.First))
+
+            val syncTypeWithUndoAndMove = assertIs<MovesSync>(gtp.getSyncType(field2))
+            assertEquals(1, syncTypeWithUndoAndMove.undoMovesCount)
+            assertEquals(listOf(MoveInfo(PositionXY(2, 4), Player.First)), syncTypeWithUndoAndMove.moves)
+        }
+    }
+
+    /**
+     * A finishing move is played on the engine as well, and the game it ends is scored the very same way
+     * the field scores it.
+     *
+     * The score of a game that is *not* over is no part of it: `final_score` scores the position as it
+     * stands, see [GtpProtocol.getGameResult], and the estimate it answers with is not a result of a game.
+     */
+    @Test
+    fun grounding() {
+        runEngine {
+            assertIs<GameResult>(it.makeMove(MoveInfo.createFinishingMove(Player.First, ExternalFinishReason.Grounding)))
+            assertIs<MovesSync>(gtp.sync(it))
+            val engineGameResult = assertIs<GameResult.ScoreWin>(gtp.getGameResult())
+            val fieldGameResult = it.gameResult as GameResult.ScoreWin
+            assertEquals(fieldGameResult.winner, engineGameResult.winner)
+            assertEquals(fieldGameResult.score, engineGameResult.score)
+
+            // The move is taken back on both sides, so that the engine is ready for the game to go on
+            assertIs<GameResult>(it.unmakeMove())
+            assertIs<MovesSync>(gtp.sync(it))
+            assertIs<NoSync>(gtp.getSyncType(it))
+        }
+    }
+
+    /** @see grounding */
+    @Test
+    fun resigning() {
+        runEngine {
+            assertIs<GameResult>(it.makeMove(MoveInfo.createFinishingMove(Player.First, ExternalFinishReason.Resign)))
+            assertIs<MovesSync>(gtp.sync(it))
+            val engineGameResult = assertIs<GameResult.ResignWin>(gtp.getGameResult())
+            val fieldGameResult = it.gameResult as GameResult.ResignWin
+            assertEquals(fieldGameResult.winner, engineGameResult.winner)
+
+            assertIs<GameResult>(it.unmakeMove())
+            assertIs<MovesSync>(gtp.sync(it))
+            assertIs<NoSync>(gtp.getSyncType(it))
         }
     }
 
@@ -130,8 +214,14 @@ class KataGoDotsEngineTests {
             val moveInfo = defaultEngine.generateMove(it, Player.Second)!!
             assertIs<LegalMove>(it.makeMove(moveInfo))
 
-            val moveInfo2 = defaultEngine.generateMove(it, Player.Second)!!
-            assertIs<LegalMove>(it.makeMove(moveInfo2))
+            assertEquals(NoSync, gtp.getSyncType(it))
+
+            assertNotNull(defaultEngine.generateMove(it, Player.First)!!)
+
+            // `genmove` plays the generated move on the board of the engine, and the field knows nothing of it
+            val syncResult = assertIs<MovesSync>(gtp.sync(it))
+            assertEquals(1, syncResult.undoMovesCount)
+            assertTrue(syncResult.moves.isEmpty())
         }
     }
 
@@ -149,10 +239,13 @@ class KataGoDotsEngineTests {
             assertEquals(best.positionXY, best.pv.firstOrNull())
             assertTrue(analysis.moves.all { move -> move.order in analysis.moves.indices })
 
-            // The very same query reports the move the engine would play, so that no second engine is needed
+            // The `play` line of the response names the move the engine would play
             val chosenMove = assertNotNull(analysis.chosenMove)
             assertEquals(Player.First, chosenMove.player)
             assertNotNull(analysis.moveAt(assertNotNull(chosenMove.positionXY)))
+
+            // The analysis must not change the position of the engine
+            assertIs<NoSync>(gtp.sync(it))
 
             assertEquals(Player.Second, defaultEngine.analyze(it, Player.Second)!!.player)
             assertEquals(Player.First, defaultEngine.analyze(it, player = null)!!.player)
@@ -160,8 +253,8 @@ class KataGoDotsEngineTests {
     }
 
     /**
-     * A whole game is analyzed by a single query: the engine reports every turn of it on its own,
-     * and the turn of a response tells which position it is about.
+     * A GTP engine has no query of a whole game, so its turns are analyzed one by one on a field
+     * of their own, see `KataGoDotsProtocol.analyzeGame`.
      */
     @Test
     fun analyzeGame() {
@@ -186,49 +279,13 @@ class KataGoDotsEngineTests {
             })
 
             for (turnNumber in turnNumbers) {
-                val position = assertNotNull(analyzedTurns.getValue(turnNumber).position, "turn $turnNumber")
-                assertTrue(position.winRate in 0.0..1.0, "The win rate of the turn $turnNumber is ${position.winRate}")
-                assertTrue(position.visits > 0)
-            }
-        }
-    }
-
-    /**
-     * A query carries the whole position rather than the difference from the previous one, so nothing
-     * of the previous query may leak into the next one, an undone move included.
-     */
-    @Test
-    fun everyQueryIsAnalyzedOnItsOwn() {
-        runEngine { field ->
-            val analyzedMove = assertNotNull(defaultEngine.analyze(field, Player.First)!!.best).positionXY
-
-            assertIs<LegalMove>(field.makeMove(analyzedMove.x, analyzedMove.y, Player.First))
-            // The position is taken now, thus it's no longer a candidate
-            assertNull(defaultEngine.analyze(field, Player.Second)!!.moveAt(analyzedMove))
-
-            assertIs<LegalMove>(field.unmakeMove())
-            assertNotNull(defaultEngine.analyze(field, Player.First)!!.moveAt(analyzedMove))
-        }
-    }
-
-    /**
-     * The engine searches several queries at once, so the responses are matched to the queries by their id
-     * rather than by their order.
-     */
-    @Test
-    fun severalQueriesAreAnsweredAtOnce() {
-        runEngine { field ->
-            val analyses = runBlocking {
-                listOf(
-                    async { defaultEngine.analyze(field, Player.First) },
-                    async { defaultEngine.analyze(field, Player.Second) },
-                    async { defaultEngine.analyze(field, Player.First, withOwnership = true) },
-                ).awaitAll()
+                val best = assertNotNull(analyzedTurns.getValue(turnNumber).best, "turn $turnNumber")
+                assertTrue(best.winRate in 0.0..1.0, "The win rate of the turn $turnNumber is ${best.winRate}")
+                assertTrue(best.visits > 0)
             }
 
-            assertEquals(listOf(Player.First, Player.Second, Player.First), analyses.map { it?.player })
-            assertNull(analyses[0]?.ownership)
-            assertEquals(field.width * field.height, analyses[2]?.ownership?.size)
+            // The turns are replayed on a field of their own, thus the analyzed one is left untouched
+            assertEquals(0, field.currentMoveNumber)
         }
     }
 
@@ -254,7 +311,8 @@ class KataGoDotsEngineTests {
                 PositionXY(5, 1), PositionXY(8, 2), PositionXY(7, 2),
             )
 
-            for ((index, surroundingMove = value) in surroundingMoves.withIndex()) {
+            for (index in surroundingMoves.indices) {
+                val surroundingMove = surroundingMoves[index]
                 assertIs<LegalMove>(field.makeMove(surroundingMove.x, surroundingMove.y, Player.First))
                 opponentMoves.elementAtOrNull(index)?.let {
                     assertIs<LegalMove>(field.makeMove(it.x, it.y, Player.Second))
@@ -283,28 +341,32 @@ class KataGoDotsEngineTests {
     }
 
     /**
-     * The engine installs the start position of its config (`CROSS` by default) on its own,
-     * so an empty start position has to be dropped from a query explicitly.
+     * The engine installs the start position of its config (`CROSS` by default) on `boardsize`,
+     * so an empty start position has to be dropped from the engine explicitly.
      */
     @Test
-    fun anEmptyStartPositionIsNotFilledByTheEngine() {
+    fun anEmptyStartPositionIsSynchronized() {
         runBlocking {
             val field = createField(initPosType = InitPosType.Empty)
             assertEquals(0, field.initialMovesCount)
 
-            // The very position the engine would fill with a dot of its own start position: it would reject
-            // the move as an illegal one, and the whole query along with it
-            assertIs<LegalMove>(field.makeMove(4, 4, Player.First))
+            assertIs<LegalMove>(field.makeMove(3, 3, Player.First))
+            assertIs<LegalMove>(field.makeMove(4, 4, Player.Second))
 
-            assertNotNull(defaultEngine.analyze(field, Player.Second))
+            assertIs<FullSync>(gtp.sync(field))
+            // Only reachable if the default start position of the engine was dropped
+            assertIs<NoSync>(gtp.getSyncType(field))
         }
     }
 
     /**
      * A loaded game may contain setup dots that don't fit the recognized [Rules.initPosType] pattern.
-     * They land in [Rules.remainingInitMoves], they still belong to the start position, and replaying them
-     * as ordinary moves would collide with the dots already on the board, thus the engine would reject
-     * the whole query.
+     * They land in [Rules.remainingInitMoves], they still belong to the start position,
+     * and replaying them as ordinary moves would collide with the dots already on the board.
+     *
+     * The commands are asserted rather than the resulting engine state, because `get_position`
+     * reports a start position only when it matches a pattern the engine recognizes,
+     * so a custom one can't be read back.
      */
     @Test
     fun aStartPositionBeyondTheRecognizedPatternIsSentAsAStartPosition() {
@@ -333,43 +395,28 @@ class KataGoDotsEngineTests {
             assertIs<LegalMove>(field.makeMove(1, 8, Player.First))
             assertIs<LegalMove>(field.makeMove(8, 1, Player.Second))
 
-            val analysis = assertNotNull(defaultEngine.analyze(field, Player.First))
-            // Every dot of the start position is on the board of the engine as well, so none of them is a candidate
-            for (setupMove in crossMoves + extraSetupMove) {
-                assertNull(analysis.moveAt(setupMove.positionXY!!), "${setupMove.positionXY} is occupied")
-            }
-        }
-    }
+            assertIs<FullSync>(gtp.sync(field))
 
-    /**
-     * A field that is wider than it is high is the regular one of Dots (the engine holds up to 39x32),
-     * and the symmetries of such a board can't be transposed: a transposed 39 wide board would be 39 high.
-     */
-    @Test
-    fun aWideFieldIsAnalyzed() {
-        runBlocking {
-            val wideField = Field.create(
-                Rules.create(39, 32,
-                    captureByBorder = false, baseMode = BaseMode.AtLeastOneOpponentDot,
-                    suicideAllowed = true, initPosType = InitPosType.Cross,
-                    random = testRandom,
-                    initPosGenType = InitPosGenType.Static,
-                    komi = 0.0
-                )
-            )
+            val commands = diagnostics.mapNotNull { it.message.substringAfterOrNull("Command: ") }
+            val setPositionCommand = commands.single { it.startsWith("set_position") }
+            val playCommand = commands.single { it.startsWith("play") }
 
-            val analysis = assertNotNull(defaultEngine.analyze(wideField, Player.First, withOwnership = true))
-            assertEquals(wideField.width * wideField.height, analysis.ownership?.size)
-            assertNotNull(analysis.chosenMove)
+            // The whole start position is sent as one, the ordinary moves are only the two played ones
+            assertEquals(field.initialMovesCount, setPositionCommand.countGtpMoves(), setPositionCommand)
+            assertEquals(2, playCommand.countGtpMoves(), playCommand)
+
+            // The vertical axis is inverted in GTP, so the setup dot (1;1) of an 8 rows high field is `1-8`
+            assertTrue("P1 1-8" in setPositionCommand, setPositionCommand)
+            assertFalse("P1 1-8" in playCommand, playCommand)
         }
     }
 
     /**
      * The app allows fields up to 39x39, while the engine is compiled for 39x32 at most,
-     * so a higher field makes it reject the query.
+     * so a higher field makes it reject `boardsize`.
      */
     @Test
-    fun aRejectedQueryIsReportedInsteadOfCrashing() {
+    fun aRejectedCommandIsReportedInsteadOfCrashing() {
         runBlocking {
             val tooHighField = Field.create(
                 Rules.create(39, 39,
@@ -381,16 +428,25 @@ class KataGoDotsEngineTests {
                 )
             )
 
-            // Nothing may be computed on a position the engine rejects, but it stays usable for the next query
-            assertNull(defaultEngine.analyze(tooHighField, Player.First))
+            assertEquals(SyncFailed, gtp.sync(tooHighField))
+            assertFalse(SyncFailed.isSynchronized)
+
+            // Nothing may be computed on a position the engine doesn't share
             assertNull(defaultEngine.generateMove(tooHighField, Player.First))
+            assertNull(defaultEngine.analyze(tooHighField, Player.First))
 
             val errors = diagnostics.filter { it.severity == DiagnosticSeverity.Error }
-            assertTrue(errors.any { "boardYSize" in it.message }, "Reported diagnostics: $diagnostics")
+            assertTrue(errors.any { "unacceptable size" in it.message }, "Reported diagnostics: $diagnostics")
 
+            // The engine stays usable for the next position
             assertNotNull(defaultEngine.analyze(createField(), Player.First))
         }
     }
+
+    private fun String.substringAfterOrNull(prefix: String): String? =
+        if (startsWith(prefix)) substring(prefix.length) else null
+
+    private fun String.countGtpMoves(): Int = split(" ").count { it == "P1" || it == "P2" }
 
     private fun createField(
         captureByBorder: Boolean = false,
@@ -407,7 +463,9 @@ class KataGoDotsEngineTests {
 
     private fun runEngine(action: suspend (field: Field) -> Unit) {
         runBlocking {
-            action(createField())
+            val field = createField()
+            assertIs<FullSync>(gtp.sync(field))
+            action(field)
         }
     }
 }

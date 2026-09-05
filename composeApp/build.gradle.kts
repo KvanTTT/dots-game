@@ -229,8 +229,12 @@ val kataGoDotsEngineKey = "KataGoDotsEngine"
 val kataGoDotsModelKey = "KataGoDotsModel"
 val kataGoDotsConfigKey = "KataGoDotsConfig"
 
+// The engine reads the config of the mode it's run in, so the GTP tests need a config of their own
+val kataGoDotsGtpConfigKey = "KataGoDotsGtpConfig"
+
 tasks.withType<Test> {
     localProperties.getProperty(kataGoDotsEngineKey)?.let { environment(kataGoDotsEngineKey, it) }
     localProperties.getProperty(kataGoDotsModelKey)?.let { environment(kataGoDotsModelKey, it) }
     localProperties.getProperty(kataGoDotsConfigKey)?.let { environment(kataGoDotsConfigKey, it) }
+    localProperties.getProperty(kataGoDotsGtpConfigKey)?.let { environment(kataGoDotsGtpConfigKey, it) }
 }

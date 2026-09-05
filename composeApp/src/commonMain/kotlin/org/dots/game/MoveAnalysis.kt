@@ -127,28 +127,28 @@ data class MoveAnalysis(
     }
 }
 
-private const val MOVE_INFOS_KEY = "moveInfos"
-private const val MOVE_KEY = "move"
-private const val PV_KEY = "pv"
-private const val SYMMETRY_OF_KEY = "isSymmetryOf"
-private const val ORDER_KEY = "order"
-private const val VISITS_KEY = "visits"
-private const val EDGE_VISITS_KEY = "edgeVisits"
-private const val WIN_RATE_KEY = "winrate"
-private const val SCORE_LEAD_KEY = "scoreLead"
-private const val SCORE_MEAN_KEY = "scoreMean"
-private const val SCORE_STDEV_KEY = "scoreStdev"
-private const val SCORE_SELFPLAY_KEY = "scoreSelfplay"
-private const val UTILITY_KEY = "utility"
-private const val UTILITY_LCB_KEY = "utilityLcb"
-private const val LCB_KEY = "lcb"
-private const val PRIOR_KEY = "prior"
-private const val WEIGHT_KEY = "weight"
-private const val OWNERSHIP_KEY = "ownership"
+internal const val MOVE_INFOS_KEY = "moveInfos"
+internal const val MOVE_KEY = "move"
+internal const val PV_KEY = "pv"
+internal const val SYMMETRY_OF_KEY = "isSymmetryOf"
+internal const val ORDER_KEY = "order"
+internal const val VISITS_KEY = "visits"
+internal const val EDGE_VISITS_KEY = "edgeVisits"
+internal const val WIN_RATE_KEY = "winrate"
+internal const val SCORE_LEAD_KEY = "scoreLead"
+internal const val SCORE_MEAN_KEY = "scoreMean"
+internal const val SCORE_STDEV_KEY = "scoreStdev"
+internal const val SCORE_SELFPLAY_KEY = "scoreSelfplay"
+internal const val UTILITY_KEY = "utility"
+internal const val UTILITY_LCB_KEY = "utilityLcb"
+internal const val LCB_KEY = "lcb"
+internal const val PRIOR_KEY = "prior"
+internal const val WEIGHT_KEY = "weight"
+internal const val OWNERSHIP_KEY = "ownership"
 private const val ROOT_INFO_KEY = "rootInfo"
 private const val CURRENT_PLAYER_KEY = "currentPlayer"
 private const val TURN_NUMBER_KEY = "turnNumber"
-private const val CHOSEN_MOVE_KEY = "chosenMove"
+internal const val CHOSEN_MOVE_KEY = "chosenMove"
 private const val RESIGN_REASONABLE_KEY = "resignReasonable"
 
 internal const val GROUND_MOVE = "ground"
@@ -163,7 +163,8 @@ internal fun Player.toEngineMarker(): String = when (this) {
     else -> error("Unexpected player $this")
 }
 
-private fun String.toPlayerOrNull(): Player? = when (this) {
+/** The player of a move as both protocols name it, see [toEngineMarker]. */
+internal fun String.toPlayerOrNull(): Player? = when (this) {
     PLAYER1_MARKER -> Player.First
     PLAYER2_MARKER -> Player.Second
     else -> null
@@ -234,17 +235,25 @@ private fun parseChosenMove(response: JsonObject, player: Player, fieldWidth: In
         return MoveInfo.createFinishingMove(player, ExternalFinishReason.Resign)
     }
 
-    return when (val move = response.string(CHOSEN_MOVE_KEY)) {
-        null -> null
+    return parseEngineMove(response.string(CHOSEN_MOVE_KEY) ?: return null, player, fieldWidth, fieldHeight)
+}
+
+/**
+ * Converts a move of the engine to a move of the app, no matter which protocol reported it:
+ * both of them name a position the very same way and both of them end a game by `ground` or `resign`.
+ *
+ * @return `null` if the move is neither a finishing one nor a position of the field.
+ */
+internal fun parseEngineMove(move: String, player: Player, fieldWidth: Int, fieldHeight: Int): MoveInfo? =
+    when (move) {
         GROUND_MOVE -> MoveInfo.createFinishingMove(player, ExternalFinishReason.Grounding)
         RESIGN_MOVE -> MoveInfo.createFinishingMove(player, ExternalFinishReason.Resign)
-        else -> parseAnalysisPosition(move, fieldWidth, fieldHeight)?.let { MoveInfo(it, player) }
+        else -> parseEnginePosition(move, fieldWidth, fieldHeight)?.let { MoveInfo(it, player) }
     }
-}
 
 private fun parseAnalyzedMove(moveInfo: JsonObject, fieldWidth: Int, fieldHeight: Int): AnalyzedMove? {
     // Non-coordinate moves (`ground`, `resign`) are not worth highlighting on the field
-    val positionXY = parseAnalysisPosition(moveInfo.string(MOVE_KEY) ?: return null, fieldWidth, fieldHeight)
+    val positionXY = parseEnginePosition(moveInfo.string(MOVE_KEY) ?: return null, fieldWidth, fieldHeight)
         ?: return null
 
     return AnalyzedMove(
@@ -262,10 +271,10 @@ private fun parseAnalyzedMove(moveInfo: JsonObject, fieldWidth: Int, fieldHeight
         lcb = moveInfo.double(LCB_KEY),
         prior = moveInfo.double(PRIOR_KEY),
         weight = moveInfo.double(WEIGHT_KEY),
-        symmetryOf = moveInfo.string(SYMMETRY_OF_KEY)?.let { parseAnalysisPosition(it, fieldWidth, fieldHeight) },
+        symmetryOf = moveInfo.string(SYMMETRY_OF_KEY)?.let { parseEnginePosition(it, fieldWidth, fieldHeight) },
         pv = (moveInfo[PV_KEY] as? JsonArray)?.mapNotNull {
             (it as? JsonPrimitive)?.takeIf { primitive -> primitive.isString }
-                ?.let { primitive -> parseAnalysisPosition(primitive.content, fieldWidth, fieldHeight) }
+                ?.let { primitive -> parseEnginePosition(primitive.content, fieldWidth, fieldHeight) }
         } ?: emptyList(),
     )
 }
@@ -274,7 +283,7 @@ private fun parseAnalyzedMove(moveInfo: JsonObject, fieldWidth: Int, fieldHeight
  * Converts an `x-y` move of the engine to [PositionXY].
  * The vertical axis is inverted (the engine counts it from the bottom), the same way as in `toEngineMove`.
  */
-internal fun parseAnalysisPosition(move: String, fieldWidth: Int, fieldHeight: Int): PositionXY? {
+internal fun parseEnginePosition(move: String, fieldWidth: Int, fieldHeight: Int): PositionXY? {
     val dashIndex = move.indexOf('-')
     if (dashIndex <= 0) return null
 
