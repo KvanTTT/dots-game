@@ -24,6 +24,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -48,6 +49,12 @@ import dotsgame.composeapp.generated.resources.ic_save_as
 import dotsgame.composeapp.generated.resources.ic_settings
 import org.dots.game.dump.DumpParameters
 import org.dots.game.sgf.SgfParsedNode
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.DurationUnit
+import kotlin.time.TimeSource
+
+/** How often the clock of a game is updated, which is a compromise between a smooth clock and a busy app. */
+private val CLOCK_TICK = 100.milliseconds
 
 /**
  * The moves of a game and the node every turn of it leads to, a turn being the number of the moves played
@@ -109,6 +116,15 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
         var showKataGoDotsSettingsForm by remember { mutableStateOf(false) }
         var moveMode by remember { mutableStateOf(MoveMode.Next) }
 
+        var newGameTimeSettings by remember { mutableStateOf(loadClassSettings(TimeSettings.Default)) }
+        // The clock of the current game, `null` when it's played without a time control
+        var timeControl by remember { mutableStateOf<TimeSettings?>(null) }
+        var timeSpending by remember { mutableStateOf(TimeSpending.None) }
+        // The clock only makes sense while the game is played forward: navigating over the game tree brings
+        // back a position of the past, and the time that is spent on it belongs to no move at all,
+        // so the clock stops for good as soon as it happens
+        var timeControlIsStopped by remember { mutableStateOf(false) }
+
         val focusRequester = remember { FocusRequester() }
 
         var kataGoDotsEngine by remember { mutableStateOf<KataGoDotsEngine?>(null) }
@@ -139,6 +155,41 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
             val currentNode = getGameTree().currentNode
             currentGameTreeNode = currentNode
             moveNumber = currentNode.number
+        }
+
+        /**
+         * Starts the clock of a new game, or drops it if the game is played without a time control:
+         * only a game that is created here is played with a clock, a loaded one and the one the app is
+         * reopened with are not, because the time they were left with is no longer running.
+         */
+        fun startTimeControl(newTimeControl: TimeSettings?) {
+            val enabledTimeControl = newTimeControl?.takeIf { it.isEnabled }
+            timeControl = enabledTimeControl
+            timeSpending = enabledTimeControl?.let { TimeSpending.of(it) } ?: TimeSpending.None
+            timeControlIsStopped = false
+        }
+
+        /**
+         * Switches to another node of the game tree, stopping the clock of the game for good,
+         * see [timeControlIsStopped].
+         */
+        fun navigateOverGameTree() {
+            timeControlIsStopped = true
+            updateCurrentNode()
+        }
+
+        /**
+         * Adds [moveInfo] to the game tree, stamping the time both players have left on the node it creates:
+         * SGF keeps it as `BL` and `WL`, so a saved game carries the clock along with its moves.
+         */
+        fun addMove(moveInfo: MoveInfo) {
+            val gameTree = getGameTree()
+            gameTree.addChild(moveInfo)
+
+            if (timeControl == null) return
+
+            gameTree.currentNode.player1TimeLeft = timeSpending.mainTimeLeft.player1.roundToTenthOfSecond()
+            gameTree.currentNode.player2TimeLeft = timeSpending.mainTimeLeft.player2.roundToTenthOfSecond()
         }
 
         fun updateFieldAndGameTree() {
@@ -179,15 +230,18 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
         if (showNewGameDialog) {
             NewGameDialog(
                 newGameDialogRules,
+                newGameTimeSettings,
                 uiSettings,
                 onDismiss = {
                     showNewGameDialog = false
                     focusRequester.requestFocus()
                 },
-            ) {
+            ) { newRules, newTimeSettings ->
                 showNewGameDialog = false
-                newGameDialogRules = it
+                newGameDialogRules = newRules
                 saveClassSettings(newGameDialogRules)
+                newGameTimeSettings = newTimeSettings
+                saveClassSettings(newGameTimeSettings)
                 reset(newGame = true)
             }
         }
@@ -197,6 +251,8 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
 
             if (contentOrPath == null) {
                 games = Games.fromRules(newGameDialogRules)
+                // The time control is a property of a game that is created here rather than of a loaded one
+                startTimeControl(newGameTimeSettings)
                 onGamesChange(games)
                 switchGame(0)
             } else {
@@ -209,6 +265,8 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                         )
                     if (loadResult.games.isNotEmpty()) {
                         games = loadResult.games
+                        // Neither a loaded game nor the one the app is reopened with is played with a clock
+                        startTimeControl(null)
                         onGamesChange(games)
                         switchGame(gameSettings.game)
                     }
@@ -250,6 +308,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     gameSettings.sgf = content
                     gameSettings.game = null
                     gameSettings.node = null
+                    startTimeControl(null)
                     games = newGames
                     onGamesChange(games)
                     switchGame(gameSettings.game)
@@ -337,9 +396,10 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                             ?.takeIf { analysis -> analysis.player == movePlayer }
                             ?.chosenMove
                         val generatedMove = analyzedMove ?: it.generateMove(getField(), movePlayer)
-                        if (generatedMove != null) {
+                        // The clock may have ended the game while the engine was thinking
+                        if (generatedMove != null && !getField().isGameOver()) {
                             getGameTree().disabled = false
-                            getGameTree().addChild(generatedMove)
+                            addMove(generatedMove)
                             updateFieldAndGameTree()
                         }
                         generatedMove
@@ -410,6 +470,35 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
             }
         }
 
+        val playerToMove = getField().getCurrentPlayer()
+        val gameIsOver = getField().isGameOver()
+
+        timeControl?.let { control ->
+            if (!gameIsOver && !timeControlIsStopped) {
+                LaunchedEffect(control, currentGameTreeNode, playerToMove) {
+                    timeSpending = timeSpending.startTurn(control)
+
+                    var tickStart = TimeSource.Monotonic.markNow()
+                    while (true) {
+                        delay(CLOCK_TICK)
+
+                        val elapsedSeconds = tickStart.elapsedNow().toDouble(DurationUnit.SECONDS)
+                        tickStart = TimeSource.Monotonic.markNow()
+
+                        timeSpending = timeSpending.spend(playerToMove, elapsedSeconds)
+
+                        if (timeSpending.isTimeUp(playerToMove)) {
+                            // The engine may be busy with the position, and the game is over nonetheless
+                            getGameTree().disabled = false
+                            addMove(MoveInfo.createFinishingMove(playerToMove, ExternalFinishReason.Time))
+                            updateFieldAndGameTree()
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
         Row(Modifier.pointerInput(Unit) {
             awaitPointerEventScope {
                 while (true) {
@@ -417,11 +506,11 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     if (event.type == PointerEventType.Press) {
                         if (event.buttons.isBackPressed) {
                             if (getGameTree().back()) {
-                                updateCurrentNode()
+                                navigateOverGameTree()
                             }
                         } else if (event.buttons.isForwardPressed) {
                             if (getGameTree().next()) {
-                                updateCurrentNode()
+                                navigateOverGameTree()
                             }
                         }
                     }
@@ -434,7 +523,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
             ) {
                 Row {
                     FieldView(currentGameTreeNode, moveMode, getField(), uiSettings, moveAnalysis) { position, player ->
-                        getGameTree().addChild(MoveInfo(position.toXY(getField().realWidth), player))
+                        addMove(MoveInfo(position.toXY(getField().realWidth), player))
                         updateFieldAndGameTree()
 
                         if (automove) {
@@ -446,6 +535,17 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     val gameResult = getField().gameResult ?:
                         currentGameTreeNode?.takeIf { it.mainBranch && it.children.isEmpty() }?.let { currentGame.result }
                     GameInfo(currentGame, player1Score, player2Score, gameResult, strings, uiSettings)
+                }
+                timeControl?.let { control ->
+                    Row(Modifier.padding(bottom = 10.dp)) {
+                        TimeView(
+                            control,
+                            timeSpending,
+                            movePlayer = playerToMove.takeIf { !gameIsOver && !timeControlIsStopped },
+                            strings,
+                            uiSettings,
+                        )
+                    }
                 }
                 Row {
                     Tooltip(gameSettings.path) {
@@ -553,7 +653,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                                 // Check for game over just in case
                                 if (getField().isGameOver()) return@IconButton
 
-                                getGameTree().addChild(
+                                addMove(
                                     MoveInfo.createFinishingMove(
                                         moveMode.getMovePlayer(getField()),
                                         if (isGrounding)
@@ -711,9 +811,12 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     uiSettings,
                     focusRequester,
                     onChangeGameTree = {
+                        // A removed branch brings the current node back to its parent, which is a position
+                        // of the past the same way a navigation over the tree is
+                        timeControlIsStopped = true
                         updateFieldAndGameTree()
                     }) {
-                    updateCurrentNode()
+                    navigateOverGameTree()
                 }
 
                 if (gameAnalysis.isNotEmpty() || gameTreeViewData.gameTree.game?.appInfo?.appType == AppType.Katago) {
@@ -728,7 +831,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                             focusRequester.requestFocus()
                         },
                     ) {
-                        updateCurrentNode()
+                        navigateOverGameTree()
                     }
                 }
 

@@ -38,6 +38,14 @@ object RussianStrings : Strings {
     override val drawIsAllowed = "Возможность ничьи"
     override val captureByBorder = "Захват через край"
 
+    override val mainTime = "Основное время (мин)"
+    override val mainTimeDescription = """Время на всю партию, которое расходуется только после того, как закончится время на ход.
+Игрок, израсходовавший его, проигрывает. Обнулите его вместе со временем на ход, чтобы играть без часов."""
+    override val turnTime = "Время на ход (сек)"
+    override val turnTimeDescription = """Время на один ход, которое расходуется раньше основного и не накапливается, если осталось,
+то есть задержка Бронштейна."""
+    override val noTimeControl = "Нет"
+    override val noTimeControlHint = "Оба времени обнулены: партия играется без часов."
     override val createNewGame = "Создать игру"
 
     override fun initPosTypeLabel(type: InitPosType): String = when (type) {

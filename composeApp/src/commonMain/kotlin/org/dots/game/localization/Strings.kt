@@ -37,6 +37,12 @@ interface Strings {
     val captureByBorder: String
     val suicideAllowed: String
     val drawIsAllowed: String
+    val mainTime: String
+    val mainTimeDescription: String
+    val turnTime: String
+    val turnTimeDescription: String
+    val noTimeControl: String
+    val noTimeControlHint: String
     val createNewGame: String
 
     // InitPosType enum labels

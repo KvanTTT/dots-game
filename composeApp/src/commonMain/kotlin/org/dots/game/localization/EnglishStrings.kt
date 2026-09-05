@@ -37,6 +37,14 @@ object EnglishStrings : Strings {
     override val captureByBorder = "Capture by border"
     override val suicideAllowed = "Suicide allowed"
     override val drawIsAllowed = "Draw is allowed"
+    override val mainTime = "Main time (min)"
+    override val mainTimeDescription = """The time of the whole game, which is only spent when the time of a move is over.
+A player who has spent it loses the game. Zero it along with the time of a move to play without a clock."""
+    override val turnTime = "Turn time (sec)"
+    override val turnTimeDescription = """The time of a single move, which is spent before the main one and is not banked when it's left,
+that is a Bronstein delay."""
+    override val noTimeControl = "None"
+    override val noTimeControlHint = "Both times zeroed: the game is played without a clock."
     override val createNewGame = "Create game"
 
     override fun initPosTypeLabel(type: InitPosType): String = when (type) {

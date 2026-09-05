@@ -52,8 +52,8 @@ val defaultButtonModifier = Modifier.padding(start = 3.dp, end = 3.dp)
 val defaultIconModifier = Modifier.size(20.dp)
 val selectedModeButtonColor = Color.Magenta
 
-context(strings: Strings)
 @Composable
+context(strings: Strings)
 fun IconButton(
     icon: DrawableResource,
     enabled: Boolean = true,
@@ -81,8 +81,8 @@ fun IconButton(
  * @param description an explanation of the option, shown in the tooltip under the name of the option,
  * because its icon alone conveys neither.
  */
-context(strings: Strings)
 @Composable
+context(strings: Strings)
 fun ToggleIconButton(
     icon: DrawableResource,
     checked: Boolean,

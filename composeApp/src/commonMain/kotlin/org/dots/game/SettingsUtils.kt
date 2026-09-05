@@ -89,6 +89,12 @@ fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? 
                     setSetting(GameSettings::node)
                 }
             }
+            is TimeSettings -> {
+                context(settings, settingsObj) {
+                    setSetting(TimeSettings::mainTimeMinutes)
+                    setSetting(TimeSettings::turnTimeSeconds)
+                }
+            }
             is KataGoDotsSettings -> {
                 context(settings, settingsObj) {
                     setSetting(KataGoDotsSettings::exePath)
@@ -185,6 +191,14 @@ fun <T : ClassSettings<T>> loadClassSettings(defaultSettingsObj: T, directory: S
                         sgf = getSetting(GameSettings::sgf),
                         game = getSetting(GameSettings::game),
                         node = getSetting(GameSettings::node),
+                    )
+                }
+            }
+            is TimeSettings -> {
+                context(settings, defaultSettingsObj) {
+                    TimeSettings(
+                        mainTimeMinutes = getSetting(TimeSettings::mainTimeMinutes),
+                        turnTimeSeconds = getSetting(TimeSettings::turnTimeSeconds),
                     )
                 }
             }
