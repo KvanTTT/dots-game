@@ -1,7 +1,10 @@
 package org.dots.game
 
 import org.dots.game.core.ClassSettings
+import org.dots.game.core.Game
+import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Player
+import org.dots.game.core.PropertiesHolder
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.round
@@ -41,6 +44,53 @@ data class MainTimeLeft(val player1: Double, val player2: Double) {
 
     fun with(player: Player, secondsLeft: Double): MainTimeLeft =
         if (player == Player.First) copy(player1 = secondsLeft) else copy(player2 = secondsLeft)
+}
+
+/**
+ * The main time both players have left at this node, which SGF keeps as the `BL` and `WL` properties
+ * of a move.
+ *
+ * A move only records the time of the player who made it, so the time of the other one is the one of
+ * the move that player made last; what a player who hasn't moved yet has left is the time the game starts
+ * with, that is the `BL` and `WL` of the game itself and, failing those, its time limit (`TM`).
+ *
+ * @return `null` if the move of either player records no time of it: the move has spent an unknown part
+ * of the clock, so what the moves before it recorded is out of date rather than still valid.
+ */
+fun GameTreeNode.mainTimeLeft(game: Game?): MainTimeLeft? {
+    fun timeLeftOf(player: Player): Double? {
+        var node: GameTreeNode? = this
+        while (node != null) {
+            if (node.isMoveOf(player)) return node.timeLeft(player)
+            node = node.previousNode
+        }
+
+        // The player hasn't moved yet, thus nothing of the time the game starts with is spent
+        return game?.timeLeft(player) ?: game?.time
+    }
+
+    return MainTimeLeft(timeLeftOf(Player.First) ?: return null, timeLeftOf(Player.Second) ?: return null)
+}
+
+private fun GameTreeNode.isMoveOf(player: Player): Boolean =
+    !(if (player == Player.First) player1Moves else player2Moves).isNullOrEmpty()
+
+/** The `BL` or the `WL` property of a move or of a game, see [mainTimeLeft]. */
+private fun PropertiesHolder.timeLeft(player: Player): Double? =
+    if (player == Player.First) player1TimeLeft else player2TimeLeft
+
+/**
+ * Stamps on this node what [player] has left of the main time after the move it was made with, that is
+ * the `BL` property of SGF or the `WL` one: only the player who made a move has spent any time on it,
+ * and the time of the other one is read back off the move that player made last, see [mainTimeLeft].
+ */
+fun GameTreeNode.setMainTimeLeft(player: Player, secondsLeft: Double) {
+    val roundedSecondsLeft = secondsLeft.roundToTenthOfSecond()
+    if (player == Player.First) {
+        player1TimeLeft = roundedSecondsLeft
+    } else {
+        player2TimeLeft = roundedSecondsLeft
+    }
 }
 
 /**

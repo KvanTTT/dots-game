@@ -179,8 +179,8 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
         }
 
         /**
-         * Adds [moveInfo] to the game tree, stamping the time both players have left on the node it creates:
-         * SGF keeps it as `BL` and `WL`, so a saved game carries the clock along with its moves.
+         * Adds [moveInfo] to the game tree, stamping the time its player has left on the node it creates:
+         * SGF keeps it as `BL` or `WL`, so a saved game carries the clock along with its moves.
          */
         fun addMove(moveInfo: MoveInfo) {
             val gameTree = getGameTree()
@@ -188,8 +188,8 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
 
             if (timeControl == null) return
 
-            gameTree.currentNode.player1TimeLeft = timeSpending.mainTimeLeft.player1.roundToTenthOfSecond()
-            gameTree.currentNode.player2TimeLeft = timeSpending.mainTimeLeft.player2.roundToTenthOfSecond()
+            val movePlayer = moveInfo.player
+            gameTree.currentNode.setMainTimeLeft(movePlayer, timeSpending.mainTimeLeft[movePlayer])
         }
 
         fun updateFieldAndGameTree() {
@@ -253,6 +253,10 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                 games = Games.fromRules(newGameDialogRules)
                 // The time control is a property of a game that is created here rather than of a loaded one
                 startTimeControl(newGameTimeSettings)
+                // The main time is what both players start with, and a move only records the time of
+                // the player who made it, so it's the game itself that tells the time of the one
+                // who hasn't moved yet, see `GameTreeNode.mainTimeLeft`
+                timeControl?.let { games.first().time = it.mainTimeSeconds.toDouble() }
                 onGamesChange(games)
                 switchGame(0)
             } else {
@@ -536,12 +540,20 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                         currentGameTreeNode?.takeIf { it.mainBranch && it.children.isEmpty() }?.let { currentGame.result }
                     GameInfo(currentGame, player1Score, player2Score, gameResult, strings, uiSettings)
                 }
-                timeControl?.let { control ->
+                // The running clock belongs to the game that is being played; every other game reports
+                // the times its moves were made with, which SGF keeps as `BL` and `WL`
+                val clockIsRunning = timeControl != null && !timeControlIsStopped && !gameIsOver
+                val displayedTimeSpending = if (clockIsRunning) {
+                    timeSpending
+                } else {
+                    currentGameTreeNode?.mainTimeLeft(currentGame)?.let { TimeSpending(it, turnTimeLeft = 0.0) }
+                }
+                displayedTimeSpending?.let { displayedTime ->
                     Row(Modifier.padding(bottom = 10.dp)) {
                         TimeView(
-                            control,
-                            timeSpending,
-                            movePlayer = playerToMove.takeIf { !gameIsOver && !timeControlIsStopped },
+                            timeControl,
+                            displayedTime,
+                            movePlayer = playerToMove.takeIf { clockIsRunning },
                             strings,
                             uiSettings,
                         )

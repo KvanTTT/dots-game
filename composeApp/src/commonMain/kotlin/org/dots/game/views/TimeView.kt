@@ -18,19 +18,23 @@ import kotlin.math.ceil
  * The clock of a game: the main time of every player and, for the player to move, the time of the move
  * that is spent before it, see [TimeSettings].
  *
- * @param movePlayer the player whose clock is running, `null` if the game is over.
+ * @param timeSettings the time control the clock is running by, `null` for the times a game merely keeps
+ * a record of, see [org.dots.game.mainTimeLeft].
+ * @param movePlayer the player whose clock is running, `null` if no clock is running at all.
  */
 @Composable
 fun TimeView(
-    timeSettings: TimeSettings,
+    timeSettings: TimeSettings?,
     timeSpending: TimeSpending,
     movePlayer: Player?,
     strings: Strings,
     uiSettings: UiSettings,
 ) {
-    val timeControlInfo = buildString {
-        appendLine("${strings.mainTime}: ${timeSettings.mainTimeMinutes}")
-        append("${strings.turnTime}: ${timeSettings.turnTimeSeconds}")
+    val timeControlInfo = timeSettings?.let {
+        buildString {
+            appendLine("${strings.mainTime}: ${it.mainTimeMinutes}")
+            append("${strings.turnTime}: ${it.turnTimeSeconds}")
+        }
     }
 
     Tooltip(timeControlInfo) {
@@ -41,7 +45,7 @@ fun TimeView(
                 val time = buildString {
                     append(timeSpending.mainTimeLeft[player].toClockString())
                     // The time of the move is only spent by the player who is thinking right now
-                    if (isMovePlayer && timeSettings.turnTimeSeconds > 0) {
+                    if (isMovePlayer && (timeSettings?.turnTimeSeconds ?: 0) > 0) {
                         append(" +${ceil(timeSpending.turnTimeLeft.coerceAtLeast(0.0)).toInt()}")
                     }
                 }
