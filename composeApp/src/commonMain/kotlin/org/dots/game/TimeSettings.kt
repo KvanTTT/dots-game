@@ -5,9 +5,11 @@ import org.dots.game.core.Game
 import org.dots.game.core.GameTreeNode
 import org.dots.game.core.Player
 import org.dots.game.core.PropertiesHolder
+import org.dots.game.sgf.toOvertimeSecondsOrNull
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.round
+import kotlin.math.roundToInt
 
 /**
  * The time control of a game: Dots is normally played with [mainTimeMinutes] for the whole game plus
@@ -78,6 +80,35 @@ private fun GameTreeNode.isMoveOf(player: Player): Boolean =
 /** The `BL` or the `WL` property of a move or of a game, see [mainTimeLeft]. */
 private fun PropertiesHolder.timeLeft(player: Player): Double? =
     if (player == Player.First) player1TimeLeft else player2TimeLeft
+
+/**
+ * Records [timeSettings] on the game itself: a move only records what the player who made it has left,
+ * so it's the game that tells what both players start with, see [GameTreeNode.mainTimeLeft].
+ *
+ * The main time is the time limit of SGF (`TM`, in seconds) and the time of a move is its overtime (`OT`),
+ * which officially describes the overtime method in words while the apps of Dots put the time of a move
+ * there, see [timeSettings].
+ */
+fun Game.setTimeControl(timeSettings: TimeSettings) {
+    time = timeSettings.mainTimeSeconds.toDouble()
+    overtime = timeSettings.turnTimeSeconds.toString()
+}
+
+/**
+ * The time control the game was played with, see [setTimeControl].
+ *
+ * The time of a move is read the way the apps of Dots write it, see [toOvertimeSecondsOrNull].
+ *
+ * @return `null` if the game keeps no time limit, thus no time control to speak of.
+ */
+fun Game.timeSettings(): TimeSettings? {
+    val mainTimeSeconds = time ?: return null
+
+    return TimeSettings(
+        mainTimeMinutes = (mainTimeSeconds / SECONDS_PER_MINUTE).roundToInt(),
+        turnTimeSeconds = overtime?.toOvertimeSecondsOrNull()?.roundToInt() ?: 0,
+    )
+}
 
 /**
  * Stamps on this node what [player] has left of the main time after the move it was made with, that is

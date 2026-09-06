@@ -161,12 +161,18 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
          * Starts the clock of a new game, or drops it if the game is played without a time control:
          * only a game that is created here is played with a clock, a loaded one and the one the app is
          * reopened with are not, because the time they were left with is no longer running.
+         *
+         * The clock is recorded on [game] as well, so that a saved game carries the time control it was
+         * played with rather than the times of its moves alone, see [Game.setTimeControl]. A loaded game
+         * keeps the one it comes with, thus a game is only passed here when the app creates it.
          */
-        fun startTimeControl(newTimeControl: TimeSettings?) {
+        fun startTimeControl(newTimeControl: TimeSettings?, game: Game? = null) {
             val enabledTimeControl = newTimeControl?.takeIf { it.isEnabled }
             timeControl = enabledTimeControl
             timeSpending = enabledTimeControl?.let { TimeSpending.of(it) } ?: TimeSpending.None
             timeControlIsStopped = false
+
+            enabledTimeControl?.let { game?.setTimeControl(it) }
         }
 
         /**
@@ -252,11 +258,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
             if (contentOrPath == null) {
                 games = Games.fromRules(newGameDialogRules)
                 // The time control is a property of a game that is created here rather than of a loaded one
-                startTimeControl(newGameTimeSettings)
-                // The main time is what both players start with, and a move only records the time of
-                // the player who made it, so it's the game itself that tells the time of the one
-                // who hasn't moved yet, see `GameTreeNode.mainTimeLeft`
-                timeControl?.let { games.first().time = it.mainTimeSeconds.toDouble() }
+                startTimeControl(newGameTimeSettings, games.first())
                 onGamesChange(games)
                 switchGame(0)
             } else {
@@ -551,7 +553,9 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                 displayedTimeSpending?.let { displayedTime ->
                     Row(Modifier.padding(bottom = 10.dp)) {
                         TimeView(
-                            timeControl,
+                            // A loaded game reports the time control it was played with rather than one
+                            // that is running, see `Game.timeSettings`
+                            timeControl ?: currentGame.timeSettings(),
                             displayedTime,
                             movePlayer = playerToMove.takeIf { clockIsRunning },
                             strings,

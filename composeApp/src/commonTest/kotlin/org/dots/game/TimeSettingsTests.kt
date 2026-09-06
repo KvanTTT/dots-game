@@ -6,7 +6,10 @@ import org.dots.game.core.GameTree
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
 import org.dots.game.core.PositionXY
+import org.dots.game.core.Games
 import org.dots.game.core.Rules
+import org.dots.game.sgf.Sgf
+import org.dots.game.sgf.SgfWriter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -212,6 +215,30 @@ class TimeSettingsTests {
         secondMove.setMainTimeLeft(Player.Second, 280.0)
         assertEquals(280.0, secondMove.player2TimeLeft)
         assertNull(secondMove.player1TimeLeft)
+    }
+
+    /**
+     * A move records the time of the player who made it alone, so it's the game that tells the time
+     * control both players start with: the time limit (`TM`) and the time of a move (`OT`) of SGF.
+     */
+    @Test
+    fun theTimeControlOfAGameSurvivesSgf() {
+        val gameTree = playedGame()
+        val game = Game(gameTree).apply { setTimeControl(TIME_SETTINGS) }
+        assertNotNull(gameTree.rootNode.children.single()).setMainTimeLeft(Player.First, 290.0)
+
+        val sgf = SgfWriter.write(Games(listOf(game)))
+        assertTrue("TM[300]" in sgf, sgf)
+        assertTrue("OT[25]" in sgf, sgf)
+
+        val loadedGame = Sgf.parseAndConvert(sgf) { }.single()
+        assertEquals(TIME_SETTINGS, loadedGame.timeSettings())
+        // A loaded game reports the time both players start with, the way a played one does
+        assertEquals(MainTimeLeft(300.0, 300.0), loadedGame.gameTree.rootNode.mainTimeLeft(loadedGame))
+        assertEquals(
+            MainTimeLeft(290.0, 300.0),
+            assertNotNull(loadedGame.gameTree.rootNode.children.single()).mainTimeLeft(loadedGame),
+        )
     }
 
     private fun playedGame(): GameTree = GameTree(Field.create(Rules.Standard)).apply {
