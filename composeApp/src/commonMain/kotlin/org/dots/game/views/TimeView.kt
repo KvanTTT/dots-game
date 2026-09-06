@@ -32,7 +32,7 @@ fun TimeView(
 ) {
     val timeControlInfo = timeSettings?.let {
         buildString {
-            appendLine("${strings.mainTime}: ${it.mainTimeMinutes}")
+            appendLine("${strings.mainTime}: ${it.mainTimeMinutes.toMinutesString()}")
             append("${strings.turnTime}: ${it.turnTimeSeconds}")
         }
     }
@@ -63,3 +63,6 @@ fun TimeView(
         }
     }
 }
+
+/** The minutes of a time control, which are whole unless the game was played with a time of its own. */
+private fun Double.toMinutesString(): String = if (this % 1.0 == 0.0) toInt().toString() else toFixed(1)

@@ -91,7 +91,7 @@ fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? 
             }
             is TimeSettings -> {
                 context(settings, settingsObj) {
-                    setSetting(TimeSettings::mainTimeMinutes)
+                    setSetting(TimeSettings::mainTimeSeconds)
                     setSetting(TimeSettings::turnTimeSeconds)
                 }
             }
@@ -197,7 +197,7 @@ fun <T : ClassSettings<T>> loadClassSettings(defaultSettingsObj: T, directory: S
             is TimeSettings -> {
                 context(settings, defaultSettingsObj) {
                     TimeSettings(
-                        mainTimeMinutes = getSetting(TimeSettings::mainTimeMinutes),
+                        mainTimeSeconds = getSetting(TimeSettings::mainTimeSeconds),
                         turnTimeSeconds = getSetting(TimeSettings::turnTimeSeconds),
                     )
                 }

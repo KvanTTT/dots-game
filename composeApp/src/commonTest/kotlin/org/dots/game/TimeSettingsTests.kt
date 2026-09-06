@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
 /** The time of a move is spent before the main one and it's not banked, that is a Bronstein delay. */
 class TimeSettingsTests {
     companion object {
-        private val TIME_SETTINGS = TimeSettings(mainTimeMinutes = 5, turnTimeSeconds = 25)
+        private val TIME_SETTINGS = TimeSettings(mainTimeSeconds = 5 * 60, turnTimeSeconds = 25)
     }
 
     private val initialSpending = TimeSpending.of(TIME_SETTINGS)
@@ -85,7 +85,7 @@ class TimeSettingsTests {
     /** A game without the main time is a game where a move that is not made in time is lost. */
     @Test
     fun theTimeOfAMoveIsTheWholeTimeWhenThereIsNoMainOne() {
-        val turnTimeOnly = TimeSpending.of(TimeSettings(mainTimeMinutes = 0, turnTimeSeconds = 25))
+        val turnTimeOnly = TimeSpending.of(TimeSettings(mainTimeSeconds = 0, turnTimeSeconds = 25))
 
         assertFalse(turnTimeOnly.spend(Player.First, 24.0).isTimeUp(Player.First))
         assertTrue(turnTimeOnly.spend(Player.First, 25.0).isTimeUp(Player.First))
@@ -116,9 +116,9 @@ class TimeSettingsTests {
 
     @Test
     fun aTimeControlOfZerosIsNoTimeControl() {
-        assertFalse(TimeSettings(mainTimeMinutes = 0, turnTimeSeconds = 0).isEnabled)
-        assertTrue(TimeSettings(mainTimeMinutes = 0, turnTimeSeconds = 25).isEnabled)
-        assertTrue(TimeSettings(mainTimeMinutes = 5, turnTimeSeconds = 0).isEnabled)
+        assertFalse(TimeSettings(mainTimeSeconds = 0, turnTimeSeconds = 0).isEnabled)
+        assertTrue(TimeSettings(mainTimeSeconds = 0, turnTimeSeconds = 25).isEnabled)
+        assertTrue(TimeSettings(mainTimeSeconds = 5 * 60, turnTimeSeconds = 0).isEnabled)
     }
 
     /** A move of SGF carries the time of the player who made it alone, that is `BL` or `WL` but not both. */
@@ -239,6 +239,30 @@ class TimeSettingsTests {
             MainTimeLeft(290.0, 300.0),
             assertNotNull(loadedGame.gameTree.rootNode.children.single()).mainTimeLeft(loadedGame),
         )
+    }
+
+    /**
+     * The times are kept in seconds, the way SGF stores them, while the main one is displayed in minutes.
+     *
+     * The forms the time of a move is written in are the business of the converter of SGF,
+     * see `SgfConverterTests.overtime`.
+     */
+    @Test
+    fun theMainTimeIsKeptInSecondsAndDisplayedInMinutes() {
+        assertEquals(300, TIME_SETTINGS.mainTimeSeconds)
+        assertEquals(5.0, TIME_SETTINGS.mainTimeMinutes)
+
+        // The time control of a game that is played with a time of its own is kept as it is rather than
+        // rounded to whole minutes, while the time of a move is rounded, the way it's displayed
+        val timeSettings = assertNotNull(Game(playedGame()).apply { time = 150.0; overtime = "7.5" }.timeSettings())
+        assertEquals(150, timeSettings.mainTimeSeconds)
+        assertEquals(2.5, timeSettings.mainTimeMinutes)
+        assertEquals(8, timeSettings.turnTimeSeconds)
+
+        // A game that tells no time of a move is played without one
+        assertEquals(0, assertNotNull(Game(playedGame()).apply { time = 150.0 }.timeSettings()).turnTimeSeconds)
+        // A game that tells no main time was played with no time control to report at all
+        assertNull(Game(playedGame()).timeSettings())
     }
 
     private fun playedGame(): GameTree = GameTree(Field.create(Rules.Standard)).apply {

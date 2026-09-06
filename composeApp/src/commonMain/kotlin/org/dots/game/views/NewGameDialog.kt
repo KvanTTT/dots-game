@@ -7,6 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import org.dots.game.SECONDS_PER_MINUTE
 import org.dots.game.TimeSettings
 import org.dots.game.Tooltip
 import org.dots.game.UiSettings
@@ -62,7 +63,7 @@ fun NewGameDialog(
     }
     var drawIsAllowed by remember { mutableStateOf(integerKomi == 0) }
 
-    var mainTimeMinutes by remember { mutableStateOf(timeSettings.mainTimeMinutes) }
+    var mainTimeSeconds by remember { mutableStateOf(timeSettings.mainTimeSeconds) }
     var turnTimeSeconds by remember { mutableStateOf(timeSettings.turnTimeSeconds) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -142,11 +143,15 @@ fun NewGameDialog(
                 // The clock is a property of a game that is being played rather than of a loaded one,
                 // so it's set up here only. Both times zeroed mean a game that is played without a clock
                 Tooltip(strings.mainTimeDescription) {
+                    // The main time is kept in seconds and set up in minutes, thus the step of a minute
                     DiscreteSliderConfig(
-                        strings.mainTime, mainTimeMinutes, 0, TimeSettings.MAX_MAIN_TIME_MINUTES,
-                        valueRenderer = { if (it == 0) strings.noTimeControl else it.toString() },
+                        strings.mainTime, mainTimeSeconds, 0, TimeSettings.MAX_MAIN_TIME_SECONDS,
+                        step = SECONDS_PER_MINUTE,
+                        valueRenderer = {
+                            if (it == 0) strings.noTimeControl else (it / SECONDS_PER_MINUTE).toString()
+                        },
                     ) {
-                        mainTimeMinutes = it
+                        mainTimeSeconds = it
                     }
                 }
                 Tooltip(strings.turnTimeDescription) {
@@ -158,7 +163,7 @@ fun NewGameDialog(
                     }
                 }
                 // The zeros of the sliders alone don't tell what a game of no time at all is played like
-                if (!TimeSettings(mainTimeMinutes, turnTimeSeconds).isEnabled) {
+                if (!TimeSettings(mainTimeSeconds, turnTimeSeconds).isEnabled) {
                     Text(strings.noTimeControlHint, style = MaterialTheme.typography.caption)
                 }
 
@@ -184,7 +189,7 @@ fun NewGameDialog(
                                     }
                                 }
                             ),
-                            TimeSettings(mainTimeMinutes, turnTimeSeconds),
+                            TimeSettings(mainTimeSeconds, turnTimeSeconds),
                         )
                     },
                     modifier = Modifier.align(Alignment.CenterHorizontally),

@@ -12,20 +12,23 @@ import kotlin.math.round
 import kotlin.math.roundToInt
 
 /**
- * The time control of a game: Dots is normally played with [mainTimeMinutes] for the whole game plus
+ * The time control of a game: Dots is normally played with [mainTimeSeconds] for the whole game plus
  * [turnTimeSeconds] for every move, where the time of a move is spent first and only its overflow is charged
  * to the main time, which is known as a Bronstein delay. The time of a move that is left is not banked.
+ *
+ * Both times are kept in seconds, the way SGF stores them, although the main one is set up and displayed
+ * in minutes, see [mainTimeMinutes].
  *
  * A player who has spent the whole main time loses the game, see [ExternalFinishReason.Time].
  */
 data class TimeSettings(
-    val mainTimeMinutes: Int = 5,
+    val mainTimeSeconds: Int = 5 * SECONDS_PER_MINUTE,
     val turnTimeSeconds: Int = 25,
 ) : ClassSettings<TimeSettings>() {
     companion object {
         val Default = TimeSettings()
 
-        const val MAX_MAIN_TIME_MINUTES = 60
+        const val MAX_MAIN_TIME_SECONDS = 60 * SECONDS_PER_MINUTE
         const val MAX_TURN_TIME_SECONDS = 60
     }
 
@@ -34,10 +37,14 @@ data class TimeSettings(
 
     /** A clock of no time at all would end the game at once, so both times zeroed mean no clock. */
     val isEnabled: Boolean
-        get() = mainTimeMinutes > 0 || turnTimeSeconds > 0
+        get() = mainTimeSeconds > 0 || turnTimeSeconds > 0
 
-    val mainTimeSeconds: Int
-        get() = mainTimeMinutes * SECONDS_PER_MINUTE
+    /**
+     * The main time as it's set up and displayed, which is a fraction of a minute for a game that is
+     * played with a time of its own rather than with one of this app: `150` seconds are `2.5` minutes.
+     */
+    val mainTimeMinutes: Double
+        get() = mainTimeSeconds.toDouble() / SECONDS_PER_MINUTE
 }
 
 /** How much of the main time every player has left, in seconds. */
@@ -105,7 +112,7 @@ fun Game.timeSettings(): TimeSettings? {
     val mainTimeSeconds = time ?: return null
 
     return TimeSettings(
-        mainTimeMinutes = (mainTimeSeconds / SECONDS_PER_MINUTE).roundToInt(),
+        mainTimeSeconds = mainTimeSeconds.roundToInt(),
         turnTimeSeconds = overtime?.toOvertimeSecondsOrNull()?.roundToInt() ?: 0,
     )
 }
