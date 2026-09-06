@@ -83,6 +83,8 @@ class SgfGameMode {
 enum class SgfPropertyType {
     Number,
     Double,
+    /** The time of a move of a game, see [toOvertimeSecondsOrNull]. */
+    Overtime,
     SimpleText,
     Text,
     Size,
@@ -195,7 +197,7 @@ object SgfMetaInfo {
         COPYRIGHT_KEY to SgfPropertyInfo("Copyright", Game::copyright),
         SOURCE_KEY to SgfPropertyInfo("Source", Game::source),
         TIME_KEY to SgfPropertyInfo("Time", Game::time, SgfPropertyType.Double),
-        OVERTIME_KEY to SgfPropertyInfo("Overtime", Game::overtime),
+        OVERTIME_KEY to SgfPropertyInfo("Overtime", Game::overtime, SgfPropertyType.Overtime),
         APP_INFO_KEY to SgfPropertyInfo("App Info", Game::appInfo, SgfPropertyType.AppInfo),
         PLAYER1_ADD_DOTS_KEY to SgfPropertyInfo("Player1 initial dots", Game::player1AddDots, SgfPropertyType.MovePosition, multipleValues = true),
         PLAYER2_ADD_DOTS_KEY to SgfPropertyInfo("Player2 initial dots", Game::player2AddDots, SgfPropertyType.MovePosition, multipleValues = true),
@@ -247,3 +249,29 @@ val ruleNameToExtraProperty: Map<String, KProperty1<Rules, *>> = ruleExtraProper
 
 val ruleKataGoNameToExtraProperty: Map<String, KProperty1<Rules, *>> = ruleExtraPropertyToKataGoName.entries.associateBy({ it.value }) { it.key }
 
+/**
+ * The time of a move the overtime (`OT`) of a game tells: officially the property describes the overtime
+ * method in words, while the apps of Dots put the time of a move there, in one of the forms below.
+ *
+ * The value is kept as it is written, and this is what reads it, so that a value that means no time
+ * of a move is reported rather than silently taken for one, see [SgfPropertyType.Overtime].
+ *
+ * @return the time of a move in seconds: `25` and `25.5` of this app, `0+25` of zagram (the time follows
+ * the number of the overtime periods) and `20 sec / move` of playdots; `null` if the value is none of them.
+ */
+fun String.toOvertimeSecondsOrNull(): Double? {
+    val overtime = trim()
+
+    val periodsEnd = overtime.indexOf('+')
+    val turnTime = if (periodsEnd >= 0) {
+        // The number of the overtime periods is of no use, but a value that has none is not an overtime
+        if (overtime.substring(0, periodsEnd).trim().toDoubleOrNull() == null) return null
+        overtime.substring(periodsEnd + 1).trim()
+    } else {
+        overtime
+    }
+
+    return overtimeRegex.matchEntire(turnTime)?.groupValues?.get(1)?.toDoubleOrNull()
+}
+
+private val overtimeRegex = Regex("(\\d+(?:\\.\\d+)?)(?:\\s*sec(?:onds?)?\\s*/\\s*move)?")

@@ -555,6 +555,18 @@ class SgfConverter(
                         }
                     }
                 }
+                SgfPropertyType.Overtime -> {
+                    propertyValue.convertSimpleText().takeIf { it.toOvertimeSecondsOrNull() != null }.also {
+                        if (it == null) {
+                            propertyInfo.reportPropertyDiagnostic(
+                                "has incorrect format: `${propertyValue}`. Expected: the time of a move, " +
+                                        "`25`, `0+25` or `20 sec / move`.",
+                                propertyValueToken.textSpan,
+                                DiagnosticSeverity.Warning,
+                            )
+                        }
+                    }
+                }
                 SgfPropertyType.SimpleText -> propertyValue.convertSimpleText()
                 SgfPropertyType.Text -> propertyValue.convertText()
                 SgfPropertyType.Size -> propertyValueToken.convertSize(propertyInfo)

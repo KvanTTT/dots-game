@@ -57,6 +57,54 @@ class SgfConverterTests {
         }
     }
 
+    /**
+     * The overtime (`OT`) of a game tells the time of a move: officially it describes the overtime method
+     * in words, while the apps of Dots write a time there, see [toOvertimeSecondsOrNull].
+     */
+    @Test
+    fun overtime() {
+        fun checkOvertime(overtime: String, expectedSeconds: Double) {
+            val game = checkParseAndUnparse("(;GM[40]FF[4]SZ[39:32]OT[$overtime])").single()
+            assertEquals(overtime, game.overtime)
+            assertEquals(expectedSeconds, game.overtime?.toOvertimeSecondsOrNull())
+        }
+
+        // The plain time of a move this app writes, a fractional one included
+        checkOvertime("25", 25.0)
+        checkOvertime("25.5", 25.5)
+        // The time of a move follows the number of the overtime periods (zagram)
+        checkOvertime("0+25", 25.0)
+        // The time of a move is spelled out (playdots)
+        checkOvertime("20 sec / move", 20.0)
+        checkOvertime("20 seconds/move", 20.0)
+    }
+
+    @Test
+    fun overtimeIncorrect() {
+        fun checkIncorrectOvertime(overtime: String) {
+            val game = checkParseAndUnparse(
+                "(;GM[40]FF[4]SZ[39:32]OT[$overtime])", listOf(
+                    LineColumnDiagnostic(
+                        "Property OT (Overtime) has incorrect format: `$overtime`. " +
+                                "Expected: the time of a move, `25`, `0+25` or `20 sec / move`.",
+                        LineColumn(1, 26),
+                        DiagnosticSeverity.Warning
+                    ),
+                )
+            ).single()
+            // A value that tells no time of a move is no overtime of a game at all
+            assertNull(game.overtime)
+        }
+
+        checkIncorrectOvertime("unknown")
+        checkIncorrectOvertime("byo-yomi 5x30")
+        // The time of a move is spelled out only the way the apps of Dots do it
+        checkIncorrectOvertime("25 sec")
+        checkIncorrectOvertime("25 / move")
+        // The number of the overtime periods is missing
+        checkIncorrectOvertime("+25")
+    }
+
     private val multiGamesSgf = """
             (;GM[40]FF[4]SZ[39:32]GN[game 1])
             (;GM[40]FF[4]SZ[20:20]GN[game 2])
