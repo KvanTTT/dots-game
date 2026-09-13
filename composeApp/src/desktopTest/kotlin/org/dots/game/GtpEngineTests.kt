@@ -26,7 +26,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The engine tests of the GTP protocol, see [KataGoDotsEngineTests] for the analysis one.
+ * The engine tests of the GTP protocol, see [KataGoDotsAnalysisEngineTests] for the analysis one.
  *
  * Unlike the analysis engine, the GTP one keeps a position of its own, so most of the tests are about
  * the synchronization of that position with the field, see [GtpProtocol.sync].
@@ -58,8 +58,8 @@ class GtpEngineTests {
         return runBlocking {
             KataGoDotsEngine.initialize(
                 KataGoDotsSettings(
-                    KataGoDotsEngineTests.TEST_ENGINE,
-                    KataGoDotsEngineTests.TEST_MODEL,
+                    KataGoDotsAnalysisEngineTests.TEST_ENGINE,
+                    KataGoDotsAnalysisEngineTests.TEST_MODEL,
                     TEST_GTP_CONFIG,
                     protocol = EngineProtocol.Gtp,
                 )

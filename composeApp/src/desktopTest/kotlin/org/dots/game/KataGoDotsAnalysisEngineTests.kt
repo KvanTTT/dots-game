@@ -33,7 +33,7 @@ const val KataGoDotsGtpConfigKey = "KataGoDotsGtpConfig"
 @EnabledIfEnvironmentVariable(named = KataGoDotsEngineKey, matches = ".*")
 @EnabledIfEnvironmentVariable(named = KataGoDotsModelKey, matches = ".*")
 @EnabledIfEnvironmentVariable(named = KataGoDotsConfigKey, matches = ".*")
-class KataGoDotsEngineTests {
+class KataGoDotsAnalysisEngineTests {
     companion object {
         val TEST_ENGINE: String = System.getenv(KataGoDotsEngineKey)!!
         val TEST_MODEL: String = System.getenv(KataGoDotsModelKey)!!
