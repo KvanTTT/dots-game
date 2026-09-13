@@ -8,7 +8,7 @@ actual class KataGoDotsEngine {
     actual val settings: KataGoDotsSettings
         get() = TODO("Not yet implemented")
 
-    actual suspend fun generateMove(field: Field, player: Player?): MoveInfo? {
+    actual suspend fun generateMove(field: Field, player: Player?, clock: PlayerClock?): MoveInfo? {
         TODO("Not yet implemented")
     }
 

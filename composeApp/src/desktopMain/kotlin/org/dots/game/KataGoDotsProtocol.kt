@@ -68,7 +68,7 @@ internal abstract class KataGoDotsProtocol(
     private val writeMutex = Mutex()
 
     /** @see KataGoDotsEngine.generateMove */
-    abstract suspend fun generateMove(field: Field, player: Player?): MoveInfo?
+    abstract suspend fun generateMove(field: Field, player: Player?, clock: PlayerClock?): MoveInfo?
 
     /** @see KataGoDotsEngine.analyze */
     abstract suspend fun analyze(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis?

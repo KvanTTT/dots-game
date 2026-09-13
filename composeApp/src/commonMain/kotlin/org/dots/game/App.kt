@@ -394,14 +394,21 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     engineIsCalculating = true
                     val moveInfo = withFrozenPosition {
                         val movePlayer = moveMode.getMovePlayer(getField())
+                        // The engine thinks on the clock of the game, so that a move of its own costs it
+                        // no more time than the game allows, see `PlayerClock`
+                        val clock = timeControl
+                            ?.takeIf { !timeControlIsStopped && !getField().isGameOver() }
+                            ?.let { control -> PlayerClock.of(control, timeSpending, movePlayer) }
                         // The analysis of the current position already reports the move the engine would play,
                         // so an AI move in the analysis mode needs no search of its own. The analysis is dropped
                         // as soon as the position or the player to move changes, thus a present one always
-                        // matches what is being asked for
+                        // matches what is being asked for.
+                        // A move that is played on a clock is searched anew: an analysis is searched by
+                        // the limits of the engine rather than by the time the move is allowed to take
                         val analyzedMove = moveAnalysis
-                            ?.takeIf { analysis -> analysis.player == movePlayer }
+                            ?.takeIf { analysis -> clock == null && analysis.player == movePlayer }
                             ?.chosenMove
-                        val generatedMove = analyzedMove ?: it.generateMove(getField(), movePlayer)
+                        val generatedMove = analyzedMove ?: it.generateMove(getField(), movePlayer, clock)
                         // The clock may have ended the game while the engine was thinking
                         if (generatedMove != null && !getField().isGameOver()) {
                             getGameTree().disabled = false

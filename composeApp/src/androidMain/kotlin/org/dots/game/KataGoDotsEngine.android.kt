@@ -12,7 +12,8 @@ actual class KataGoDotsEngine {
 
     actual suspend fun generateMove(
         field: Field,
-        player: Player?
+        player: Player?,
+        clock: PlayerClock?,
     ): MoveInfo? {
         TODO("Not yet implemented")
     }

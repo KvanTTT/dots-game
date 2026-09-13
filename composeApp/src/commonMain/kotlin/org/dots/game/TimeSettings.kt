@@ -47,6 +47,25 @@ data class TimeSettings(
         get() = mainTimeSeconds.toDouble() / SECONDS_PER_MINUTE
 }
 
+/**
+ * The clock the engine is told to think on: the time control of the game and what the player to move
+ * has left of it, which is what the `time_settings` and `time_left` commands of GTP state and what
+ * the `timeControl` of an analysis query states, see [KataGoDotsEngine.generateMove].
+ */
+data class PlayerClock(
+    val timeSettings: TimeSettings,
+    /** What the player to move has left of the main time, in seconds. */
+    val mainTimeLeft: Double,
+    /** What the player to move has left of the time of the move, in seconds. */
+    val turnTimeLeft: Double,
+) {
+    companion object {
+        /** The clock [player] is to move on, taken off the one the game keeps. */
+        fun of(timeSettings: TimeSettings, timeSpending: TimeSpending, player: Player): PlayerClock =
+            PlayerClock(timeSettings, timeSpending.mainTimeLeft[player], timeSpending.turnTimeLeft)
+    }
+}
+
 /** How much of the main time every player has left, in seconds. */
 data class MainTimeLeft(val player1: Double, val player2: Double) {
     operator fun get(player: Player): Double = if (player == Player.First) player1 else player2

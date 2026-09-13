@@ -113,13 +113,35 @@ internal class GtpProtocol private constructor(
         getOrSetParam(KataGoDotsSettings::maxPlayouts)
     }
 
-    override suspend fun generateMove(field: Field, player: Player?): MoveInfo? = onSynchronizedPosition(field) {
-        val effectivePlayer = player ?: field.getCurrentPlayer()
+    override suspend fun generateMove(field: Field, player: Player?, clock: PlayerClock?): MoveInfo? =
+        onSynchronizedPosition(field) {
+            val effectivePlayer = player ?: field.getCurrentPlayer()
 
-        val response = sendMessage("genmove ${effectivePlayer.toEngineMarker()}")
-        if (response.isError) return@onSynchronizedPosition null
+            clock?.let { setTimeControl(it, effectivePlayer) }
 
-        parseEngineMove(response.message, effectivePlayer, field.width, field.height)
+            val response = sendMessage("genmove ${effectivePlayer.toEngineMarker()}")
+            if (response.isError) return@onSynchronizedPosition null
+
+            parseEngineMove(response.message, effectivePlayer, field.width, field.height)
+        }
+
+    /**
+     * Tells the engine the clock the move is to be thought on: `time_settings` is the time control of
+     * the game and `time_left` is what [player] has left of it.
+     *
+     * Of a Dots game the engine reads the two times its control is stated in, and the third argument of
+     * `time_left` is what is left of the time of the move rather than the stones of a period,
+     * see `GTP_Extensions.md` of KataGoDots. A game that is played without a clock says nothing at all,
+     * which leaves the engine with the limits of its own config.
+     */
+    private suspend fun setTimeControl(clock: PlayerClock, player: Player) {
+        val timeSettings = clock.timeSettings
+        if (!trySendMessage("time_settings ${timeSettings.mainTimeSeconds} ${timeSettings.turnTimeSeconds}")) return
+
+        val _ = trySendMessage(
+            "time_left ${player.toEngineMarker()} " +
+                    "${clock.mainTimeLeft.roundToTenthOfSecond()} ${clock.turnTimeLeft.roundToTenthOfSecond()}"
+        )
     }
 
     override suspend fun analyze(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis? =

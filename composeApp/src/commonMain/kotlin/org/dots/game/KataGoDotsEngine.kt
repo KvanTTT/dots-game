@@ -23,10 +23,12 @@ expect class KataGoDotsEngine {
     val logger: (Diagnostic) -> Unit
 
     /**
+     * @param clock the clock the engine is to think on, `null` for a game that is played without one,
+     * which leaves the engine with the limits of its own config, see [PlayerClock].
      * @return the move the engine would play for [player] (the player to move by default), or `null`
      * if the rules are unsupported or the engine reported no move.
      */
-    suspend fun generateMove(field: Field, player: Player?): MoveInfo?
+    suspend fun generateMove(field: Field, player: Player?, clock: PlayerClock? = null): MoveInfo?
 
     /**
      * Evaluates all the candidate moves of the [field] position for [player] without playing any of them.

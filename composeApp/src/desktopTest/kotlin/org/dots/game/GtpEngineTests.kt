@@ -17,6 +17,8 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import kotlin.random.Random
 import kotlin.test.AfterTest
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -202,6 +204,74 @@ class GtpEngineTests {
             val moveInfo3 = defaultEngine.generateMove(it, player = null)!!
             assertNotNull(moveInfo3.positionXY)
             assertEquals(Player.First, moveInfo3.player)
+        }
+    }
+
+    /**
+     * The clock of the game is stated to the engine before it thinks: `time_settings` is the control
+     * it's played with and `time_left` is what the player has left of it, see `GTP_Extensions.md`
+     * of KataGoDots.
+     */
+    @Test
+    fun theClockOfTheGameIsStatedBeforeAMoveIsGenerated() {
+        runEngine { field ->
+            val clock = PlayerClock(
+                TimeSettings(mainTimeSeconds = 300, turnTimeSeconds = 1),
+                mainTimeLeft = 290.53,
+                turnTimeLeft = 1.0,
+            )
+
+            val moveInfo = assertNotNull(defaultEngine.generateMove(field, Player.First, clock))
+            assertNotNull(moveInfo.positionXY)
+
+            val commands = diagnostics.mapNotNull { it.message.substringAfterOrNull("Command: ") }
+            assertEquals("time_settings 300 1", commands.single { it.startsWith("time_settings") })
+            // The time left is stated with a tenth of a second, and the time of the move takes the place
+            // of the stones of a period, which a Bronstein delay has none of
+            assertEquals("time_left P1 290.5 1.0", commands.single { it.startsWith("time_left") })
+            assertTrue(
+                diagnostics.none { it.severity == DiagnosticSeverity.Error },
+                "The engine rejected the clock: $diagnostics",
+            )
+        }
+    }
+
+    /**
+     * A player who has spent the whole main time is left with the time of the move alone, and that is
+     * what the engine thinks within: the ten seconds a move of a Dots game is given by default,
+     * let alone a slice of the main time, would take far longer.
+     */
+    @Test
+    fun aMoveIsThoughtAboutWithinTheTimeThatIsLeft() {
+        runEngine { field ->
+            val turnTimes = listOf(5, 10, 15)
+            for (turnTime in turnTimes) {
+                val clock = PlayerClock(
+                    TimeSettings(mainTimeSeconds = 300, turnTimeSeconds = turnTime),
+                    mainTimeLeft = 0.0,
+                    turnTimeLeft = turnTime.toDouble(),
+                )
+
+                val searchTime = TimeSource.Monotonic.markNow()
+                assertNotNull(defaultEngine.generateMove(field, Player.First, clock))
+                val elapsed = searchTime.elapsedNow()
+
+                assertTrue(elapsed > (turnTime - 2).seconds && elapsed < (turnTime + 1).seconds)
+            }
+        }
+    }
+
+    /** A game that is played without a clock leaves the engine with the limits of its own config. */
+    @Test
+    fun noClockIsStatedForAGameThatIsPlayedWithoutOne() {
+        runEngine { field ->
+            assertNotNull(defaultEngine.generateMove(field, Player.First))
+
+            val commands = diagnostics.mapNotNull { it.message.substringAfterOrNull("Command: ") }
+            assertTrue(
+                commands.none { it.startsWith("time_settings") || it.startsWith("time_left") },
+                "The clock of no game at all was stated: $commands",
+            )
         }
     }
 

@@ -60,7 +60,8 @@ actual class KataGoDotsEngine internal constructor(private val protocol: KataGoD
     internal val gtp: GtpProtocol?
         get() = protocol as? GtpProtocol
 
-    actual suspend fun generateMove(field: Field, player: Player?): MoveInfo? = protocol.generateMove(field, player)
+    actual suspend fun generateMove(field: Field, player: Player?, clock: PlayerClock?): MoveInfo? =
+        protocol.generateMove(field, player, clock)
 
     actual suspend fun analyze(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis? =
         protocol.analyze(field, player, withOwnership)

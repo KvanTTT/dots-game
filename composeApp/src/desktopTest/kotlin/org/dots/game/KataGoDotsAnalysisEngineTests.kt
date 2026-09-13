@@ -17,6 +17,8 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import kotlin.random.Random
 import kotlin.test.AfterTest
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -156,6 +158,35 @@ class KataGoDotsAnalysisEngineTests {
 
             assertEquals(Player.Second, defaultEngine.analyze(it, Player.Second)!!.player)
             assertEquals(Player.First, defaultEngine.analyze(it, player = null)!!.player)
+        }
+    }
+
+    /**
+     * The clock of the game limits the search of a move: a query states it as its `timeControl`,
+     * see `Analysis_Engine.md` of KataGoDots. The `maxVisits` of the config is raised out of the way
+     * then, small as it is next to any clock, so the clock alone is what stops the search.
+     */
+    @Test
+    fun theClockOfTheGameLimitsTheSearchOfAMove() {
+        runBlocking {
+            val field = createField()
+
+            val turnTimes = listOf(5, 10, 15)
+            for (turnTime in turnTimes) {
+                val clock = PlayerClock(
+                    TimeSettings(mainTimeSeconds = 300, turnTimeSeconds = turnTime),
+                    mainTimeLeft = 0.0,
+                    turnTimeLeft = turnTime.toDouble(),
+                )
+
+                val searchTime = TimeSource.Monotonic.markNow()
+                assertNotNull(defaultEngine.generateMove(field, Player.First, clock))
+                val elapsed = searchTime.elapsedNow()
+
+                // The whole time of the move is spent on it: a delay is never banked when it's left
+                assertTrue(elapsed > (turnTime - 1).seconds, "Elapsed time $elapsed is less than expected $turnTime")
+                assertTrue(elapsed < (turnTime + 1).seconds, "Elapsed time $elapsed is greater than expected $turnTime")
+            }
         }
     }
 

@@ -176,13 +176,15 @@ internal class AnalysisProtocol private constructor(
         }
     }
 
-    override suspend fun generateMove(field: Field, player: Player?): MoveInfo? {
+    override suspend fun generateMove(field: Field, player: Player?, clock: PlayerClock?): MoveInfo? {
         // The ownership is of no use for a move, and it's by far the largest part of a response
-        return query(field, player, withOwnership = false)?.chosenMove
+        return query(field, player, withOwnership = false, clock)?.chosenMove
     }
 
     override suspend fun analyze(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis? {
-        return query(field, player, withOwnership)?.takeIf { it.moves.isNotEmpty() }
+        // An analysis is no move of a game, so it's searched by the limits of the engine rather than
+        // by the clock the players are on
+        return query(field, player, withOwnership, clock = null)?.takeIf { it.moves.isNotEmpty() }
     }
 
     /** A whole game is analyzed by a single query rather than by a search per turn. */
@@ -199,7 +201,7 @@ internal class AnalysisProtocol private constructor(
             queryId, field, moves,
             // Every turn is analyzed for the player it's the turn of, and the ownership of a whole game
             // would be a value per position per turn, which no graph of it displays
-            player = null, turnNumbers = turnNumbers, withOwnership = false,
+            player = null, turnNumbers = turnNumbers, withOwnership = false, clock = null,
         )
 
         val _ = withQuery(queryId, query) { responses ->
@@ -217,12 +219,19 @@ internal class AnalysisProtocol private constructor(
     }
 
     /** @return `null` if the engine reported no analysis at all, that is it rejected or dropped the query. */
-    private suspend fun query(field: Field, player: Player?, withOwnership: Boolean): MoveAnalysis? {
+    private suspend fun query(
+        field: Field,
+        player: Player?,
+        withOwnership: Boolean,
+        clock: PlayerClock?,
+    ): MoveAnalysis? {
         if (!doesKataSupportRules(field.rules)) return null
 
         val effectivePlayer = player ?: field.getCurrentPlayer()
         val queryId = queryCounter.incrementAndGet().toString()
-        val query = buildQuery(queryId, field, field.playedMoves(), effectivePlayer, turnNumbers = null, withOwnership)
+        val query = buildQuery(
+            queryId, field, field.playedMoves(), effectivePlayer, turnNumbers = null, withOwnership, clock,
+        )
         val response = send(queryId, query) ?: return null
 
         return parseMoveAnalysis(response, effectivePlayer, field.width, field.height)
@@ -282,6 +291,7 @@ internal class AnalysisProtocol private constructor(
      * It's left out for [turnNumbers], where every turn is analyzed for the player whose turn it is.
      *
      * @param turnNumbers the turns of the game to analyze, `null` for the position [moves] end at.
+     * @param clock the clock the search is limited by, `null` for a search the engine limits itself.
      */
     private fun buildQuery(
         queryId: String,
@@ -290,6 +300,7 @@ internal class AnalysisProtocol private constructor(
         player: Player?,
         turnNumbers: List<Int>?,
         withOwnership: Boolean,
+        clock: PlayerClock?,
     ): JsonObject {
         val rules = field.rules
 
@@ -332,12 +343,23 @@ internal class AnalysisProtocol private constructor(
 
             put(INCLUDE_OWNERSHIP_KEY, withOwnership)
 
-            // A zero means "unset" in the settings, and the engine then keeps the limit of its config
-            settings.maxVisits.takeIf { it > 0 }?.let { put(MAX_VISITS_KEY, it) }
-            if (settings.maxTime > 0 || settings.maxPlayouts > 0) {
-                putJsonObject(OVERRIDE_SETTINGS_KEY) {
-                    settings.maxTime.takeIf { it > 0 }?.let { put(MAX_TIME_KEY, it) }
-                    settings.maxPlayouts.takeIf { it > 0 }?.let { put(MAX_PLAYOUTS_KEY, it) }
+            if (clock != null) {
+                // The clock of the game limits the search of a move of it, and a game that is played without
+                // one leaves the engine with the limits of its config, see `GtpProtocol.setTimeControl`
+                putJsonObject(TIME_CONTROL_KEY) {
+                    put(MAIN_TIME_KEY, clock.timeSettings.mainTimeSeconds)
+                    put(PER_MOVE_TIME_KEY, clock.timeSettings.turnTimeSeconds)
+                    put(MAIN_TIME_LEFT_KEY, clock.mainTimeLeft.roundToTenthOfSecond())
+                    put(PER_MOVE_TIME_LEFT_KEY, clock.turnTimeLeft.roundToTenthOfSecond())
+                }
+            } else {
+                // A zero means "unset" in the settings, and the engine then keeps the limit of its config
+                settings.maxVisits.takeIf { it > 0 }?.let { put(MAX_VISITS_KEY, it) }
+                if (settings.maxTime > 0 || settings.maxPlayouts > 0) {
+                    putJsonObject(OVERRIDE_SETTINGS_KEY) {
+                        settings.maxTime.takeIf { it > 0 }?.let { put(MAX_TIME_KEY, it) }
+                        settings.maxPlayouts.takeIf { it > 0 }?.let { put(MAX_PLAYOUTS_KEY, it) }
+                    }
                 }
             }
         }
@@ -400,6 +422,11 @@ private const val MOVES_KEY = "moves"
 private const val PLAYER_TO_MOVE_KEY = "playerToMove"
 private const val ANALYZE_TURNS_KEY = "analyzeTurns"
 private const val INCLUDE_OWNERSHIP_KEY = "includeOwnership"
+private const val TIME_CONTROL_KEY = "timeControl"
+private const val MAIN_TIME_KEY = "mainTime"
+private const val PER_MOVE_TIME_KEY = "perMoveTime"
+private const val MAIN_TIME_LEFT_KEY = "mainTimeLeft"
+private const val PER_MOVE_TIME_LEFT_KEY = "perMoveTimeLeft"
 private const val MAX_VISITS_KEY = "maxVisits"
 private const val OVERRIDE_SETTINGS_KEY = "overrideSettings"
 private const val MAX_TIME_KEY = "maxTime"
