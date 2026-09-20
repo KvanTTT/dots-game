@@ -42,7 +42,10 @@ object SgfRefiner {
         gameTree.rewindToBegin()
 
         var currentNode: GameTreeNode? = gameTree.rootNode
-        var expectedNextPlayer = gameTree.field.rules.initPosType.nextPlayer
+        // The player to move follows from the dots of the start position rather than from the pattern they
+        // fit: a single dot of the second player is a `Single` start position all the same, and it's
+        // the first player who moves after it
+        var expectedNextPlayer = gameTree.field.rules.initialPlayer
 
         while (currentNode != null) {
             if (!currentNode.isRoot) {

@@ -43,6 +43,19 @@ class SgfRefinerTests {
             ))
     }
 
+    /**
+     * A start position of a single dot is recognized as [InitPosType.Single] whichever player the dot
+     * belongs to, and it's the other player who moves after it.
+     */
+    @Test
+    fun singleDotOfTheSecondPlayerIsFollowedByTheFirstOne() {
+        val refinedGame = checkSingleGame(
+            "(;GM[40]FF[4]SZ[39:32]AW[tp];B[up];W[uq])",
+            "(;GM[40]FF[4]SZ[39:32]AW[tp];B[up];W[uq])",
+        )
+        assertEquals(InitPosType.Single, refinedGame.gameTree.field.rules.initPosType)
+    }
+
     @Test
     fun dropSecondaryBranches() {
         checkSingleGame(

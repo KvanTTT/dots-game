@@ -27,6 +27,18 @@ class Rules private constructor(
     override val default: Rules
         get() = Standard
 
+    /**
+     * The player who moves first on the start position: the one that has fewer dots on it, and the first
+     * player when both have as many. A start position of a single dot is thus followed by the other player,
+     * whichever one the dot belongs to, see [InitPosType.Single].
+     */
+    val initialPlayer: Player
+        get() {
+            val initialDots = initialMoves + remainingInitMoves
+            val player1Dots = initialDots.count { it.player == Player.First }
+            return if (player1Dots > initialDots.size - player1Dots) Player.Second else Player.First
+        }
+
     companion object {
         val Standard: Rules = create(
             width = 39,
@@ -117,14 +129,6 @@ enum class InitPosType {
     DoubleCross,
     QuadrupleCross,
     Custom;
-
-    val nextPlayer: Player
-        get() {
-            return when (this) {
-                Single -> Player.Second
-                else -> Player.First
-            }
-        }
 
     companion object {
         const val MARLOV_MIN_EDGE_DISTANCE: Int = 8
