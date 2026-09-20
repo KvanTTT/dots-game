@@ -9,7 +9,10 @@ import org.dots.game.core.Field
 import org.dots.game.core.IllegalMove
 import org.dots.game.core.MoveInfo
 import org.dots.game.core.Player
+import java.io.File
 import java.io.OutputStreamWriter
+import java.nio.file.Files
+import java.nio.file.Paths
 
 /**
  * The way the app talks to the engine process, see [KataGoDotsEngine] for what it is asked for.
@@ -36,8 +39,22 @@ internal abstract class KataGoDotsProtocol(
          * The analysis protocol keeps the streams apart instead, because it reads the startup log
          * of the engine along with the responses rather than after them.
          */
-        fun startProcess(settings: KataGoDotsSettings, mode: String, mergeErrorStream: Boolean): Process =
-            ProcessBuilder(
+        fun startProcess(settings: KataGoDotsSettings, mode: String, mergeErrorStream: Boolean): Process {
+            // The log directory a config states is relative to the directory the app is started in, and an
+            // installed app is started in one it may not write to, which the engine dies of. It's given a
+            // directory of the user instead, and the one the engine would create is created here, because
+            // the engine creates the directory of its log but not the path that leads to it
+            val logDir = settings.logDir ?: KataGoDotsEngine.DEFAULT_LOGS_DIR
+            val _ = runCatching { Files.createDirectories(Paths.get(logDir)) }
+
+            // The packaging of an app doesn't necessarily keep the executable bit of the engine it ships,
+            // and an engine that can't be executed is no engine at all
+            val exe = File(settings.exePath)
+            if (exe.isFile && !exe.canExecute()) {
+                val _ = exe.setExecutable(true)
+            }
+
+            return ProcessBuilder(
                 settings.exePath,
                 mode,
                 "-model", settings.modelPath,
@@ -47,10 +64,9 @@ internal abstract class KataGoDotsProtocol(
                 // them for the first player. A config that does so would turn every evaluation and every
                 // ownership of a position of the second player upside down, so the app states its own
                 "-override-config", "reportAnalysisWinratesAs=SIDETOMOVE",
-                // MacOS doesn't allow writing to a `user.home` directory without extra permissions, so don't use it for now.
-                // Probably it makes sense to introduce logging to a custom directory:
-                // "-override-config", "${settings::logDir.name}=\"${settings.logDir ?: DEFAULT_LOGS_DIR}\"",
+                "-override-config", "logDir=$logDir",
             ).redirectErrorStream(mergeErrorStream).start()
+        }
 
         /** The reason a process that is no longer alive gives for a setup that doesn't work. */
         fun startupFailureMessage(process: Process, lastLogLine: String?): String {

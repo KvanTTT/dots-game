@@ -102,7 +102,8 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
         var strings by remember { mutableStateOf(uiSettings.language.getStrings()) }
         var newGameDialogRules by remember { mutableStateOf(loadClassSettings(Rules.Standard)) }
         var openGameSettings by remember { mutableStateOf(loadClassSettings(OpenGameSettings.Default)) }
-        var kataGoDotsSettings by remember { mutableStateOf(loadClassSettings(KataGoDotsSettings.Default)) }
+        // The engine the app is shipped with is the default, so that a fresh install plays out of the box
+        var kataGoDotsSettings by remember { mutableStateOf(loadClassSettings(KataGoDotsEngine.defaultSettings)) }
         val coroutineScope = rememberCoroutineScope()
 
         var start by remember { mutableStateOf(true) }

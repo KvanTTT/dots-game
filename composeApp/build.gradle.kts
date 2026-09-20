@@ -195,6 +195,11 @@ compose.desktop {
             packageVersion = "${buildInfo.majorVersion}.${buildInfo.minorVersion}.${buildInfo.buildNumber}"
             vendor = "Dots Game Org"
 
+            // The engine, its config and its model are shipped along with the app, so that it plays out of
+            // the box, see `KataGoDotsEngine`. The common files and the ones of the platform being packaged
+            // are merged into a single directory, which the app is told by `compose.application.resources.dir`
+            appResourcesRootDir.set(project.layout.projectDirectory.dir("appResources"))
+
             windows {
                 perUserInstall = true
                 menu = true
