@@ -42,6 +42,11 @@ internal abstract class KataGoDotsProtocol(
                 mode,
                 "-model", settings.modelPath,
                 "-config", settings.configPath,
+                // Every evaluation is read as the one of the player to move, which is what the configs of
+                // KataGoDots report (`reportAnalysisWinratesAs`), while the example configs of KataGo report
+                // them for the first player. A config that does so would turn every evaluation and every
+                // ownership of a position of the second player upside down, so the app states its own
+                "-override-config", "reportAnalysisWinratesAs=SIDETOMOVE",
                 // MacOS doesn't allow writing to a `user.home` directory without extra permissions, so don't use it for now.
                 // Probably it makes sense to introduce logging to a custom directory:
                 // "-override-config", "${settings::logDir.name}=\"${settings.logDir ?: DEFAULT_LOGS_DIR}\"",
