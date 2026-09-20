@@ -261,16 +261,36 @@ class GtpEngineTests {
         }
     }
 
-    /** A game that is played without a clock leaves the engine with the limits of its own config. */
+    /**
+     * A game that is played without a clock leaves the engine with the limits of its own config, which
+     * it has to be brought back to: the engine keeps the clock of the game that was played before this
+     * one otherwise, and would think the moves of this game on that clock.
+     */
     @Test
-    fun noClockIsStatedForAGameThatIsPlayedWithoutOne() {
+    fun theClockOfTheEngineItselfIsRestoredForAGameThatIsPlayedWithoutOne() {
         runEngine { field ->
             assertNotNull(defaultEngine.generateMove(field, Player.First))
 
-            val commands = diagnostics.mapNotNull { it.message.substringAfterOrNull("Command: ") }
-            assertTrue(
-                commands.none { it.startsWith("time_settings") || it.startsWith("time_left") },
-                "The clock of no game at all was stated: $commands",
+            fun statedClocks() = diagnostics
+                .mapNotNull { it.message.substringAfterOrNull("Command: ") }
+                .filter { it.contains("time_settings") || it.startsWith("time_left") }
+
+            // An engine that was never taken off the clock of its config is left alone
+            assertTrue(statedClocks().isEmpty(), "The clock of no game at all was stated: ${statedClocks()}")
+
+            val clock = PlayerClock(
+                TimeSettings(mainTimeSeconds = 300, turnTimeSeconds = 1),
+                mainTimeLeft = 0.0,
+                turnTimeLeft = 1.0,
+            )
+            assertNotNull(defaultEngine.generateMove(field, Player.Second, clock))
+            assertNotNull(defaultEngine.generateMove(field, Player.First))
+
+            // The clock of the config is restored by the engine itself, and what is left of a clock
+            // that is no longer played on is stated no more
+            assertEquals(
+                listOf("time_settings 300 1", "time_left P2 0.0 1.0", "kata-time_settings default"),
+                statedClocks(),
             )
         }
     }

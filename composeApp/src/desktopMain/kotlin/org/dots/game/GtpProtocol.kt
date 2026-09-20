@@ -46,6 +46,8 @@ internal class GtpProtocol private constructor(
         private const val OWNERSHIP_OPTION_NAME = "ownership"
         private const val SUICIDE_OPTION_NAME = "suicide"
         private const val CAPTURE_EMPTY_BASE_OPTION_NAME = "dotsCaptureEmptyBase"
+        /** Puts the engine back on the clock of its own config, see [setTimeControl]. */
+        private const val RESTORE_TIME_CONTROL_COMMAND = "kata-time_settings default"
 
         suspend fun initialize(settings: KataGoDotsSettings, logger: (Diagnostic) -> Unit): GtpProtocol? {
             // A response is looked up among the lines the engine writes, the ones of its log included
@@ -113,11 +115,14 @@ internal class GtpProtocol private constructor(
         getOrSetParam(KataGoDotsSettings::maxPlayouts)
     }
 
+    /** Whether the engine was taken off the clock of its own config by the clock of a game. */
+    private var clockIsStated = false
+
     override suspend fun generateMove(field: Field, player: Player?, clock: PlayerClock?): MoveInfo? =
         onSynchronizedPosition(field) {
             val effectivePlayer = player ?: field.getCurrentPlayer()
 
-            clock?.let { setTimeControl(it, effectivePlayer) }
+            setTimeControl(clock, effectivePlayer)
 
             val response = sendMessage("genmove ${effectivePlayer.toEngineMarker()}")
             if (response.isError) return@onSynchronizedPosition null
@@ -131,12 +136,26 @@ internal class GtpProtocol private constructor(
      *
      * Of a Dots game the engine reads the two times its control is stated in, and the third argument of
      * `time_left` is what is left of the time of the move rather than the stones of a period,
-     * see `GTP_Extensions.md` of KataGoDots. A game that is played without a clock says nothing at all,
-     * which leaves the engine with the limits of its own config.
+     * see `GTP_Extensions.md` of KataGoDots.
+     *
+     * A game that is played without a clock puts the engine back on the clock of its own config, which
+     * `kata-time_settings default` is for: the engine keeps the clock of the game that was played before
+     * this one otherwise, and would think the moves of this game on it. Zeroing the clock instead, the way
+     * `time_settings 0 0` does, would leave the engine with no limit at all, since a config that leaves
+     * the clock to the controller states no `maxVisits` either, and a search of a move would never end.
      */
-    private suspend fun setTimeControl(clock: PlayerClock, player: Player) {
+    private suspend fun setTimeControl(clock: PlayerClock?, player: Player) {
+        if (clock == null) {
+            // An engine that was never taken off the clock of its config is on it already
+            if (!clockIsStated) return
+            clockIsStated = false
+            val _ = trySendMessage(RESTORE_TIME_CONTROL_COMMAND)
+            return
+        }
+
         val timeSettings = clock.timeSettings
         if (!trySendMessage("time_settings ${timeSettings.mainTimeSeconds} ${timeSettings.turnTimeSeconds}")) return
+        clockIsStated = true
 
         val _ = trySendMessage(
             "time_left ${player.toEngineMarker()} " +
