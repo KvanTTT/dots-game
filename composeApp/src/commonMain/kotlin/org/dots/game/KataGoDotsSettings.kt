@@ -18,7 +18,15 @@ enum class EngineProtocol {
      * `katago gtp`: a text command is answered with a text response, and the engine keeps the position
      * the commands are applied to, so it has to be synchronized with the field, see `SyncType`.
      */
-    Gtp,
+    Gtp;
+
+    /**
+     * Whether the engine keeps a position of its own, which nothing may change while a command runs on it:
+     * the app freezes the game for the whole of such a command, see `withFrozenPosition`. The queries of
+     * an engine that keeps none are independent of the game, so a dot may be placed while one is searched.
+     */
+    val keepsPosition: Boolean
+        get() = this == Gtp
 }
 
 data class KataGoDotsSettings(

@@ -176,6 +176,8 @@ fun FieldView(
     field: Field,
     uiSettings: UiSettings,
     moveAnalysis: MoveAnalysis? = null,
+    /** Hides the analysis: it's of the position that was left behind, see [staleAnalysisAlpha]. */
+    analysisIsStale: Boolean = false,
     onMovePlaced: (Position, Player) -> Unit = { pos, player -> require(field.makeMoveUnsafe(pos, player) is LegalMove) }
 ) {
     val currentDensity = LocalDensity.current
@@ -231,7 +233,7 @@ fun FieldView(
         Grid(field, uiSettings)
         // Drawn before the dots and the bases so that they stay on top of the shading
         if (moveAnalysis != null && uiSettings.showOwnership) {
-            AnalyzedOwnership(moveAnalysis, field, uiSettings)
+            AnalyzedOwnership(moveAnalysis, field, uiSettings, analysisIsStale)
         }
         Moves(updateFieldObject, field, uiSettings)
         if (!field.isGameOver()) {
@@ -244,14 +246,14 @@ fun FieldView(
             }
 
             if (moveAnalysis != null && uiSettings.showCandidateMoves) {
-                AnalyzedMoves(moveAnalysis, uiSettings)
+                AnalyzedMoves(moveAnalysis, uiSettings, analysisIsStale)
             }
         }
         Pointer(pointerFieldPosition, moveMode, field, uiSettings)
 
         // The topmost layer, so that the hint is never covered by the field content
         if (moveAnalysis != null) {
-            hoveredPositionXY?.let { AnalysisHint(it, moveAnalysis, uiSettings) }
+            hoveredPositionXY?.let { AnalysisHint(it, moveAnalysis, uiSettings, analysisIsStale) }
         }
     }
 }
@@ -547,8 +549,13 @@ private fun ThreatsAndSurroundings(updateObject: Any?, field: Field, uiSettings:
  * their base, see [minSettledOwnership]. A base the ownership disagrees with is shaded as any other position.
  */
 @Composable
-private fun AnalyzedOwnership(moveAnalysis: MoveAnalysis, field: Field, uiSettings: UiSettings) {
-    Canvas(Modifier.fillMaxSize().graphicsLayer()) {
+private fun AnalyzedOwnership(
+    moveAnalysis: MoveAnalysis,
+    field: Field,
+    uiSettings: UiSettings,
+    analysisIsStale: Boolean,
+) {
+    Canvas(Modifier.fillMaxSize().graphicsLayer().dimmedIfStale(analysisIsStale)) {
         val cellSizePx = cellSize.toPx()
         val cellOffsetPx = cellSizePx / 2
         val cellArea = Size(cellSizePx, cellSizePx)
@@ -604,7 +611,12 @@ private class HintLine(val text: String, val color: Color)
  * doesn't have to be mentally inverted.
  */
 @Composable
-private fun AnalysisHint(positionXY: PositionXY, moveAnalysis: MoveAnalysis, uiSettings: UiSettings) {
+private fun AnalysisHint(
+    positionXY: PositionXY,
+    moveAnalysis: MoveAnalysis,
+    uiSettings: UiSettings,
+    analysisIsStale: Boolean,
+) {
     val lines = buildList {
         if (uiSettings.showCandidateMoves) {
             moveAnalysis.moveAt(positionXY)?.let { move ->
@@ -629,7 +641,7 @@ private fun AnalysisHint(positionXY: PositionXY, moveAnalysis: MoveAnalysis, uiS
 
     val textMeasurer = rememberTextMeasurer()
 
-    Canvas(Modifier.fillMaxSize().graphicsLayer()) {
+    Canvas(Modifier.fillMaxSize().graphicsLayer().dimmedIfStale(analysisIsStale)) {
         val paddingPx = hintPadding.toPx()
         val gapPx = hintLineGap.toPx()
         val cornerRadius = CornerRadius(hintCornerRadius.toPx())
@@ -702,8 +714,8 @@ internal fun contrastRatio(first: Color, second: Color): Float {
  * highlighting of the move and the [fieldColor] background, and it tells whose move is being suggested.
  */
 @Composable
-private fun AnalyzedMoves(moveAnalysis: MoveAnalysis, uiSettings: UiSettings) {
-    Canvas(Modifier.fillMaxSize().graphicsLayer()) {
+private fun AnalyzedMoves(moveAnalysis: MoveAnalysis, uiSettings: UiSettings, analysisIsStale: Boolean) {
+    Canvas(Modifier.fillMaxSize().graphicsLayer().dimmedIfStale(analysisIsStale)) {
         val radiusPx = analyzedMoveRadius.toPx()
         val bestMoveColor = uiSettings.toColor(moveAnalysis.player)
 

@@ -24,7 +24,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -55,6 +60,12 @@ import kotlin.time.TimeSource
 
 /** How often the clock of a game is updated, which is a compromise between a smooth clock and a busy app. */
 private val CLOCK_TICK = 100.milliseconds
+
+/**
+ * The analysis of the position [positionHash] identifies while it's still being searched: an AI move on
+ * that very position awaits it instead of searching it once more, see [Field.positionHash].
+ */
+private data class RunningAnalysis(val positionHash: Long, val analysis: Deferred<MoveAnalysis?>)
 
 /**
  * The moves of a game and the node every turn of it leads to, a turn being the number of the moves played
@@ -133,6 +144,12 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
         var engineCommandsInProgress by remember { mutableStateOf(0) }
         var engineIsAnalyzing by remember { mutableStateOf(false) }
         var moveAnalysis by remember { mutableStateOf<MoveAnalysis?>(null) }
+        // The analysis of the position that was left behind is hidden until the one of the current
+        // position arrives, rather than dropped, so that the space it takes is held and it can be
+        // brought back to the screen by `staleAnalysisAlpha` alone
+        var moveAnalysisIsStale by remember { mutableStateOf(false) }
+        // The analysis that is still being searched, which an AI move on its position awaits
+        var runningAnalysis by remember { mutableStateOf<RunningAnalysis?>(null) }
         var engineIsAnalyzingGame by remember { mutableStateOf(false) }
         // Keyed by the node rather than by the number of a move, so that the analysis of the nodes that stay
         // survives a move that is added or taken back
@@ -208,6 +225,8 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
             gameSettings.game = gameNumber
             // The analysis is keyed by the nodes of the game that is being left
             gameAnalysis = emptyMap()
+            // The analysis of a position of another game tells nothing about this one
+            moveAnalysis = null
             currentGame = gameNumber?.let { games.elementAtOrNull(it) } ?: games[0]
             val node = gameSettings.node
 
@@ -392,6 +411,20 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
             kataGoDotsEngine?.let {
                 coroutineScope.launch {
                     engineIsCalculating = true
+                    // The analysis of the current position already reports the move the engine would play,
+                    // so an AI move in the analysis mode needs no search of its own: the analysis that is
+                    // still running is awaited rather than searched once more.
+                    // A move that is played on a clock is searched anew instead, and nothing is awaited:
+                    // an analysis is searched by the limits of the engine rather than by the time the move
+                    // is allowed to take.
+                    // It's awaited before the position is frozen, because the analysis of an engine that
+                    // keeps a position of its own freezes it as well and would never get the freeze back
+                    val playedOnClock = timeControl != null && !timeControlIsStopped && !getField().isGameOver()
+                    val analyzedPositionHash = getField().positionHash
+                    val analysis = runningAnalysis
+                        ?.takeIf { !playedOnClock && it.positionHash == analyzedPositionHash }
+                        ?.analysis?.awaitOrNull()
+
                     val moveInfo = withFrozenPosition {
                         val movePlayer = moveMode.getMovePlayer(getField())
                         // The engine thinks on the clock of the game, so that a move of its own costs it
@@ -399,14 +432,11 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                         val clock = timeControl
                             ?.takeIf { !timeControlIsStopped && !getField().isGameOver() }
                             ?.let { control -> PlayerClock.of(control, timeSpending, movePlayer) }
-                        // The analysis of the current position already reports the move the engine would play,
-                        // so an AI move in the analysis mode needs no search of its own. The analysis is dropped
-                        // as soon as the position or the player to move changes, thus a present one always
-                        // matches what is being asked for.
-                        // A move that is played on a clock is searched anew: an analysis is searched by
-                        // the limits of the engine rather than by the time the move is allowed to take
-                        val analyzedMove = moveAnalysis
-                            ?.takeIf { analysis -> clock == null && analysis.player == movePlayer }
+                        // A dot may be placed while the analysis is awaited, and the analysis of a position
+                        // that is no longer on the field tells nothing about the one that is
+                        val analyzedMove = analysis
+                            ?.takeIf { clock == null && it.player == movePlayer }
+                            ?.takeIf { getField().positionHash == analyzedPositionHash }
                             ?.chosenMove
                         val generatedMove = analyzedMove ?: it.generateMove(getField(), movePlayer, clock)
                         // The clock may have ended the game while the engine was thinking
@@ -429,27 +459,47 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
             // The displayed options are no keys of the effect, because the analysis of a position has to stay
             // the same no matter which of them is switched on and in which order
             LaunchedEffect(kataGoDotsEngine, currentGame, currentGameTreeNode, moveMode) {
-                moveAnalysis = null
+                // The analysis of the previous position is kept until this one is searched, hidden
+                // while it's stale, see `moveAnalysisIsStale`
+                moveAnalysisIsStale = true
+                runningAnalysis = null
 
-                val engine = kataGoDotsEngine ?: return@LaunchedEffect
+                val engine = kataGoDotsEngine
                 val field = getField()
-                if (field.isGameOver() || !doesKataSupportRules(field.rules)) return@LaunchedEffect
+                // Nothing is going to analyze this position, so the analysis of another one would be
+                // left behind for good, waiting for one that never comes
+                if (engine == null || field.isGameOver() || !doesKataSupportRules(field.rules)) {
+                    moveAnalysis = null
+                    return@LaunchedEffect
+                }
 
+                val analyzedPlayer = moveMode.getMovePlayer(field)
                 engineIsAnalyzing = true
                 try {
-                    withFrozenPosition {
-                        // The ownership is always requested, otherwise the very same position would be
-                        // evaluated differently depending on whether it's displayed.
-                        // A cancelled analysis (the player to move has changed, for one) is dropped by
-                        // the engine as well, so that its threads are freed for the query that replaces it
-                        val analysis = engine.analyze(field, moveMode.getMovePlayer(field), withOwnership = true)
-
-                        // The position may have changed while the engine was busy; the relaunched effect
-                        // refreshes it. The result is published before the position is released, so that
-                        // an AI move that is waiting for it takes it over instead of searching once more
-                        if (isActive) {
-                            moveAnalysis = analysis
+                    // The ownership is always requested, otherwise the very same position would be
+                    // evaluated differently depending on whether it's displayed.
+                    // A cancelled analysis (the player to move has changed, for one) is dropped by
+                    // the engine as well, so that its threads are freed for the query that replaces it
+                    val analysis = async {
+                        // A query of the analysis engine carries the whole position, so the game is free
+                        // to go on while it's searched: a dot may be placed without awaiting it. An engine
+                        // that keeps a position of its own has to stay in sync with the field instead,
+                        // and the game is frozen for the whole of its command
+                        if (engine.settings.protocol.keepsPosition) {
+                            withFrozenPosition { engine.analyze(field, analyzedPlayer, withOwnership = true) }
+                        } else {
+                            engine.analyze(field, analyzedPlayer, withOwnership = true)
                         }
+                    }
+                    // An AI move on this very position takes its move instead of searching it again
+                    runningAnalysis = RunningAnalysis(field.positionHash, analysis)
+
+                    // The position may have changed while the engine was busy; the relaunched effect
+                    // refreshes it
+                    val analyzedPosition = analysis.await()
+                    if (isActive) {
+                        moveAnalysis = analyzedPosition
+                        moveAnalysisIsStale = false
                     }
                 } finally {
                     engineIsAnalyzing = false
@@ -485,6 +535,12 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
 
         val playerToMove = getField().getCurrentPlayer()
         val gameIsOver = getField().isGameOver()
+
+        // The engine freezes the game while it works on the position: an AI move always does, and so does
+        // the analysis of an engine that keeps a position of its own, see `withFrozenPosition`. The analysis
+        // of an engine that keeps none is independent of the game, which goes on while it's searched
+        val positionIsFrozen = engineIsCalculating ||
+                engineIsAnalyzing && kataGoDotsEngine?.settings?.protocol?.keepsPosition == true
 
         timeControl?.let { control ->
             if (!gameIsOver && !timeControlIsStopped) {
@@ -535,7 +591,9 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row {
-                    FieldView(currentGameTreeNode, moveMode, getField(), uiSettings, moveAnalysis) { position, player ->
+                    FieldView(
+                        currentGameTreeNode, moveMode, getField(), uiSettings, moveAnalysis, moveAnalysisIsStale,
+                    ) { position, player ->
                         addMove(MoveInfo(position.toXY(getField().realWidth), player))
                         updateFieldAndGameTree()
 
@@ -671,7 +729,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                         with(strings) {
                             IconButton(
                                 if (isGrounding) Res.drawable.ic_ground else Res.drawable.ic_resign,
-                                enabled = !getField().isGameOver() && !engineIsCalculating && !engineIsAnalyzing,
+                                enabled = !getField().isGameOver() && !positionIsFrozen,
                             ) {
                                 // Check for game over just in case
                                 if (getField().isGameOver()) return@IconButton
@@ -700,7 +758,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                             with (strings) {
                                 IconButton(
                                     if (next) Res.drawable.ic_next else Res.drawable.ic_previous,
-                                    enabled = !engineIsCalculating && !engineIsAnalyzing,
+                                    enabled = !positionIsFrozen,
                                 ) {
                                     var currentGameIndex = games.indexOf(currentGame)
                                     currentGameIndex = (currentGameIndex + if (next) 1 else games.size - 1) % games.size
@@ -733,7 +791,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                                     focusRequester.requestFocus()
                                 },
                                 checked = automove,
-                                enabled = !getField().isGameOver() && !engineIsCalculating && !engineIsAnalyzing &&
+                                enabled = !getField().isGameOver() && !positionIsFrozen &&
                                         doesKataSupportRules(getField().rules),
                                 colors = if (automove)
                                     ButtonDefaults.buttonColors(selectedModeButtonColor)
@@ -757,6 +815,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                                 // along with the next switched on option. A running command is not interrupted,
                                 // it reports itself as done, so that nothing modifies the position under it
                                 moveAnalysis = null
+                                runningAnalysis = null
                             }
                             focusRequester.requestFocus()
                         }
@@ -815,15 +874,20 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                         }
                     }
 
-                    // The analysis of the current position, no matter which of the buttons above requested it
-                    (moveAnalysis ?: currentGameTreeNode?.let { gameAnalysis[it] })?.let { analysis ->
-                        Row(rowModifier) {
+                    // The analysis of the current position, no matter which of the buttons above requested it.
+                    // A stale one is of the position that was left behind, so the analysis of this very node
+                    // is preferred to it, and it's hidden the same way the overlays of the field are
+                    val nodeAnalysis = currentGameTreeNode?.let { gameAnalysis[it] }
+                    (moveAnalysis?.takeIf { !moveAnalysisIsStale } ?: nodeAnalysis ?: moveAnalysis)?.let { analysis ->
+                        Row(rowModifier.dimmedIfStale(analysis === moveAnalysis && moveAnalysisIsStale)) {
                             PositionEvaluationView(analysis, uiSettings, strings)
                         }
                     }
 
                     moveAnalysis?.let { analysis ->
-                        MoveAnalysisView(analysis, getField(), uiSettings, strings)
+                        Box(Modifier.dimmedIfStale(moveAnalysisIsStale)) {
+                            MoveAnalysisView(analysis, getField(), uiSettings, strings)
+                        }
                     }
                 }
 
@@ -882,3 +946,16 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
     }
 }
 
+/**
+ * Awaits the analysis of a position that the game may leave behind while it's searched.
+ *
+ * @return `null` if the analysis was cancelled, that is if the position it is of is no longer the one
+ * on the field, which is no cancellation of whoever awaits it.
+ */
+private suspend fun Deferred<MoveAnalysis?>.awaitOrNull(): MoveAnalysis? =
+    try {
+        await()
+    } catch (_: CancellationException) {
+        currentCoroutineContext().ensureActive()
+        null
+    }

@@ -16,6 +16,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.dots.game.core.Field
@@ -24,6 +25,17 @@ import org.dots.game.splitByUppercase
 import kotlin.math.round
 
 const val configKeyTextFraction = 0.4f
+
+/**
+ * The transparency the analysis of the position that was left behind is shown with until the analysis of
+ * the current one arrives. It's hidden altogether, so that nothing stale is ever read as the evaluation of
+ * the position on screen; a value above zero brings it back, dimmed, and the space it takes is held
+ * either way, so that nothing jumps when the new analysis lands.
+ */
+const val staleAnalysisAlpha = 0.0f
+
+/** @see staleAnalysisAlpha */
+fun Modifier.dimmedIfStale(isStale: Boolean): Modifier = if (isStale) alpha(staleAnalysisAlpha) else this
 
 /**
  * The coordinates are rendered the way the field labels its grid, so that a position of a view is the very same
