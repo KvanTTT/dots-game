@@ -140,6 +140,9 @@ object RussianStrings : Strings {
     override val previousGame = "Предыдущая игра"
     override val aiMove = "Ход бота"
     override val aiThinking = "Бот думает..."
+    override val engineIsStarting = "Движок запускается..."
+    override val engineIsReady = "Движок готов"
+    override val engineDidNotStart = "Движок не запустился"
     override val aiMoveDescription = """Движок делает ход за игрока, который должен ходить.
 Долгое нажатие включает режим автохода, в котором движок автоматически отвечает на каждый ход."""
     override val autoMoveDescription = """Режим автохода включён: движок автоматически отвечает на каждый ход.

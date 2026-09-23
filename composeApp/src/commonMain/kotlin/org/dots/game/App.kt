@@ -61,6 +61,9 @@ import kotlin.time.TimeSource
 /** How often the clock of a game is updated, which is a compromise between a smooth clock and a busy app. */
 private val CLOCK_TICK = 100.milliseconds
 
+/** A failure of the engine is displayed in a tooltip, which is no place for the whole of a stack of them. */
+private const val MAX_ENGINE_FAILURE_LENGTH = 300
+
 /**
  * The analysis of the position [positionHash] identifies while it's still being searched: an AI move on
  * that very position awaits it instead of searching it once more, see [Field.positionHash].
@@ -140,6 +143,46 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
         val focusRequester = remember { FocusRequester() }
 
         var kataGoDotsEngine by remember { mutableStateOf<KataGoDotsEngine?>(null) }
+        // What the engine is up to, which the indicator of it displays, see `EngineStateView`
+        var engineState by remember { mutableStateOf<EngineState>(EngineState.NotConfigured) }
+
+        /**
+         * Starts the engine of [settings], telling [engineState] what is going on along the way: the first
+         * start of an engine on a machine takes a while, a model of tens of megabytes being read and the
+         * shaders of a backend compiled, and the indicator of it says what it is doing meanwhile.
+         */
+        suspend fun startEngine(settings: KataGoDotsSettings): KataGoDotsEngine? {
+            engineState = EngineState.Starting()
+            var failure: String? = null
+
+            val engine = KataGoDotsEngine.initialize(settings) { diagnostic ->
+                println(diagnostic)
+                if (diagnostic.severity >= DiagnosticSeverity.Error) {
+                    failure = diagnostic.message
+                } else if (engineState is EngineState.Starting) {
+                    // The engine reports what it's loading as it goes, and the last of it is where it is now
+                    engineState = EngineState.Starting(diagnostic.message)
+                }
+            }
+
+            // The engine says why it gives up in the very log it reports its progress in, the reason being
+            // the last thing it said rather than the message of the failure itself, so both are kept
+            val lastStep = (engineState as? EngineState.Starting)?.step
+            engineState = when {
+                engine != null -> EngineState.Ready
+                // An engine that was never asked for is no failure, it's a game played without one
+                settings.exePath.isEmpty() -> EngineState.NotConfigured
+                else -> {
+                    val reason = failure
+                    EngineState.Failed(
+                        // The message of the failure often quotes the last thing the engine said already
+                        listOfNotNull(reason, lastStep?.takeIf { reason == null || it !in reason })
+                            .joinToString("\n") { it.trimMessageIfNecessary(MAX_ENGINE_FAILURE_LENGTH) }
+                    )
+                }
+            }
+            return engine
+        }
         var automove by remember { mutableStateOf(kataGoDotsSettings.autoMove) }
         var engineIsCalculating by remember { mutableStateOf(false) }
         var engineCommandsInProgress by remember { mutableStateOf(0) }
@@ -306,9 +349,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     println("Build Info: ${BuildInfo.render()}")
 
                     if (KataGoDotsEngine.IS_SUPPORTED) {
-                        kataGoDotsEngine = KataGoDotsEngine.initialize(kataGoDotsSettings) {
-                            println(it)
-                        }
+                        kataGoDotsEngine = startEngine(kataGoDotsSettings)
                     }
                 }
             }
@@ -381,6 +422,7 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                 // The engine is a process of its own, and the replaced one would keep running otherwise
                 kataGoDotsEngine?.close()
                 kataGoDotsEngine = it
+                engineState = EngineState.Ready
                 saveClassSettings(it.settings)
             }) {
                 showKataGoDotsSettingsForm = false
@@ -773,107 +815,116 @@ fun App(gameSettings: GameSettings = loadClassSettings(GameSettings.Default), on
                     }
                 }
 
-                kataGoDotsEngine?.let {
+                // The engine of the app: what is asked of it, and the state it is in. The row is there
+                // from the moment there is an engine to start rather than from the moment it answers, so
+                // that the indicator tells what is going on while it starts
+                if (engineState != EngineState.NotConfigured) {
                     Row(rowModifier) {
-                        val aiMoveTooltip = strings.aiMove + "\n" + when {
-                            engineIsCalculating -> strings.aiThinking
-                            automove -> strings.autoMoveDescription
-                            else -> strings.aiMoveDescription
-                        }
-                        Tooltip(aiMoveTooltip) {
-                            LongPressButton(
-                                onClick = { makeAIMove() },
-                                // The auto move mode is switched by a long press, because it's the very same
-                                // action, just repeated after every move, and it needs no button of its own
-                                onLongClick = {
-                                    automove = !automove
-                                    kataGoDotsSettings = kataGoDotsSettings.copy(autoMove = automove)
-                                    saveClassSettings(kataGoDotsSettings)
-                                    focusRequester.requestFocus()
-                                },
-                                checked = automove,
-                                enabled = !getField().isGameOver() && !positionIsFrozen &&
-                                        doesKataSupportRules(getField().rules),
-                                colors = if (automove)
-                                    ButtonDefaults.buttonColors(selectedModeButtonColor)
-                                else
-                                    ButtonDefaults.buttonColors(),
-                            ) {
-                                Icon(
-                                    painterResource(Res.drawable.ic_ai_move),
-                                    contentDescription = strings.aiMove,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                        if (kataGoDotsEngine != null) {
+                            val aiMoveTooltip = strings.aiMove + "\n" + when {
+                                engineIsCalculating -> strings.aiThinking
+                                automove -> strings.autoMoveDescription
+                                else -> strings.aiMoveDescription
                             }
-                        }
-
-                        // Switching every analysis option off stops the analysis, so it has no button of its own
-                        fun switchAnalysisOption(newUiSettings: UiSettings) {
-                            uiSettings = newUiSettings
-                            saveClassSettings(uiSettings)
-                            if (!uiSettings.analysisEnabled) {
-                                // Nothing displays the analysis anymore, and the stale one shouldn't come back
-                                // along with the next switched on option. A running command is not interrupted,
-                                // it reports itself as done, so that nothing modifies the position under it
-                                moveAnalysis = null
-                                runningAnalysis = null
-                            }
-                            focusRequester.requestFocus()
-                        }
-
-                        val analysisSupported = !getField().isGameOver() && doesKataSupportRules(getField().rules)
-                        with (strings) {
-                            ToggleIconButton(
-                                Res.drawable.ic_candidate_moves,
-                                checked = uiSettings.showCandidateMoves,
-                                description = strings.candidateMovesDescription,
-                                enabled = analysisSupported,
-                            ) {
-                                switchAnalysisOption(
-                                    uiSettings.copy(showCandidateMoves = !uiSettings.showCandidateMoves)
-                                )
+                            Tooltip(aiMoveTooltip) {
+                                LongPressButton(
+                                    onClick = { makeAIMove() },
+                                    // The auto move mode is switched by a long press, because it's the very same
+                                    // action, just repeated after every move, and it needs no button of its own
+                                    onLongClick = {
+                                        automove = !automove
+                                        kataGoDotsSettings = kataGoDotsSettings.copy(autoMove = automove)
+                                        saveClassSettings(kataGoDotsSettings)
+                                        focusRequester.requestFocus()
+                                    },
+                                    checked = automove,
+                                    enabled = !getField().isGameOver() && !positionIsFrozen &&
+                                            doesKataSupportRules(getField().rules),
+                                    colors = if (automove)
+                                        ButtonDefaults.buttonColors(selectedModeButtonColor)
+                                    else
+                                        ButtonDefaults.buttonColors(),
+                                ) {
+                                    Icon(
+                                        painterResource(Res.drawable.ic_ai_move),
+                                        contentDescription = strings.aiMove,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
 
-                            ToggleIconButton(
-                                Res.drawable.ic_ownership,
-                                checked = uiSettings.showOwnership,
-                                description = strings.ownershipDescription,
-                                enabled = analysisSupported,
-                            ) {
-                                switchAnalysisOption(uiSettings.copy(showOwnership = !uiSettings.showOwnership))
-                            }
-
-                            ToggleIconButton(
-                                Res.drawable.ic_game_analysis,
-                                checked = uiSettings.showGameAnalysis,
-                                description = strings.gameAnalysisDescription,
-                                enabled = doesKataSupportRules(getField().rules),
-                            ) {
-                                uiSettings = uiSettings.copy(showGameAnalysis = !uiSettings.showGameAnalysis)
+                            // Switching every analysis option off stops the analysis, so it has no button of its own
+                            fun switchAnalysisOption(newUiSettings: UiSettings) {
+                                uiSettings = newUiSettings
                                 saveClassSettings(uiSettings)
-                                if (!uiSettings.showGameAnalysis) {
-                                    // The graphs are gone along with the option, and the game goes on,
-                                    // so the evaluations would be outdated by the time it's switched on again
-                                    gameAnalysis = emptyMap()
+                                if (!uiSettings.analysisEnabled) {
+                                    // Nothing displays the analysis anymore, and the stale one shouldn't come back
+                                    // along with the next switched on option. A running command is not interrupted,
+                                    // it reports itself as done, so that nothing modifies the position under it
+                                    moveAnalysis = null
+                                    runningAnalysis = null
                                 }
                                 focusRequester.requestFocus()
                             }
-                        }
 
-                        // A single indicator of a busy engine, no matter which command it's busy with:
-                        // the button of a command keeps its icon, so that the row doesn't jump around
-                        if (engineIsCalculating || engineIsAnalyzing || engineIsAnalyzingGame) {
-                            Box(Modifier.align(Alignment.CenterVertically).padding(start = 3.dp)) {
-                                Tooltip(when {
-                                    engineIsCalculating -> strings.aiThinking
-                                    engineIsAnalyzing -> strings.analyzing
-                                    else -> strings.analyzingGame
-                                }) {
-                                    CircularProgressIndicator(Modifier.size(20.dp))
+                            val analysisSupported = !getField().isGameOver() && doesKataSupportRules(getField().rules)
+                            with (strings) {
+                                ToggleIconButton(
+                                    Res.drawable.ic_candidate_moves,
+                                    checked = uiSettings.showCandidateMoves,
+                                    description = strings.candidateMovesDescription,
+                                    enabled = analysisSupported,
+                                ) {
+                                    switchAnalysisOption(
+                                        uiSettings.copy(showCandidateMoves = !uiSettings.showCandidateMoves)
+                                    )
+                                }
+
+                                ToggleIconButton(
+                                    Res.drawable.ic_ownership,
+                                    checked = uiSettings.showOwnership,
+                                    description = strings.ownershipDescription,
+                                    enabled = analysisSupported,
+                                ) {
+                                    switchAnalysisOption(uiSettings.copy(showOwnership = !uiSettings.showOwnership))
+                                }
+
+                                ToggleIconButton(
+                                    Res.drawable.ic_game_analysis,
+                                    checked = uiSettings.showGameAnalysis,
+                                    description = strings.gameAnalysisDescription,
+                                    enabled = doesKataSupportRules(getField().rules),
+                                ) {
+                                    uiSettings = uiSettings.copy(showGameAnalysis = !uiSettings.showGameAnalysis)
+                                    saveClassSettings(uiSettings)
+                                    if (!uiSettings.showGameAnalysis) {
+                                        // The graphs are gone along with the option, and the game goes on,
+                                        // so the evaluations would be outdated by the time it's switched on again
+                                        gameAnalysis = emptyMap()
+                                    }
+                                    focusRequester.requestFocus()
                                 }
                             }
+
                         }
+
+                        // A single indicator of the engine, of the state it is in and of the command it is
+                        // busy with alike: the button of a command keeps its icon, so that nothing jumps
+                        EngineStateView(
+                            engineState,
+                            busyWith = when {
+                                engineIsCalculating -> strings.aiThinking
+                                engineIsAnalyzing -> strings.analyzing
+                                engineIsAnalyzingGame -> strings.analyzingGame
+                                else -> null
+                            },
+                            strings,
+                            Modifier.align(Alignment.CenterVertically).padding(start = 3.dp),
+                        )
                     }
+                }
+
+                kataGoDotsEngine?.let {
 
                     // The analysis of the current position, no matter which of the buttons above requested it.
                     // A stale one is of the position that was left behind, so the analysis of this very node

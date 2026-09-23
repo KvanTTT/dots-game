@@ -140,6 +140,9 @@ that is a Bronstein delay."""
     override val previousGame = "Previous game"
     override val aiMove = "AI move"
     override val aiThinking = "AI is thinking..."
+    override val engineIsStarting = "The engine is starting..."
+    override val engineIsReady = "The engine is ready"
+    override val engineDidNotStart = "The engine didn't start"
     override val aiMoveDescription = """Makes the engine move for the player to move.
 Long press to turn on the auto move mode, in which the engine answers every move automatically."""
     override val autoMoveDescription = """The auto move mode is on: the engine answers every move automatically.

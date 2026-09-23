@@ -107,6 +107,9 @@ interface Strings {
     val previousGame: String
     val aiMove: String
     val aiThinking: String
+    val engineIsStarting: String
+    val engineIsReady: String
+    val engineDidNotStart: String
     val aiMoveDescription: String
     val autoMoveDescription: String
 
