@@ -2,7 +2,9 @@ name: Publish WasmJS & Desktop
 
 on:
   push:
-    branches: [ "main" ]
+    # TEMPORARY: the installers are built from the branch of the work on them as well, to try the whole
+    # of the pipeline out before it lands on `main`. Revert the commit that added this once it has run.
+    branches: [ "main", "self-contained-app" ]
   workflow_dispatch:
 
 concurrency:
@@ -28,6 +30,9 @@ jobs:
   publish-wasmjs:
     name: Publish WasmJS
     runs-on: ubuntu-latest
+    # TEMPORARY: the site of the app is published from `main` alone, so that a run of the pipeline from
+    # a branch tries the installers out without putting the app of that branch on the pages
+    if: github.ref == 'refs/heads/main'
     timeout-minutes: 20
 
     steps:
