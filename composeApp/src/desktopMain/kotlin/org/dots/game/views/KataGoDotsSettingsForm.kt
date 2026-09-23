@@ -110,15 +110,20 @@ actual fun KataGoDotsSettingsForm(
                 fun FileSelector(path: String, fileType: KataGoDotsSettingsFileType) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(strings.aiSettingsFilePath(fileType), Modifier.fillMaxWidth(0.35f))
-                        TextField(
-                            path, {
-                                invalidatePath(it, fileType)
-                            },
-                            modifier = Modifier.fillMaxWidth(0.8f).padding(top = 5.dp, bottom = 5.dp, end = 5.dp),
-                            maxLines = 1,
-                            singleLine = true,
-                            enabled = !engineIsInitializing,
-                        )
+                        // A relative path is one of the files the app is shipped with, and where it leads
+                        // is of the app rather than of the user, so it's told rather than typed out
+                        val resolvedPath = KataGoDotsEngine.resolveShippedPath(path)
+                        Tooltip(resolvedPath.takeIf { it != path }) {
+                            TextField(
+                                path, {
+                                    invalidatePath(it, fileType)
+                                },
+                                modifier = Modifier.fillMaxWidth(0.8f).padding(top = 5.dp, bottom = 5.dp, end = 5.dp),
+                                maxLines = 1,
+                                singleLine = true,
+                                enabled = !engineIsInitializing,
+                            )
+                        }
                         with (strings) {
                             IconButton(Res.drawable.ic_browse, enabled = !engineIsInitializing) {
                                 selectedFileType = fileType

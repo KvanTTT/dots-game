@@ -15,6 +15,13 @@ expect class KataGoDotsEngine {
     companion object {
         val IS_SUPPORTED: Boolean
 
+        /**
+         * The engine the app is shipped with, which is what it plays with until the settings of the user
+         * point it somewhere else. The paths are empty when the app carries no engine at all, which is
+         * every platform but the desktop one and a desktop app that was packaged without it.
+         */
+        val defaultSettings: KataGoDotsSettings
+
         suspend fun initialize(kataGoDotsSettings: KataGoDotsSettings, logger: (Diagnostic) -> Unit): KataGoDotsEngine?
     }
 

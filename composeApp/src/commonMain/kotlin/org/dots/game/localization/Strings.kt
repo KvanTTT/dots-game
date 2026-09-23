@@ -82,6 +82,9 @@ interface Strings {
     val threats: String
     val surroundings: String
     val developerMode: String
+    val resetSettings: String
+    val resetSettingsDescription: String
+    val settingsAreReset: String
     val experimentalMode: String
     val version: String
 
@@ -107,6 +110,9 @@ interface Strings {
     val previousGame: String
     val aiMove: String
     val aiThinking: String
+    val engineIsStarting: String
+    val engineIsReady: String
+    val engineDidNotStart: String
     val aiMoveDescription: String
     val autoMoveDescription: String
 

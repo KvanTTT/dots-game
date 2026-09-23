@@ -8,6 +8,8 @@ import java.io.File
 import java.nio.file.Paths
 import java.util.Properties
 
+private const val PROPERTIES_EXTENSION = "properties"
+
 actual class SettingsWrapper<T : ClassSettings<T>> private constructor(
     actual val obj: T,
     actual val settings: Settings?,
@@ -32,6 +34,14 @@ actual class SettingsWrapper<T : ClassSettings<T>> private constructor(
                 }
             }
             return SettingsWrapper(obj, PropertiesSettings(properties), propertiesFile, properties)
+        }
+
+        actual fun reset() {
+            // Every settings class is kept in a file of its own, and the app keeps nothing else there
+            val appDirectory = Paths.get(System.getProperty("user.home"), ThisAppName).toFile()
+            appDirectory.listFiles { file -> file.extension == PROPERTIES_EXTENSION }?.forEach {
+                val _ = it.delete()
+            }
         }
     }
 

@@ -38,6 +38,9 @@ actual class KataGoDotsEngine {
     actual companion object {
         actual val IS_SUPPORTED: Boolean = false
 
+        /** No engine is shipped with the app on this platform. */
+        actual val defaultSettings: KataGoDotsSettings = KataGoDotsSettings.Default
+
         actual suspend fun initialize(
             kataGoDotsSettings: KataGoDotsSettings,
             logger: (Diagnostic) -> Unit

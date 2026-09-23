@@ -2,7 +2,9 @@ name: Publish WasmJS & Desktop
 
 on:
   push:
-    branches: [ "main" ]
+    # TEMPORARY: the installers are built from the branch of the work on them as well, to try the whole
+    # of the pipeline out before it lands on `main`. Revert the commit that added this once it has run.
+    branches: [ "main", "self-contained-app" ]
   workflow_dispatch:
 
 concurrency:
@@ -15,11 +17,22 @@ permissions:
 env:
   MAJOR_VERSION: '1'
   MINOR_VERSION: '0'
+  # The engine the app is shipped with is built from this revision of KataGoDots, its config is taken
+  # from the very same one, and the model is downloaded, see `composeApp/appResources/README.md`.
+  # A tag or a commit pins the engine of a release, a branch keeps the app on the engine as it grows.
+  ENGINE_REPOSITORY: 'KvanTTT/KataGoDots'
+  ENGINE_REF: 'master'
+  # The model is too large to keep in this repository, so it's downloaded from where the repository
+  # variable points. An app that is packaged without one plays with no engine at all.
+  MODEL_URL: ${{ vars.KATA_GO_DOTS_MODEL_URL }}
 
 jobs:
   publish-wasmjs:
     name: Publish WasmJS
     runs-on: ubuntu-latest
+    # TEMPORARY: the site of the app is published from `main` alone, so that a run of the pipeline from
+    # a branch tries the installers out without putting the app of that branch on the pages
+    if: github.ref == 'refs/heads/main'
     timeout-minutes: 20
 
     steps:
@@ -64,7 +77,8 @@ jobs:
   publish-desktop:
     name: Publish Desktop - ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    # The engine is built from the sources on the first run of a revision of it, and cached afterwards
+    timeout-minutes: 75
 
     strategy:
       fail-fast: false
@@ -74,14 +88,23 @@ jobs:
             platform: Linux
             task: packageDeb
             artifact-path: composeApp/build/compose/binaries/main/deb/*.deb
+            # The backend of a shipped engine is the one that plays well on the platform: Metal on
+            # macOS, which is a part of the system itself, and OpenCL elsewhere, which runs on the
+            # graphics of the machine wherever a driver for it is installed
+            engine-backend: OPENCL
+            app-resources: linux-x64
           - os: windows-latest
             platform: Windows
             task: packageMsi
             artifact-path: composeApp/build/compose/binaries/main/msi/*.msi
+            engine-backend: OPENCL
+            app-resources: windows-x64
           - os: macos-latest
             platform: macOS
             task: packageDmg
             artifact-path: composeApp/build/compose/binaries/main/dmg/*.dmg
+            engine-backend: METAL
+            app-resources: macos-arm64
 
     steps:
       - name: Checkout
@@ -101,6 +124,95 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           add-job-summary: on-failure
+
+      - name: Checkout Engine
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ENGINE_REPOSITORY }}
+          ref: ${{ env.ENGINE_REF }}
+          path: engine-sources
+
+      - name: Resolve Engine Revision
+        id: engine
+        shell: bash
+        run: echo "revision=$(git -C engine-sources rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Engine
+        id: engine-cache
+        uses: actions/cache@v4
+        with:
+          path: engine
+          key: engine-${{ matrix.app-resources }}-${{ matrix.engine-backend }}-${{ steps.engine.outputs.revision }}
+
+      # The engine is built without libzip, which it only needs for writing training data: a shipped
+      # engine has to run on a machine that has nothing installed on it, and every library it is linked
+      # against beyond the ones of the system itself is a machine it doesn't start on
+      - name: Build Engine - Linux
+        if: runner.os == 'Linux' && steps.engine-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential zlib1g-dev opencl-headers ocl-icd-opencl-dev
+          cmake -S engine-sources/cpp -B engine-sources/cpp \
+            -DUSE_BACKEND=${{ matrix.engine-backend }} -DCMAKE_BUILD_TYPE=Release \
+            -DLIBZIP_LIBRARY=NOTFOUND -DLIBZIP_INCLUDE_DIR_ZIP=NOTFOUND -DLIBZIP_INCLUDE_DIR_ZIPCONF=NOTFOUND
+          make -C engine-sources/cpp -j$(nproc)
+          mkdir -p engine && cp engine-sources/cpp/katago engine/
+
+      - name: Build Engine - macOS
+        if: runner.os == 'macOS' && steps.engine-cache.outputs.cache-hit != 'true'
+        run: |
+          # The Metal backend runs the model through CoreML as well as MPSGraph, and the converter of it
+          # is built against protobuf and abseil, which no Mac carries: `bundle-macos-libraries.sh` below
+          # is what brings them along, so that the engine runs on a Mac that has no Homebrew on it
+          brew install ninja protobuf abseil
+          cmake -S engine-sources/cpp -B engine-sources/cpp -G Ninja \
+            -DUSE_BACKEND=${{ matrix.engine-backend }} -DCMAKE_BUILD_TYPE=Release \
+            -DLIBZIP_LIBRARY=NOTFOUND -DLIBZIP_INCLUDE_DIR_ZIP=NOTFOUND -DLIBZIP_INCLUDE_DIR_ZIPCONF=NOTFOUND
+          ninja -C engine-sources/cpp katago
+          mkdir -p engine && cp engine-sources/cpp/katago engine/
+          # The Metal backend is linked against protobuf and abseil, which a Mac doesn't carry
+          .github/scripts/bundle-macos-libraries.sh engine/katago
+
+      - name: Setup MSVC
+        if: runner.os == 'Windows' && steps.engine-cache.outputs.cache-hit != 'true'
+        uses: microsoft/setup-msbuild@v2
+
+      # Unlike the other two platforms, Windows has no zlib of its own, so the one the engine is linked
+      # against is shipped next to it, the loader of OpenCL along with it
+      - name: Build Engine - Windows
+        if: runner.os == 'Windows' && steps.engine-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          vcpkg install zlib:x64-windows opencl:x64-windows
+          cmake -S engine-sources/cpp -B engine-sources/cpp -A x64 `
+            -DUSE_BACKEND=${{ matrix.engine-backend }} `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DLIBZIP_LIBRARY=NOTFOUND -DLIBZIP_INCLUDE_DIR_ZIP=NOTFOUND -DLIBZIP_INCLUDE_DIR_ZIPCONF=NOTFOUND
+          cmake --build engine-sources/cpp --config Release -j 4
+          New-Item -ItemType Directory -Force engine | Out-Null
+          Copy-Item engine-sources/cpp/Release/katago.exe engine/
+          Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/*.dll" engine/ -ErrorAction SilentlyContinue
+
+      - name: Report Engine
+        shell: bash
+        run: ls -l engine && (engine/katago version || engine/katago.exe version)
+
+      # The app plays with them out of the box, see `composeApp/appResources/README.md`
+      - name: Ship Engine, Config and Model with the App
+        shell: bash
+        run: |
+          common=composeApp/appResources/common/KataGoDots
+          platform=composeApp/appResources/${{ matrix.app-resources }}/KataGoDots
+          mkdir -p "$common" "$platform"
+          cp -R engine/. "$platform"/
+          cp engine-sources/cpp/configs/analysis_dots.cfg "$common"/
+          if [ -n "$MODEL_URL" ]; then
+            curl --fail --silent --show-error --location "$MODEL_URL" -o "$common/model.bin.gz"
+          elif [ ! -f "$common/model.bin.gz" ]; then
+            echo "::warning::No model: set the KATA_GO_DOTS_MODEL_URL repository variable or keep a model" \
+                 "in the repository, otherwise the app is packaged with the engine switched off"
+          fi
+          ls -l "$common" "$platform"
 
       - name: Generate Build Info
         shell: bash

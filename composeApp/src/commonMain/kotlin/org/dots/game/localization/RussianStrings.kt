@@ -97,6 +97,10 @@ object RussianStrings : Strings {
     override val diagonalConnections = "Диагональные соединения"
     override val threats = "Угрозы окружения"
     override val surroundings = "Области под угрозой"
+    override val resetSettings = "Сбросить настройки"
+    override val resetSettingsDescription = "Удаляет все настройки приложения, чтобы при следующем запуске " +
+            "оно запустилось так же, как в самый первый раз. До этого ничего не сохраняется."
+    override val settingsAreReset = "Перезапустите приложение"
     override val developerMode = "Режим разработчика"
     override val experimentalMode = "Экспериментальный режим"
     override val version: String = "Версия"
@@ -140,6 +144,9 @@ object RussianStrings : Strings {
     override val previousGame = "Предыдущая игра"
     override val aiMove = "Ход бота"
     override val aiThinking = "Бот думает..."
+    override val engineIsStarting = "Движок запускается..."
+    override val engineIsReady = "Движок готов"
+    override val engineDidNotStart = "Движок не запустился"
     override val aiMoveDescription = """Движок делает ход за игрока, который должен ходить.
 Долгое нажатие включает режим автохода, в котором движок автоматически отвечает на каждый ход."""
     override val autoMoveDescription = """Режим автохода включён: движок автоматически отвечает на каждый ход.
