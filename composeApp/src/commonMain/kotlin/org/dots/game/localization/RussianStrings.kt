@@ -97,6 +97,10 @@ object RussianStrings : Strings {
     override val diagonalConnections = "Диагональные соединения"
     override val threats = "Угрозы окружения"
     override val surroundings = "Области под угрозой"
+    override val resetSettings = "Сбросить настройки"
+    override val resetSettingsDescription = "Удаляет все настройки приложения, чтобы при следующем запуске " +
+            "оно запустилось так же, как в самый первый раз. До этого ничего не сохраняется."
+    override val settingsAreReset = "Перезапустите приложение"
     override val developerMode = "Режим разработчика"
     override val experimentalMode = "Экспериментальный режим"
     override val version: String = "Версия"

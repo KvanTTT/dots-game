@@ -11,6 +11,10 @@ actual class SettingsWrapper<T : ClassSettings<T>>(actual val obj: T) {
         actual fun <T : ClassSettings<T>> initialize(obj: T, directory: String?, loading: Boolean): SettingsWrapper<T> {
             return SettingsWrapper(obj)
         }
+
+        actual fun reset() {
+            androidSettings.clear()
+        }
     }
 
     actual val settings: Settings? = androidSettings

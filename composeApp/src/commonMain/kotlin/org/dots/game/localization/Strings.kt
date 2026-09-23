@@ -82,6 +82,9 @@ interface Strings {
     val threats: String
     val surroundings: String
     val developerMode: String
+    val resetSettings: String
+    val resetSettingsDescription: String
+    val settingsAreReset: String
     val experimentalMode: String
     val version: String
 

@@ -16,6 +16,9 @@ import kotlin.reflect.KProperty1
 expect class SettingsWrapper<T : ClassSettings<T>> {
     companion object {
         fun <T : ClassSettings<T>> initialize(obj: T, directory: String?, loading: Boolean): SettingsWrapper<T>
+
+        /** Drops every setting the app has kept, see [resetSettings]. */
+        fun reset()
     }
 
     val obj: T
@@ -25,8 +28,26 @@ expect class SettingsWrapper<T : ClassSettings<T>> {
     fun save()
 }
 
+/**
+ * Drops every setting of the app, so that it is started the way it is started for the very first time
+ * the next time it is started: the engine it is shipped with, the rules and the look it comes with, and
+ * no game of the last time at all.
+ *
+ * Nothing is saved for the rest of this run of the app either, because the app saves the game it is left
+ * with and the window it is left in when it is closed, and a first start is a start with neither.
+ */
+fun resetSettings() {
+    settingsAreReset = true
+    SettingsWrapper.reset()
+}
+
+/** @see resetSettings */
+internal var settingsAreReset = false
+
 @IgnorableReturnValue
 fun <T : ClassSettings<T>> saveClassSettings(settingsObj: T, directory: String? = null): Boolean {
+    if (settingsAreReset) return false
+
     try {
         val settingsWrapper = SettingsWrapper.initialize(settingsObj, directory, loading = false)
         val settings = settingsWrapper.settings ?: return false

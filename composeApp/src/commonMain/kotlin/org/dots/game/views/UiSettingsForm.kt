@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material.Button
 import androidx.compose.material.Card
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
@@ -19,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import org.dots.game.BuildInfo
+import org.dots.game.Tooltip
+import org.dots.game.resetSettings
 import org.dots.game.UiSettings
 import org.dots.game.date
 import org.dots.game.version
@@ -33,6 +36,7 @@ fun UiSettingsForm(
     var baseDrawMode by remember { mutableStateOf(EnumMode(uiSettings.baseDrawMode)) }
     var language by remember { mutableStateOf(EnumMode(uiSettings.language)) }
     var strings by remember { mutableStateOf(uiSettings.language.getStrings())}
+    var settingsAreReset by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.width(470.dp).wrapContentHeight()) {
@@ -96,6 +100,26 @@ fun UiSettingsForm(
                         language = it
                         strings = language.selected.getStrings()
                         onUiSettingsChange(uiSettings.copy(language = it.selected))
+                    }
+                }
+                // The app is started the way it is started for the very first time after this, which is
+                // what it's here for: to try that very start out, the engine the app is shipped with
+                // and everything else it comes with included
+                if (uiSettings.developerMode) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(strings.resetSettings, Modifier.fillMaxWidth(configKeyTextFraction))
+                        if (settingsAreReset) {
+                            Text(strings.settingsAreReset)
+                        } else {
+                            Tooltip(strings.resetSettingsDescription) {
+                                Button(onClick = {
+                                    resetSettings()
+                                    settingsAreReset = true
+                                }) {
+                                    Text(strings.reset)
+                                }
+                            }
+                        }
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
