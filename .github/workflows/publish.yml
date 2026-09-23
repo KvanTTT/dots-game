@@ -156,7 +156,10 @@ jobs:
       - name: Build Engine - macOS
         if: runner.os == 'macOS' && steps.engine-cache.outputs.cache-hit != 'true'
         run: |
-          brew install ninja
+          # The Metal backend runs the model through CoreML as well as MPSGraph, and the converter of it
+          # is built against protobuf and abseil, which no Mac carries: `bundle-macos-libraries.sh` below
+          # is what brings them along, so that the engine runs on a Mac that has no Homebrew on it
+          brew install ninja protobuf abseil
           cmake -S engine-sources/cpp -B engine-sources/cpp -G Ninja \
             -DUSE_BACKEND=${{ matrix.engine-backend }} -DCMAKE_BUILD_TYPE=Release \
             -DLIBZIP_LIBRARY=NOTFOUND -DLIBZIP_INCLUDE_DIR_ZIP=NOTFOUND -DLIBZIP_INCLUDE_DIR_ZIPCONF=NOTFOUND
